@@ -317,3 +317,47 @@ entrypoint = "./functions/meeting/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/meeting/*.html" ]
+
+[functions.location-points]
+enabled = true
+verify_jwt = true
+import_map = "./functions/location-points/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/location-points/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/location-points/*.html" ]
+
+[functions.location-points-post]
+enabled = true
+verify_jwt = true
+import_map = "./functions/location-points-post/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/location-points-post/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/location-points-post/*.html" ]
+
+[functions.location-points-vote-post]
+enabled = true
+verify_jwt = true
+import_map = "./functions/location-points-vote-post/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/location-points-vote-post/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/location-points-vote-post/*.html" ]
+
+[functions.location-points-confirm-post]
+enabled = true
+verify_jwt = true
+import_map = "./functions/location-points-confirm-post/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/location-points-confirm-post/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/location-points-confirm-post/*.html" ]
