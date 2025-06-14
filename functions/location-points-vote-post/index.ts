@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { serve } from "jsr:@supabase/functions";
 import { createClient } from "jsr:@supabase/supabase-js";
 

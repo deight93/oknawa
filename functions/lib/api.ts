@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { getEnv } from "./env.ts";
 
 const KAKAO_API_KEY = getEnv("KAKAO_REST_API_KEY")!;
