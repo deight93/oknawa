@@ -1,35 +1,85 @@
-import { serve } from "jsr:@supabase/functions";
-import { createClient } from "jsr:@supabase/supabase-js";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js";
+import { getEnv } from "../lib/env.ts";
+import { getCenterCoordinates, getCenterLocations } from "../lib/distance.ts";
+import { callGoogleMapItineraries } from "../lib/mapapi.ts";
 
-serve(async (req) => {
-  const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-  );
-  const body = await req.json();
+const SUPABASE_URL = getEnv("SUPABASE_URL");
+const SUPABASE_SERVICE_ROLE_KEY = getEnv("SUPABASE_SERVICE_ROLE_KEY");
 
-  // 1. map_id, map_host_id 생성
-  const map_id = crypto.randomUUID();
-  const map_host_id = map_id.replace("-", "").slice(0, 8).split("").reverse().join("");
-  // 2. 중간 좌표, 인기역, 경로계산 등은 기존 python open_api를 JS로 재구현 필요 (여긴 stub 처리)
-  const station_info = []; // TODO: 비즈니스 로직 구현 필요
+serve(async (req: Request) => {
+  try {
+    const body = await req.json();
+    const participants = body.participant;
+    const priority = Number(new URL(req.url).searchParams.get("priority") ?? "4");
 
-  // 3. 결과 DB에 저장
-  const { error } = await supabase.from("location_result").insert([{
-    map_id,
-    map_host_id,
-    station_info,
-    request_info: body,
-    confirmed: null,
-  }]);
-  if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+    if (!participants || !Array.isArray(participants) || participants.length === 0) {
+      return new Response(JSON.stringify({ error: "invalid participant" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
 
-  // 4. 응답
-  return new Response(JSON.stringify({
-    map_id,
-    map_host_id,
-    station_info,
-    request_info: body,
-    confirmed: null,
-  }), { headers: { "Content-Type": "application/json" } });
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // 1. 인기역 데이터 가져오기
+    const { data: stations, error } = await supabase
+        .from("popular_meeting_location")
+        .select("*")
+        .is("deleted_at", null);
+    if (error) throw new Error(error.message);
+
+    // 2. 중간좌표 계산
+    const centerCoordinates = getCenterCoordinates(participants);
+
+    // 3. 가까운 역 추출
+    const centerLocationDataList = getCenterLocations(centerCoordinates, stations, priority);
+
+    // 4. 각 역에 대해 Google Map Itinerary 생성
+    const stationInfoList = await callGoogleMapItineraries(participants, centerLocationDataList);
+
+    // 5. 추가정보 세팅
+    const mapId = crypto.randomUUID();
+    const mapHostId = mapId.replace(/-/g, "").slice(0, 8).split("").reverse().join("");
+
+    const response = {
+      map_id: mapId,
+      map_host_id: mapHostId,
+      station_info: stationInfoList.map((station) => ({
+        ...station,
+        share_key: crypto.randomUUID(),
+        vote: 0,
+        request_info: { participant: participants },
+      })),
+      request_info: { participant: participants },
+      confirmed: null,
+    };
+
+    await supabase
+        .from("location_result")
+        .insert({
+          map_id: mapId,
+          map_host_id: mapHostId,
+          station_info: stationInfoList.map((station) => ({
+            ...station,
+            share_key: crypto.randomUUID(),
+            vote: 0,
+            request_info: { participant: participants },
+          })),
+          request_info: { participant: participants },
+          confirmed: null,
+        });
+
+    return new Response(JSON.stringify(response), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+
+  } catch (err) {
+    console.error("Error:", err);
+    return new Response(JSON.stringify({ error: err.message || "Unexpected error" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
 });
