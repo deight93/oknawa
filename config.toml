@@ -318,35 +318,35 @@ entrypoint = "./functions/meeting/index.ts"
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/meeting/*.html" ]
 
-[functions.location-points-post]
+[functions.location-points]
 enabled = true
 verify_jwt = true
-import_map = "./functions/location-points-post/deno.json"
+import_map = "./functions/location-points/deno.json"
 # Uncomment to specify a custom file path to the entrypoint.
 # Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
-entrypoint = "./functions/location-points-post/index.ts"
+entrypoint = "./functions/location-points/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/location-points-post/*.html" ]
+# static_files = [ "./functions/location-points/*.html" ]
 
-[functions.location-points-vote-post]
+[functions.location-points-vote]
 enabled = true
 verify_jwt = true
-import_map = "./functions/location-points-vote-post/deno.json"
+import_map = "./functions/location-points-vote/deno.json"
 # Uncomment to specify a custom file path to the entrypoint.
 # Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
-entrypoint = "./functions/location-points-vote-post/index.ts"
+entrypoint = "./functions/location-points-vote/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/location-points-vote-post/*.html" ]
+# static_files = [ "./functions/location-points-vote/*.html" ]
 
-[functions.location-points-confirm-post]
+[functions.location-points-confirm]
 enabled = true
 verify_jwt = true
-import_map = "./functions/location-points-confirm-post/deno.json"
+import_map = "./functions/location-points-confirm/deno.json"
 # Uncomment to specify a custom file path to the entrypoint.
 # Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
-entrypoint = "./functions/location-points-confirm-post/index.ts"
+entrypoint = "./functions/location-points-confirm/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/location-points-confirm-post/*.html" ]
+# static_files = [ "./functions/location-points-confirm/*.html" ]

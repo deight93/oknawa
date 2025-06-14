@@ -1,13 +1,17 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js";
-import { getEnv } from "../lib/env.ts";
-import { getCenterCoordinates, getCenterLocations } from "../lib/distance.ts";
-import { callGoogleMapItineraries } from "../lib/mapapi.ts";
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "jsr:@supabase/supabase-js";
+import { getEnv } from "../../lib/env.ts";
+import { getCenterCoordinates, getCenterLocations } from "../../lib/distance.ts";
+import { callGoogleMapItineraries } from "../../lib/mapapi.ts";
 
 const SUPABASE_URL = getEnv("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = getEnv("SUPABASE_SERVICE_ROLE_KEY");
 
-serve(async (req: Request) => {
+Deno.serve(async (req) => {
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ msg: "Method Not Allowed" }), { status: 405 });
+  }
+
   try {
     const body = await req.json();
     const participants = body.participant;
