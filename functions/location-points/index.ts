@@ -1,8 +1,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js";
-import { getEnv } from "../../lib/env.ts";
-import { getCenterCoordinates, getCenterLocations } from "../../lib/distance.ts";
-import { callGoogleMapItineraries } from "../../lib/mapapi.ts";
+import { getEnv } from "../lib/env.ts";
+import { getCenterCoordinates, getCenterLocations } from "../lib/distance.ts";
+import { callGoogleMapItineraries } from "../lib/mapapi.ts";
 
 const SUPABASE_URL = getEnv("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = getEnv("SUPABASE_SERVICE_ROLE_KEY");
