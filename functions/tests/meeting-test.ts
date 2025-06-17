@@ -4,7 +4,7 @@ import {
 } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js";
 
-Deno.test("Edge Function: meeting/index.ts - popular_meeting_location upsert test", async () => {
+Deno.test("Edge Function: location-meeting/index.ts - popular_meeting_location upsert test", async () => {
     const supabase = createClient(
         Deno.env.get("SUPABASE_URL")!,
         Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -17,7 +17,7 @@ Deno.test("Edge Function: meeting/index.ts - popular_meeting_location upsert tes
         .eq("name", "강남역");
 
     // Edge 함수 호출
-    const response = await fetch("http://localhost:54321/functions/v1/meeting", {
+    const response = await fetch("http://localhost:54321/functions/v1/location-meeting", {
         method: "GET", // 또는 POST, 실제 index.ts에 따라 조정
     });
 
