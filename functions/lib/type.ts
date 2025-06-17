@@ -115,3 +115,21 @@ export interface PostTogetherClientResponse {
 export interface PutTogetherHostResponse {
     msg: string;
 }
+
+// supabase/functions/lib/response.ts
+export interface Success<T> {
+    code: number;          // 0
+    msg:  string;          // "success"
+    data: T;
+}
+export interface Fail {
+    code: number;          // 4xx, 5xx
+    msg:  string;
+}
+
+export function json<T>(payload: Success<T> | Fail, status = 200) {
+    return new Response(JSON.stringify(payload), {
+        status,
+        headers: { "Content-Type": "application/json" },
+    });
+}

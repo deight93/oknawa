@@ -3,14 +3,13 @@ import { createClient } from "jsr:@supabase/supabase-js";
 import { getEnv } from "../lib/env.ts";
 import { getCenterCoordinates, getCenterLocations } from "../lib/distance.ts";
 import { callGoogleMapItineraries } from "../lib/mapapi.ts";
+import { json } from "../lib/utils.ts";
 
 const SUPABASE_URL = getEnv("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = getEnv("SUPABASE_SERVICE_ROLE_KEY");
 
 Deno.serve(async (req) => {
-  if (req.method !== "POST") {
-    return new Response(JSON.stringify({ msg: "Method Not Allowed" }), { status: 405 });
-  }
+  if (req.method !== "POST") return json({ msg: "Method Not Allowed" }, 405);
 
   try {
     const body = await req.json();
@@ -46,17 +45,9 @@ Deno.serve(async (req) => {
     const mapId = crypto.randomUUID();
     const mapHostId = mapId.replace(/-/g, "").slice(0, 8).split("").reverse().join("");
 
-    const response = {
+    const resData = {
       map_id: mapId,
-      map_host_id: mapHostId,
-      station_info: stationInfoList.map((station) => ({
-        ...station,
-        share_key: crypto.randomUUID(),
-        vote: 0,
-        request_info: { participant: participants },
-      })),
-      request_info: { participant: participants },
-      confirmed: null,
+      map_host_id: mapHostId
     };
 
     await supabase
@@ -74,10 +65,7 @@ Deno.serve(async (req) => {
           confirmed: null,
         });
 
-    return new Response(JSON.stringify(response), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    return new json((resData));
 
   } catch (err) {
     console.error("Error:", err);
