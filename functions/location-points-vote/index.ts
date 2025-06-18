@@ -30,34 +30,27 @@ Deno.serve(async (req) => {
         SUPABASE_SERVICE_ROLE_KEY
     );
 
-    // 1. 데이터 읽기
-    const { data, error } = await supabase
-        .from("location_result")
-        .select("station_info")
+    const { data: station, error: readErr } = await supabase
+        .from("station_info")
+        .select("vote")
         .eq("map_id", map_id)
+        .eq("share_key", share_key)
         .maybeSingle();
 
-    if (error || !data) return json({ msg: "Not Found" }, 404);
+    if (readErr || !station) {
+        return json({ msg: "Not Found", detail: readErr?.message }, 404);
+    }
 
-    // 2. station_info 중 share_key에 해당하는 항목의 vote만 +1
-    let found = false;
-    const station_info = data.station_info.map((item: any) => {
-        if (item.share_key === share_key) {
-            found = true;
-            return { ...item, vote: (item.vote ?? 0) + 1 };
-        }
-        return item;
-    });
+    const newVote = station.vote + 1;
+    const { error: updateErr } = await supabase
+        .from("station_info")
+        .update({ vote: newVote })
+        .eq("map_id", map_id)
+        .eq("share_key", share_key);
 
-    if (!found) return json({ msg: "share_key not found" }, 404);
-
-    // 3. DB 업데이트
-    const { error: updateError } = await supabase
-        .from("location_result")
-        .update({ station_info })
-        .eq("map_id", map_id);
-
-    if (updateError) return json({ msg: "DB Update Failed" }, 500);
+    if (updateErr) {
+        return json({ msg: "Update Error", detail: updateErr.message }, 500);
+    }
 
     return json({ msg: "투표 완료" });
 });

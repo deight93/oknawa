@@ -45,27 +45,42 @@ Deno.serve(async (req) => {
     const mapId = crypto.randomUUID();
     const mapHostId = mapId.replace(/-/g, "").slice(0, 8).split("").reverse().join("");
 
-    const resData = {
-      map_id: mapId,
-      map_host_id: mapHostId
-    };
-
-    await supabase
+    const { data: locRes, error: locErr } = await supabase
         .from("location_result")
         .insert({
           map_id: mapId,
           map_host_id: mapHostId,
-          station_info: stationInfoList.map((station) => ({
-            ...station,
-            share_key: crypto.randomUUID(),
-            vote: 0,
-            request_info: { participant: participants },
-          })),
-          request_info: { participant: participants },
           confirmed: null,
-        });
+        }).select("map_id, map_host_id")
+        .maybeSingle();
 
-    return new json((resData));
+    if (locErr || !locRes) {
+      return json({ msg: "location_result insert error", detail: locErr?.message }, 500);
+    }
+
+    const stationInfoBulk = stationInfoList.map(station => ({
+      map_id: mapId,
+      share_key: crypto.randomUUID(),
+      vote: 0,
+      end_x: station.end_x,
+      end_y: station.end_y,
+      address_name: station.address_name,
+      station_name: station.station_name,
+      itinerary: station.itinerary || [],
+      request_info: { participant: participants },
+    }));
+
+    const { data: stationRes, error: stationErr } = await supabase
+        .from("station_info")
+        .insert(stationInfoBulk)
+        .select();
+
+    if (stationErr) {
+      await supabase.from("location_result").delete().eq("map_id", mapId);
+      return json({ msg: "station_info insert error", detail: stationErr.message }, 500);
+    }
+
+    return new json((locRes));
 
   } catch (err) {
     console.error("Error:", err);
