@@ -1,9 +1,19 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { getEnv } from "../lib/env.ts";
+import { responseJson } from "../lib/utils.ts";
+import { corsHeaders } from "../lib/cors.ts";
 
 const KAKAO_REST_API_KEY = getEnv("KAKAO_REST_API_KEY");
 
 Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return responseJson("ok");
+  }
+
+  if (req.method !== "GET") {
+    return responseJson({ error: "Method Not Allowed" }, 405);
+  }
+
   const url = new URL(req.url);
   const pathParts = url.pathname.split("/").filter(Boolean);
   let category = pathParts[pathParts.length - 1];
@@ -11,10 +21,7 @@ Deno.serve(async (req) => {
   if (category === "location-point-place") {
     category = "food";
   } else if (!["food", "cafe", "drink"].includes(category)) {
-    return new Response(JSON.stringify({ error: "Invalid category" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" },
-    });
+    return responseJson({ error: "Invalid category" }, 400);
   }
 
   // 쿼리스트링 파라미터 파싱
@@ -26,10 +33,7 @@ Deno.serve(async (req) => {
   const sort = url.searchParams.get("sort") ?? "accuracy";
 
   if (!x || !y) {
-    return new Response(JSON.stringify({ error: "x, y 필수" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" },
-    });
+    return responseJson({ error: "x, y 필수" }, 400);
   }
 
   // 카카오 API 파라미터 세팅
@@ -68,10 +72,7 @@ Deno.serve(async (req) => {
     headers: kakaoHeaders,
   });
   if (!kakaoRes.ok) {
-    return new Response(JSON.stringify({ error: "카카오 API 에러" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return responseJson({ error: "카카오 API 에러" }, 500);
   }
 
   const kakaoData = await kakaoRes.json();
@@ -106,11 +107,8 @@ Deno.serve(async (req) => {
   );
 
   // 3. 응답
-  return new Response(
-      JSON.stringify({
-        documents: details,
-        meta,
-      }),
-      { status: 200, headers: { "Content-Type": "application/json" } },
-  );
+  return responseJson({
+    documents: details,
+    meta,
+  }, 200);
 });

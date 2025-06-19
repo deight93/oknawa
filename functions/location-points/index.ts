@@ -3,13 +3,20 @@ import { createClient } from "jsr:@supabase/supabase-js";
 import { getEnv } from "../lib/env.ts";
 import { getCenterCoordinates, getCenterLocations } from "../lib/distance.ts";
 import { callGoogleMapItineraries } from "../lib/mapapi.ts";
-import { json } from "../lib/utils.ts";
+import { responseJson } from "../lib/utils.ts";
+import { corsHeaders } from "../lib/cors.ts";
 
 const SUPABASE_URL = getEnv("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = getEnv("SUPABASE_SERVICE_ROLE_KEY");
 
 Deno.serve(async (req) => {
-  if (req.method !== "POST") return json({ msg: "Method Not Allowed" }, 405);
+  if (req.method === "OPTIONS") {
+    return responseJson("ok");
+  }
+
+  if (req.method !== "POST") {
+    return responseJson({ error: "Method Not Allowed" }, 405);
+  }
 
   try {
     const body = await req.json();
@@ -17,10 +24,7 @@ Deno.serve(async (req) => {
     const priority = Number(new URL(req.url).searchParams.get("priority") ?? "4");
 
     if (!participants || !Array.isArray(participants) || participants.length === 0) {
-      return new Response(JSON.stringify({ error: "invalid participant" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+      return responseJson({ error: "invalid participant" }, 400);
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -50,12 +54,13 @@ Deno.serve(async (req) => {
         .insert({
           map_id: mapId,
           map_host_id: mapHostId,
+          request_info: { participant: participants },
           confirmed: null,
         }).select("map_id, map_host_id")
         .maybeSingle();
 
     if (locErr || !locRes) {
-      return json({ msg: "location_result insert error", detail: locErr?.message }, 500);
+      return responseJson({ msg: "location_result insert error", detail: locErr?.message }, 500);
     }
 
     const stationInfoBulk = stationInfoList.map(station => ({
@@ -77,16 +82,16 @@ Deno.serve(async (req) => {
 
     if (stationErr) {
       await supabase.from("location_result").delete().eq("map_id", mapId);
-      return json({ msg: "station_info insert error", detail: stationErr.message }, 500);
+      return responseJson({ msg: "station_info insert error", detail: stationErr.message }, 500);
     }
 
-    return new json((locRes));
+    return new responseJson(locRes);
 
   } catch (err) {
     console.error("Error:", err);
     return new Response(JSON.stringify({ error: err.message || "Unexpected error" }), {
       status: 500,
-      headers: { "Content-Type": "application/json" },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });

@@ -3,13 +3,18 @@ import { createClient } from "jsr:@supabase/supabase-js";
 import { normalizeStationName } from "../lib/normalize.ts";
 import { getEnv } from "../lib/env.ts";
 import { fetchPopularSubwayList, fetchStationData } from "../lib/api.ts"
+import {responseJson} from "../lib/utils.ts";
 
 const SUPABASE_URL = getEnv("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = getEnv("SUPABASE_SERVICE_ROLE_KEY");
 
 Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return responseJson("ok");
+  }
+
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ msg: "Method Not Allowed" }), { status: 405 });
+    return responseJson({ error: "Method Not Allowed" }, 405);
   }
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -24,7 +29,7 @@ Deno.serve(async (req) => {
 
   if (existingListError) {
     console.error("DB 조회 실패:", existingListError);
-    return new Response(JSON.stringify({ msg: "DB 조회 실패" }), { status: 500 });
+    return responseJson({ msg: "DB 조회 실패" }, 500);
   }
 
   const upsertItems: any[] = [];
@@ -96,11 +101,7 @@ Deno.serve(async (req) => {
       console.error("Soft delete error:", deleteError);
     }
   }
-
-  return new Response(JSON.stringify({ msg: "인기 있는 장소 최신화 완료" }), {
-    headers: { "Content-Type": "application/json" },
-    status: 200,
-  });
+  return responseJson({ msg: "인기 있는 장소 최신화 완료" });
 });
 
 
