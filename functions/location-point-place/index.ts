@@ -24,7 +24,6 @@ Deno.serve(async (req) => {
     return responseJson({ error: "Invalid category" }, 400);
   }
 
-  // 쿼리스트링 파라미터 파싱
   const x = url.searchParams.get("x");
   const y = url.searchParams.get("y");
   const radius = url.searchParams.get("radius") ?? "500";
@@ -36,7 +35,6 @@ Deno.serve(async (req) => {
     return responseJson({ error: "x, y 필수" }, 400);
   }
 
-  // 카카오 API 파라미터 세팅
   let category_group_code = "";
   let query = "";
   if (category === "food") {
@@ -66,7 +64,6 @@ Deno.serve(async (req) => {
     Authorization: `KakaoAK ${KAKAO_REST_API_KEY}`,
   };
 
-  // 1. 키워드 검색 (카카오)
   const kakaoRes = await fetch(`${kakaoUrl}?${kakaoParams.toString()}`, {
     method: "GET",
     headers: kakaoHeaders,
@@ -79,26 +76,38 @@ Deno.serve(async (req) => {
   const documents = kakaoData.documents ?? [];
   const meta = kakaoData.meta ?? {};
 
-  // 2. 각 장소의 상세정보(사진/오픈시간) 병렬조회
   const details = await Promise.all(
       documents.map(async (doc: any) => {
-        const place_url = doc.place_url;
-        if (!place_url) return doc;
-        const place_url_id = place_url.split("/").pop();
-        if (!place_url_id) return doc;
-        const detail_url = place_url.replace(
-            place_url_id,
-            `main/v/${place_url_id}`,
-        );
+        const placeUrl = doc.place_url;
+        if (!placeUrl) return doc;
+        const placeId = placeUrl.split("/").pop();
+        if (!placeId) return doc;
+
+        const apiUrl = `https://place-api.map.kakao.com/places/panel3/${placeId}`;
+
         try {
-          const detailRes = await fetch(detail_url);
-          if (!detailRes.ok) return doc;
-          const detailJson = await detailRes.json();
-          const basicInfo = detailJson?.basicInfo ?? {};
+          const res = await fetch(apiUrl, {
+            headers: {
+              "Accept": "application/json, text/plain, */*",
+              "Accept-Encoding": "gzip, deflate, br, zstd",
+              "Referer": `https://place.map.kakao.com/${placeId}`,
+              pf: "web",
+            },
+          });
+          if (!res.ok) return doc;
+          const data = await res.json();
+
+          const mainPhoto =
+              data.photos?.photos?.[0]?.url ??
+              data.menu?.menus?.photos?.[0]?.url ?? null;
+
+          const dayInfos =
+              data.business_hours?.real_time_info?.day_business_hours_infos ?? [];
+
           return {
             ...doc,
-            main_photo_url: basicInfo.mainphotourl ?? null,
-            open_hour: basicInfo.openHour ?? null,
+            main_photo_url: mainPhoto,
+            day_business_hours_infos: dayInfos,
           };
         } catch {
           return doc;
@@ -106,7 +115,6 @@ Deno.serve(async (req) => {
       }),
   );
 
-  // 3. 응답
   return responseJson({
     documents: details,
     meta,
