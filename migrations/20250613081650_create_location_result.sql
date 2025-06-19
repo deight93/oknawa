@@ -35,7 +35,7 @@ ALTER TABLE location_result
 
 -- RPC
 CREATE
-OR REPLACE FUNCTION increase_vote(
+OR REPLACE FUNCTION location_points_vote(
     map_id uuid,
     share_key text
 )
@@ -46,8 +46,8 @@ BEGIN
 UPDATE public.station_info
 SET vote       = station_info.vote + 1,
     updated_at = now()
-WHERE station_info.map_id = increase_vote.map_id
-  AND station_info.share_key = increase_vote.share_key;
+WHERE station_info.map_id = location_points_vote.map_id
+  AND station_info.share_key = location_points_vote.share_key;
 
 RETURN jsonb_build_object('msg', '투표 완료');
 END;
