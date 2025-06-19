@@ -1,3 +1,4 @@
+-- DDL
 CREATE TABLE public.popular_meeting_location
 (
     id         SERIAL PRIMARY KEY,

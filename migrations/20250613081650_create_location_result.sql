@@ -1,3 +1,4 @@
+-- DDL
 create table public.location_result
 (
     map_id       uuid primary key         default gen_random_uuid(),
@@ -31,3 +32,23 @@ ALTER TABLE station_info
 ALTER TABLE location_result
     ADD CONSTRAINT fk_confirmed_share FOREIGN KEY (map_id, confirmed)
         REFERENCES station_info (map_id, share_key);
+
+-- RPC
+CREATE
+OR REPLACE FUNCTION increase_vote(
+    map_id uuid,
+    share_key text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+AS $$
+BEGIN
+UPDATE public.station_info
+SET vote       = station_info.vote + 1,
+    updated_at = now()
+WHERE station_info.map_id = increase_vote.map_id
+  AND station_info.share_key = increase_vote.share_key;
+
+RETURN jsonb_build_object('msg', '투표 완료');
+END;
+$$;
