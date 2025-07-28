@@ -18,28 +18,23 @@ export async function fetchPopularSubwayList(): Promise<string[]> {
     const resp = await fetch(url);
     const data = await resp.json();
     const apiResponse = data.CardSubwayStatsNew.row as any[];
-    const totalPassenger: Record<string, { RIDE_PASGR_NUM: number; ALIGHT_PASGR_NUM: number }> = {};
+    const totalPassenger: Record<string, number> = {};
 
     for (const subway of apiResponse) {
         const subwayName: string = subway.SBWY_STNS_NM;
-        if (!totalPassenger[subwayName]) {
-            totalPassenger[subwayName] = { RIDE_PASGR_NUM: 0, ALIGHT_PASGR_NUM: 0 };
-        }
-        totalPassenger[subwayName].RIDE_PASGR_NUM += Number(subway.RIDE_PASGR_NUM);
-        totalPassenger[subwayName].ALIGHT_PASGR_NUM += Number(subway.ALIGHT_PASGR_NUM);
+        const ride = Number(subway.GTON_TNOPE) || 0;
+        const alight = Number(subway.GTOFF_TNOPE) || 0;
+        if (!totalPassenger[subwayName]) totalPassenger[subwayName] = 0;
+        totalPassenger[subwayName] += ride + alight;
     }
 
-    let subwayList = Object.entries(totalPassenger).map(([subway_name, passenger]) => ({
-        subway_name,
-        total_passenger: passenger.RIDE_PASGR_NUM + passenger.ALIGHT_PASGR_NUM,
-    }));
-
-    subwayList = subwayList
+    const subwayList = Object.entries(totalPassenger)
+        .map(([subway_name, total_passenger]) => ({ subway_name, total_passenger }))
         .sort((a, b) => b.total_passenger - a.total_passenger)
-        .slice(0, 80);
+        .slice(0, 100);
 
-    return subwayList.map((subway) => {
-        let name = subway.subway_name.split("(")[0].trim();
+    return subwayList.map(({ subway_name, total_passenger }) => {
+        let name = subway_name.split("(")[0].trim();
         if (!name.endsWith("역")) name += "역";
         return name;
     });
