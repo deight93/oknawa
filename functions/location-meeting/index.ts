@@ -24,8 +24,9 @@ Deno.serve(async (req) => {
 
   const { data: existingList, error: existingListError } = await supabase
       .from("popular_meeting_location")
-      .select("name")
-      .is("deleted_at", null);
+      .select("name, type")
+      .is("deleted_at", null)
+      .eq("type", "station");
 
   if (existingListError) {
     console.error("DB 조회 실패:", existingListError);
@@ -65,7 +66,6 @@ Deno.serve(async (req) => {
         address: station.road_address_name ?? "",
         location_x: Number(station.x),
         location_y: Number(station.y),
-        created_at: now,
         updated_at: now,
         deleted_at: null
       });
