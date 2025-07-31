@@ -11,12 +11,13 @@ CREATE TABLE location_room
 
 CREATE TABLE participant
 (
-    id          SERIAL PRIMARY KEY,
-    room_id     UUID REFERENCES location_room (room_id) ON DELETE CASCADE,
-    name        TEXT             NOT NULL,
-    region_name TEXT             NOT NULL,
-    start_x     DOUBLE PRECISION NOT NULL,
-    start_y     DOUBLE PRECISION NOT NULL
+    id           SERIAL PRIMARY KEY,
+    room_id      UUID REFERENCES location_room (room_id) ON DELETE CASCADE,
+    name         TEXT             NOT NULL,
+    region_name  TEXT             NOT NULL,
+    full_address TEXT             NOT NULL,
+    start_x      DOUBLE PRECISION NOT NULL,
+    start_y      DOUBLE PRECISION NOT NULL
 );
 
 
@@ -44,9 +45,13 @@ DELETE
 FROM participant
 WHERE participant.room_id = location_together_room_id.room_id;
 
-INSERT INTO participant (room_id, name, region_name, start_x, start_y)
+INSERT INTO participant (room_id, name, region_name, full_address, start_x, start_y)
 SELECT location_together_room_id.room_id,
-       p ->> 'name', p ->> 'region_name', (p ->> 'start_x'):: double precision, (p ->> 'start_y'):: double precision
+       p ->> 'name',
+    p ->> 'region_name',
+    p ->> 'full_address',
+    (p ->> 'start_x')::double precision,
+    (p ->> 'start_y')::double precision
 FROM jsonb_array_elements(location_together_room_id.participants) AS p;
 END;
 $$;
@@ -56,6 +61,7 @@ CREATE
 OR REPLACE FUNCTION location_together(
     name TEXT,
     region_name TEXT,
+    full_address TEXT,
     start_x DOUBLE PRECISION,
     start_y DOUBLE PRECISION
 )
@@ -73,8 +79,8 @@ BEGIN
 INSERT INTO location_room(room_id, room_host_id)
 VALUES (v_room_id, v_room_host_id);
 
-INSERT INTO participant(room_id, name, region_name, start_x, start_y)
-VALUES (v_room_id, name, region_name, start_x, start_y);
+INSERT INTO participant(room_id, name, region_name, full_address, start_x, start_y)
+VALUES (v_room_id, name, region_name, full_address, start_x, start_y);
 
 RETURN jsonb_build_object(
         'room_id', v_room_id,

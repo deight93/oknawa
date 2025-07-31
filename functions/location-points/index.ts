@@ -27,12 +27,24 @@ Deno.serve(async (req) => {
       return responseJson({ error: "invalid participant" }, 400);
     }
 
+    // 2. 서울/경기 판별 함수
+    function isSeoulOrGyeonggi(full_address: string): boolean {
+      return full_address.includes("서울") || full_address.includes("경기");
+    }
+
+    // 3. 추천 타입 결정
+    const hasNonSeoulGyeonggi = participants.some(
+        (p) => !isSeoulOrGyeonggi(p.full_address)
+    );
+    const recommendType = hasNonSeoulGyeonggi ? "terminal" : "station";
+
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // 1. 인기역 데이터 가져오기
     const { data: stations, error } = await supabase
         .from("popular_meeting_location")
         .select("*")
+        .eq("type", recommendType)
         .is("deleted_at", null);
     if (error) throw new Error(error.message);
 
