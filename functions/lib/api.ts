@@ -2,6 +2,8 @@ import { getEnv } from "./env.ts";
 
 const KAKAO_API_KEY = getEnv("KAKAO_REST_API_KEY")!;
 const OPEN_DATA_API_URL = getEnv("OPEN_DATA_API_URL")!;
+const BUS_TERMINAL_DATA_API_URL = getEnv("BUS_TERMINAL_DATA_API_URL")!;
+
 
 function getLastWeekSameDayString() {
     const today = new Date();
@@ -48,5 +50,27 @@ export async function fetchStationData(subway_name: string) {
     const json = await resp.json();
     return (json.documents as any[]).filter(
         (doc) => doc.category_group_name === "지하철역"
+    );
+}
+
+export async function fetchTerminalList(): Promise<string[]> {
+    const url = `${BUS_TERMINAL_DATA_API_URL}`;
+    const resp = await fetch(url);
+    const data = await resp.json();
+
+    return data.response.body.items.item.map((item: any) =>
+        item.terminalNm.replace(/\(.*?\)/g, '') + '고속버스터미널'
+    );
+}
+
+
+export async function fetchTerminalData(terminal_name: string) {
+    const url = `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(terminal_name)}`;
+    const resp = await fetch(url, {
+        headers: { Authorization: `KakaoAK ${KAKAO_API_KEY}` },
+    });
+    const json = await resp.json();
+    return (json.documents as any[]).filter(
+        (doc) => doc.category_name?.includes("고속,시외버스터미널")
     );
 }

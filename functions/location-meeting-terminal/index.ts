@@ -1,9 +1,9 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js";
-import { normalizeStationName } from "../lib/normalize.ts";
+import { fetchTerminalList, fetchTerminalData } from "../lib/api.ts";
 import { getEnv } from "../lib/env.ts";
-import { fetchPopularSubwayList, fetchStationData } from "../lib/api.ts"
-import {responseJson} from "../lib/utils.ts";
+import { responseJson } from "../lib/utils.ts";
+import {normalizeStationName} from "../lib/normalize.ts";
 
 const SUPABASE_URL = getEnv("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = getEnv("SUPABASE_SERVICE_ROLE_KEY");
@@ -20,7 +20,8 @@ Deno.serve(async (req) => {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
   const now = new Date().toISOString();
 
-  const subwayNames = await fetchPopularSubwayList();
+  const terminalNames = Array.from(new Set(await fetchTerminalList()));
+  console.log(terminalNames);
 
   const { data: existingList, error: existingListError } = await supabase
       .from("popular_meeting_location")
@@ -33,11 +34,13 @@ Deno.serve(async (req) => {
   }
 
   const upsertItems: any[] = [];
-  for (const subwayName of subwayNames) {
-    const stations = await fetchStationData(subwayName);
+  for (const terminalName of terminalNames) {
+    const stations = await fetchTerminalData(terminalName);
     if (!stations.length) continue;
 
     const station = stations[0];
+    console.log(station);
+
 
     const isExists =
         existingList?.some(
@@ -48,7 +51,7 @@ Deno.serve(async (req) => {
     if (!isExists) {
       upsertItems.push({
         name: station.place_name,
-        type: "station",
+        type: "terminal",
         url: station.place_url,
         address: station.road_address_name ?? "",
         location_x: Number(station.x),
@@ -60,7 +63,7 @@ Deno.serve(async (req) => {
     } else {
       upsertItems.push({
         name: station.place_name,
-        type: "station",
+        type: "terminal",
         url: station.place_url,
         address: station.road_address_name ?? "",
         location_x: Number(station.x),
@@ -71,13 +74,14 @@ Deno.serve(async (req) => {
     }
   }
 
-  if (upsertItems.length > 0) {
+  const uniqueUpsertItems = Array.from(
+      new Map(upsertItems.map(item => [item.name, item])).values()
+  );
+
+  if (uniqueUpsertItems.length > 0) {
     const { error: upsertError } = await supabase
         .from("popular_meeting_location")
-        .upsert(
-            upsertItems,
-            { onConflict: "name"}
-        );
+        .upsert(uniqueUpsertItems, { onConflict: "name" });
     if (upsertError) {
       console.error("Upsert Error:", upsertError);
       return new Response(JSON.stringify({ msg: "DB upsert 실패" }), { status: 500 });
@@ -101,8 +105,5 @@ Deno.serve(async (req) => {
       console.error("Soft delete error:", deleteError);
     }
   }
-  return responseJson({ msg: "지하철 이용객 상위 100개 장소 최신화 완료" });
+  return responseJson({ msg: "터미널 장소 최신화 완료" });
 });
-
-
-
