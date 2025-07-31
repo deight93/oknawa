@@ -21,7 +21,6 @@ Deno.serve(async (req) => {
   const now = new Date().toISOString();
 
   const terminalNames = Array.from(new Set(await fetchTerminalList()));
-  console.log(terminalNames);
 
   const { data: existingList, error: existingListError } = await supabase
       .from("popular_meeting_location")
@@ -39,9 +38,6 @@ Deno.serve(async (req) => {
     if (!stations.length) continue;
 
     const station = stations[0];
-    console.log(station);
-
-
     const isExists =
         existingList?.some(
             (item) =>
@@ -68,6 +64,7 @@ Deno.serve(async (req) => {
         address: station.road_address_name ?? "",
         location_x: Number(station.x),
         location_y: Number(station.y),
+        created_at: now,
         updated_at: now,
         deleted_at: null
       });
@@ -90,7 +87,7 @@ Deno.serve(async (req) => {
 
   const existingNames = existingList.map((item) => item.name);
   const namesToDelete = existingNames.filter(
-      (name) => !subwayNames.includes(normalizeStationName(name))
+      (name) => !terminalNames.includes(normalizeStationName(name))
   );
   if (namesToDelete.length > 0) {
     const encodedNames = namesToDelete.map((name) => `"${name}"`).join(",");

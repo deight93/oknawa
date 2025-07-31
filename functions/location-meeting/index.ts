@@ -65,6 +65,7 @@ Deno.serve(async (req) => {
         address: station.road_address_name ?? "",
         location_x: Number(station.x),
         location_y: Number(station.y),
+        created_at: now,
         updated_at: now,
         deleted_at: null
       });
