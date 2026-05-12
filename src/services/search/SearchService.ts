@@ -1,4 +1,4 @@
-import { api, edgeApi, pollingApi } from '@/axois';
+import { api, edgeApi } from '@/axois';
 
 import SearchForm from '@/model/search/SearchForm';
 
@@ -10,13 +10,17 @@ export default class SearchService {
   static async searchPlaces(searchForm: SearchState[]) {
     const requestBody = SearchForm.convertToRequestBody(searchForm);
 
-    const { data } = await edgeApi.post('/functions/v1/location-points', { ...requestBody });
+    const { data } = await edgeApi.post('/functions/v1/location-points', {
+      ...requestBody,
+    });
 
     return data;
   }
 
   static async searchPolling(mapId: string) {
-    const { data } = await api.get(`/rest/v1/location_result?map_id=eq.${mapId}&select=*,station_info!station_info_map_id_fkey(*)&limit=1`);
+    const { data } = await api.get(
+      `/rest/v1/location_result?map_id=eq.${mapId}&select=*,station_info!station_info_map_id_fkey(*)&limit=1`,
+    );
 
     return data?.[0] ?? null;
   }
@@ -26,22 +30,28 @@ export default class SearchService {
       return null;
     }
 
-    const { data } = await api.get(`/rest/v1/station_info?share_key=eq.${shareKey}&select=*&limit=1`);
+    const { data } = await api.get(
+      `/rest/v1/station_info?share_key=eq.${shareKey}&select=*&limit=1`,
+    );
 
     return data?.[0] ?? null;
   }
 
-  static async makeRoom(searchForm: any) {
+  static async makeRoom(searchForm: SearchState) {
     const requestBody = SearchFormWithTogether.convertToRequestBody(searchForm);
 
-    const { data } = await api.post('/rest/v1/rpc/location_together', { ...requestBody });
+    const { data } = await api.post('/rest/v1/rpc/location_together', {
+      ...requestBody,
+    });
 
     return data;
   }
 
   static async getInputStatusList(roomId: string) {
-    const res = await pollingApi.get(`/rest/v1/location_room?room_id=eq.${roomId}&select=*,participant!participant_room_id_fkey(*)`);
-    return res.data;
+    const { data } = await api.get(
+      `/rest/v1/location_room?room_id=eq.${roomId}&select=*,participant!participant_room_id_fkey(*)&limit=1`,
+    );
+    return data?.[0] ?? null;
   }
 
   static async submitDeparturePoint(

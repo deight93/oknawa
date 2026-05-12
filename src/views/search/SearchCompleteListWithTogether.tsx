@@ -22,6 +22,7 @@ import { resultState } from '@/jotai/result/store';
 import { roomState } from '@/jotai/global/room';
 import { MapIdType } from '@/services/search/types';
 import { mapIdState } from '@/jotai/mapId/store';
+import { Participant } from '@/types/location';
 
 export default function SearchCompleteListWithTogetherView() {
   const router = useRouter();
@@ -40,9 +41,9 @@ export default function SearchCompleteListWithTogetherView() {
     isSuccess,
   } = usePlaceSearchMutation();
   const { mutate: placeSearchMapIdMutate } = usePlaceSearchMapIdMutation();
-  const participantList = participants ?? [];
+  const participantList = (participants ?? []) as Participant[];
 
-  const toSearchState = (participant: any): SearchState => ({
+  const toSearchState = (participant: Participant): SearchState => ({
     name: participant.name,
     address: {
       fullAddress: participant.full_address ?? participant.region_name,
@@ -120,7 +121,7 @@ export default function SearchCompleteListWithTogetherView() {
           </TitleBox>
         </Section>
         <div className="flex flex-col gap-3">
-          {participantList.map((participant: any, index: number) => {
+          {participantList.map((participant, index) => {
             return (
               <PeopleCard
                 key={index}

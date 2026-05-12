@@ -17,6 +17,7 @@ import ResultMap from './components/ResultMap';
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@nextui-org/react';
+import { DistanceSummaryItem } from '@/types/location';
 
 export default function ResultBody() {
   const router = useRouter();
@@ -69,7 +70,7 @@ export default function ResultBody() {
     );
   };
 
-  const handleHotplaceBtnClick = (station: any) => {
+  const handleHotplaceBtnClick = (station: DistanceSummaryItem) => {
     setBottomSheet(prevState => ({
       ...prevState,
       isOpen: true,
@@ -113,7 +114,6 @@ export default function ResultBody() {
           stationIndex={`0${currentIndex + 1}`}
           stationLength={`0${distanceSummaries.length}`}
           stationName={currentStation.stationName}
-          participants={participants}
           stationParticipants={currentStation.stationParticipants}
           shareKey={currentStation.shareKey}
           vote={currentStation.vote}

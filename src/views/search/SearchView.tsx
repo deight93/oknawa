@@ -1,13 +1,18 @@
 'use client';
 
 import { Input } from '@nextui-org/react';
+import { MouseEvent } from 'react';
 import { useAtom, useSetAtom } from 'jotai';
 import { styled } from 'styled-components';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import Address from '@/components/Address';
 import useSearchForm from '@/hooks/form/search/useSearchForm';
-import { bottomSheetState, searchState } from '@/jotai/global/store';
+import {
+  bottomSheetState,
+  SearchState,
+  searchState,
+} from '@/jotai/global/store';
 import Button from '@/components/Button';
 import { ArrowBackIcon } from '@/assets/icons/ArrowBack';
 import {
@@ -48,7 +53,10 @@ export default function SearchView({ type }: SearchViewProps) {
 
   const isIndividualView = type === 'individual';
 
-  const handleSearchAddressBtnClick = (index: number, e: any) => {
+  const handleSearchAddressBtnClick = (
+    index: number,
+    e: MouseEvent<HTMLDivElement>,
+  ) => {
     e.preventDefault();
     setBottomSheet(prevState => ({
       ...prevState,
@@ -58,7 +66,7 @@ export default function SearchView({ type }: SearchViewProps) {
     }));
   };
 
-  const handleSearchBtnClick = (searchForm: any) => {
+  const handleSearchBtnClick = (searchForm: SearchState) => {
     if (isIndividualView) {
       setSearchList(prevState => [...prevState, searchForm]);
     }
@@ -74,7 +82,7 @@ export default function SearchView({ type }: SearchViewProps) {
               full_address: searchForm.address.fullAddress,
               start_x: searchForm.address.longitude,
               start_y: searchForm.address.latitude,
-            }
+            },
           },
           {
             onSuccess: () => {
@@ -93,7 +101,7 @@ export default function SearchView({ type }: SearchViewProps) {
               full_address: searchForm.address.fullAddress,
               start_x: searchForm.address.longitude,
               start_y: searchForm.address.latitude,
-            }
+            },
           },
           {
             onSuccess: () => {

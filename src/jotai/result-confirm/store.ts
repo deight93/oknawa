@@ -1,37 +1,8 @@
 import { atomWithStorage, createJSONStorage } from 'jotai/utils';
 
-export interface ItineraryItem {
-  name: string;
-  itinerary: {
-    totalTime: number;
-    total_polyline: {
-      lat: number;
-      lng: number;
-    }[];
-  };
-  region_name: string;
-}
+import { StationInfo } from '@/types/location';
 
-interface Participant {
-  start_x: number;
-  start_y: number;
-}
-
-interface RequestInfo {
-  participant: Participant[];
-}
-
-interface ResultConfirmState {
-  address_name: string;
-  end_x: number;
-  end_y: number;
-  itinerary: ItineraryItem[];
-  station_name: string;
-  share_key: string;
-  request_info: RequestInfo;
-}
-
-const initialState: ResultConfirmState = {
+const initialState: StationInfo = {
   address_name: '',
   end_x: 0,
   end_y: 0,
@@ -39,9 +10,10 @@ const initialState: ResultConfirmState = {
   station_name: '',
   share_key: '',
   request_info: { participant: [] },
+  vote: 0,
 };
 
-export const resultConfirmState = atomWithStorage<ResultConfirmState>(
+export const resultConfirmState = atomWithStorage<StationInfo>(
   'result-confirm',
   initialState,
   createJSONStorage(() => sessionStorage),

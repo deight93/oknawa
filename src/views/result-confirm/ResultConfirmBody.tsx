@@ -15,6 +15,7 @@ import { Button } from '@nextui-org/react';
 
 import { usePlaceSearchWithShareKeyMutation } from '@/hooks/mutation/search';
 import { resultConfirmState } from '@/jotai/result-confirm/store';
+import { StationInfo } from '@/types/location';
 
 export default function ResultConfirmBody() {
   const shareKey = useSearchParams().get('sharekey');
@@ -44,7 +45,7 @@ export default function ResultConfirmBody() {
     Boolean(request_info?.participant?.length) &&
     !shouldFetchShareResult;
 
-  const handleHotplaceBtnClick = (station: any) => {
+  const handleHotplaceBtnClick = (station: StationInfo) => {
     setBottomSheet(prevState => ({
       ...prevState,
       isOpen: true,

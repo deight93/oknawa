@@ -3,6 +3,7 @@ import { useAtom } from 'jotai';
 import { resultState } from '@/jotai/result/store';
 
 import { ErrorNotify } from '@/types/error';
+import { DistanceSummaryItem } from '@/types/location';
 
 export const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 
@@ -11,7 +12,7 @@ export default function useDistanceSummary() {
 
   const { station_info = [], request_info } = result;
 
-  const distanceSummaries = station_info.map(station => {
+  const distanceSummaries: DistanceSummaryItem[] = station_info.map(station => {
     const stationName = station.station_name?.split(' ')[0] ?? '';
     const itinerary = station.itinerary ?? [];
     const shareKey = station.share_key;
@@ -47,7 +48,7 @@ export default function useDistanceSummary() {
     }
   };
 
-  const kakaoShareSendDefault = (stationName: any, shareKey: any) => {
+  const kakaoShareSendDefault = (stationName: string, shareKey: string) => {
     try {
       window.Kakao.Share.sendDefault({
         objectType: 'feed',

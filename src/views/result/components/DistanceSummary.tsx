@@ -32,6 +32,7 @@ import ButtonPrimary from '@/components/ButtonPrimary';
 import Button from '@/components/Button';
 
 import { convertToKoreanTime } from '@/utils/date';
+import { DistanceSummaryItem, Participant } from '@/types/location';
 
 import {
   Container,
@@ -69,6 +70,18 @@ import {
 } from '../style';
 import styled from 'styled-components';
 
+interface DistanceSummaryProps {
+  station: DistanceSummaryItem;
+  stationName: string;
+  shareKey: string;
+  stationIndex: string;
+  stationLength: string;
+  stationParticipants: Participant[];
+  vote: number;
+  onNext: () => void;
+  onPrev: () => void;
+}
+
 export default function DistanceSummary({
   station,
   stationName,
@@ -79,7 +92,7 @@ export default function DistanceSummary({
   vote,
   onNext,
   onPrev,
-}: any) {
+}: DistanceSummaryProps) {
   const router = useRouter();
 
   const [mapIdInfo] = useAtom(mapIdState);
@@ -153,10 +166,7 @@ export default function DistanceSummary({
   const handleVote = async () => {
     reset();
     try {
-      await VoteService.setVote(
-        activeMapId,
-        shareKey,
-      );
+      await VoteService.setVote(activeMapId, shareKey);
       if (voteStorageKey) {
         localStorage.setItem(voteStorageKey, 'true');
         localStorage.removeItem('isVote');
@@ -187,7 +197,9 @@ export default function DistanceSummary({
   const moveToFinal = () => {
     placeSearchWithShareKey(shareKey, {
       onSuccess: data => {
-        setResultConfirm(data);
+        if (data) {
+          setResultConfirm(data);
+        }
         if (voteStorageKey) {
           localStorage.removeItem(voteStorageKey);
         }
@@ -203,9 +215,8 @@ export default function DistanceSummary({
 
   const handleVoteConfirm = async () => {
     try {
-      const result = await VoteService.setVoteConfirm(mapIdInfo, shareKey);
+      await VoteService.setVoteConfirm(mapIdInfo, shareKey);
 
-      console.error('confirm - result:', result);
       setModalContents({
         buttonLabel: '확인',
         contents: '이번 약속 지역이 확정되었어요!',

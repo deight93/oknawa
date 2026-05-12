@@ -1,5 +1,7 @@
+import { SearchState } from '@/jotai/global/store';
+
 export default class SearchFormWithTogether {
-  static convertToRequestBody(searchForm: any) {
+  static convertToRequestBody(searchForm: SearchState) {
     return {
       name: searchForm.name,
       region_name: searchForm.address.regionName,

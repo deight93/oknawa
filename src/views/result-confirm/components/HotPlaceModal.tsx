@@ -8,6 +8,7 @@ import PlaceItem from './PlaceItem';
 import { useHotPlaceQuery } from '@/hooks/query/hot-place';
 
 import { HotPlaceCategory } from '@/services/hot-place/types';
+import { StationInfo } from '@/types/location';
 
 // import { resultState } from '@/jotai/result/store';
 
@@ -21,9 +22,13 @@ const HOT_PLACE_CATEGORY: { title: string; category: HotPlaceCategory }[] = [
   { title: '술집', category: 'drink' },
 ];
 
-export default function HotPlaceModal({ station }: any) {
+interface HotPlaceModalProps {
+  station: StationInfo;
+}
+
+export default function HotPlaceModal({ station }: HotPlaceModalProps) {
   const [category, setCategory] = useState<HotPlaceCategory>('food');
-  const loaderRef = useRef(null);
+  const loaderRef = useRef<HTMLDivElement | null>(null);
 
   const { data, hasNextPage, isFetchingNextPage, fetchNextPage } =
     useHotPlaceQuery(category, {
@@ -39,36 +44,29 @@ export default function HotPlaceModal({ station }: any) {
     drink: <DrinkIcon color="black" />,
   };
 
-  const handleObserver = (entries: any) => {
-    const target = entries[0];
-
-    if (target.isIntersecting && hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
-    }
-  };
-
-  const intersectionObserveroptions = {
-    root: null,
-    rootMargin: '0px 0px 300px',
-    threshold: 0.1,
-  };
-
-  const currentRef = loaderRef.current;
-
-  const io = new IntersectionObserver(
-    handleObserver,
-    intersectionObserveroptions,
-  );
-
   useEffect(() => {
-    if (currentRef) {
-      io.observe(currentRef);
-    }
+    const target = loaderRef.current;
+    if (!target) return;
+
+    const observer = new IntersectionObserver(
+      entries => {
+        const entry = entries[0];
+
+        if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      {
+        root: null,
+        rootMargin: '0px 0px 300px',
+        threshold: 0.1,
+      },
+    );
+
+    observer.observe(target);
 
     return () => {
-      if (currentRef) {
-        io.unobserve(currentRef);
-      }
+      observer.disconnect();
     };
   }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 

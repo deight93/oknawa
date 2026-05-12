@@ -26,11 +26,17 @@ import {
   TitleWrapper,
 } from '../style';
 
+interface DistanceSummaryProps {
+  stationName: string;
+  shareKey: string;
+  averageTravelTime: number;
+}
+
 export default function DistanceSummary({
   stationName,
   shareKey,
   averageTravelTime,
-}: any) {
+}: DistanceSummaryProps) {
   const router = useRouter();
 
   const { initKakao, kakaoShareSendDefault } = useDistanceSummary();
@@ -39,7 +45,10 @@ export default function DistanceSummary({
 
   const { setModalContents } = useModal();
 
-  const handleKakaoSharingBtnClick = (stationName: any, shareKey: any) => {
+  const handleKakaoSharingBtnClick = (
+    stationName: string,
+    shareKey: string,
+  ) => {
     initKakao();
     kakaoShareSendDefault(stationName, shareKey);
   };
