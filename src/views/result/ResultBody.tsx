@@ -1,13 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-
-import { usePlaceSearchMapIdQuery } from '@/hooks/query/search';
-import useResultSummary from '@/hooks/result/useResultSummary';
-
-import { useAtomValue, useSetAtom } from 'jotai';
-import { resultState } from '@/jotai/result/store';
-import { mapIdState } from '@/jotai/mapId/store';
+import { useSetAtom } from 'jotai';
 import { bottomSheetState } from '@/jotai/global/store';
 
 import styled from 'styled-components';
@@ -15,63 +8,24 @@ import DistanceSummary from './components/DistanceSummary';
 import HotPlaceModal from './components/HotPlaceModal';
 import ResultMap from './components/ResultMap';
 
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Button } from '@nextui-org/react';
+import useResultPageState from '@/hooks/result/useResultPageState';
 import { DistanceSummaryItem } from '@/types/location';
-import { clearLegacyVoteState } from '@/utils/voteStorage';
 
 export default function ResultBody() {
   const router = useRouter();
-  const queryMapId = useSearchParams().get('mapId');
-
-  const mapIdInfo = useAtomValue(mapIdState);
   const setBottomSheet = useSetAtom(bottomSheetState);
-  const setResult = useSetAtom(resultState);
-
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  const { distanceSummaries, participants } = useResultSummary();
-
-  const currentStation = distanceSummaries[currentIndex];
-  const activeMapId = (mapIdInfo.mapId || queryMapId) ?? '';
-
-  const { data, isLoading, clearRefetchInterval } =
-    usePlaceSearchMapIdQuery(activeMapId);
-
-  useEffect(() => {
-    if (data) {
-      setResult(data);
-    }
-  }, [data, setResult]);
-
-  useEffect(() => {
-    if (queryMapId) {
-      clearLegacyVoteState();
-    }
-  }, [queryMapId]);
-
-  useEffect(() => {
-    if (data?.confirmed) {
-      clearRefetchInterval();
-    }
-  }, [data, clearRefetchInterval]);
-
-  useEffect(() => {
-    if (currentIndex >= distanceSummaries.length) {
-      setCurrentIndex(0);
-    }
-  }, [currentIndex, distanceSummaries.length]);
-
-  const handleNext = () => {
-    setCurrentIndex(prevIndex => (prevIndex + 1) % distanceSummaries.length);
-  };
-
-  const handlePrev = () => {
-    setCurrentIndex(
-      prevIndex =>
-        (prevIndex - 1 + distanceSummaries.length) % distanceSummaries.length,
-    );
-  };
+  const {
+    activeMapId,
+    currentIndex,
+    currentStation,
+    distanceSummaries,
+    participants,
+    isLoading,
+    handleNext,
+    handlePrev,
+  } = useResultPageState();
 
   const handleHotplaceBtnClick = (station: DistanceSummaryItem) => {
     setBottomSheet(prevState => ({

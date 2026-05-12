@@ -1,8 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-
-import { useAtom, useSetAtom } from 'jotai';
+import { useSetAtom } from 'jotai';
 import { bottomSheetState } from '@/jotai/global/store';
 
 import styled from 'styled-components';
@@ -10,42 +8,24 @@ import DistanceSummary from './components/DistanceSummary';
 import HotPlaceModal from './components/HotPlaceModal';
 import ResultMap from './components/ResultMap';
 
-import { useSearchParams } from 'next/navigation';
 import { Button } from '@nextui-org/react';
 
-import { usePlaceSearchWithShareKeyMutation } from '@/hooks/mutation/search';
-import { resultConfirmState } from '@/jotai/result-confirm/store';
-import { StationInfo } from '@/types/location';
+import useConfirmedResult from '@/hooks/result/useConfirmedResult';
 
 export default function ResultConfirmBody() {
-  const shareKey = useSearchParams().get('sharekey');
-
   const setBottomSheet = useSetAtom(bottomSheetState);
-  const [resultConfirm, setResultConfirm] = useAtom(resultConfirmState);
-  const [loadFailed, setLoadFailed] = useState(false);
+  const {
+    resultConfirm,
+    stationName,
+    shareKey,
+    averageTravelTime,
+    hasResult,
+    isLoading,
+  } = useConfirmedResult();
 
-  const { mutate: placeSearchWithShareKey, isPending } =
-    usePlaceSearchWithShareKeyMutation();
+  const { station_name, itinerary, request_info, end_x, end_y } = resultConfirm;
 
-  const { station_name, share_key, itinerary, request_info, end_x, end_y } =
-    resultConfirm;
-
-  const totalTravelTime = itinerary.reduce(
-    (sum, itinerary) => sum + itinerary.itinerary.totalTime,
-    0,
-  );
-  const averageTravelTime = itinerary.length
-    ? totalTravelTime / itinerary.length
-    : 0;
-  const stationName = station_name.split(' ')[0];
-  const shouldFetchShareResult = Boolean(shareKey && share_key !== shareKey);
-  const hasResult =
-    Boolean(station_name) &&
-    itinerary.length > 0 &&
-    Boolean(request_info?.participant?.length) &&
-    !shouldFetchShareResult;
-
-  const handleHotplaceBtnClick = (station: StationInfo) => {
+  const handleHotplaceBtnClick = () => {
     setBottomSheet(prevState => ({
       ...prevState,
       isOpen: true,
@@ -55,38 +35,15 @@ export default function ResultConfirmBody() {
           <div>핫플레이스를 추천해요!</div>
         </>
       ),
-      contents: <HotPlaceModal station={station} />,
+      contents: <HotPlaceModal station={resultConfirm} />,
       height: 60,
     }));
   };
 
-  useEffect(() => {
-    if (shouldFetchShareResult && shareKey) {
-      setLoadFailed(false);
-      placeSearchWithShareKey(shareKey, {
-        onSuccess: data => {
-          if (data) {
-            setResultConfirm(data);
-          } else {
-            setLoadFailed(true);
-          }
-        },
-        onError: () => {
-          setLoadFailed(true);
-        },
-      });
-    }
-  }, [
-    shareKey,
-    shouldFetchShareResult,
-    placeSearchWithShareKey,
-    setResultConfirm,
-  ]);
-
   if (!hasResult) {
     return (
       <EmptyContainer>
-        {shareKey && !loadFailed && (isPending || shouldFetchShareResult) ? (
+        {isLoading ? (
           <>
             <EmptyTitle>확정된 장소를 불러오는 중입니다.</EmptyTitle>
             <EmptyText>잠시만 기다려주세요.</EmptyText>
@@ -106,7 +63,7 @@ export default function ResultConfirmBody() {
       <Container>
         <DistanceSummary
           stationName={stationName}
-          shareKey={share_key}
+          shareKey={shareKey}
           averageTravelTime={averageTravelTime}
         />
         <ResultMap
@@ -122,7 +79,7 @@ export default function ResultConfirmBody() {
           size="lg"
           color="success"
           variant="shadow"
-          onClick={() => handleHotplaceBtnClick(resultConfirm)}
+          onClick={handleHotplaceBtnClick}
         >
           {stationName} 핫플레이스는 어디?
         </FloatingButton>
