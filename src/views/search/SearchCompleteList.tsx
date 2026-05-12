@@ -32,10 +32,6 @@ export default function SearchCompleteList() {
     setSearchList(prevList => prevList.filter((_, i) => i !== index));
   };
 
-  const handleModifyIconClick = () => {
-    console.log('handleModifyIconClick');
-  };
-
   useEffect(() => {
     const image = new Image();
     image.src = '/loading.gif';
@@ -59,7 +55,6 @@ export default function SearchCompleteList() {
                 name={search.name}
                 place={search.address.regionName}
                 onDeleteIconClick={() => handleDeleteIconClick(index)}
-                onModifyIconClick={handleModifyIconClick}
               />
             );
           })}

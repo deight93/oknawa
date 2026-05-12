@@ -97,7 +97,6 @@ export default function SearchCompleteListWithTogetherView() {
                 place={participant.region_name}
                 index={index}
                 type="together"
-                isKing={Boolean(storageRoomData.hostId)}
               />
             );
           })}

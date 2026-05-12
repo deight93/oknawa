@@ -1,5 +1,4 @@
 import { MinusIcon } from '@/assets/icons/Minus';
-import { PencilIcon } from '@/assets/icons/Pencil';
 import { Crown } from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import styled from 'styled-components';
@@ -8,20 +7,16 @@ interface PeopleCardProps {
   name: string;
   place: string;
   onDeleteIconClick?: () => void;
-  onModifyIconClick?: () => void;
   index?: number;
   type?: 'individual' | 'together';
-  isKing?: boolean;
 }
 
 export default function PeopleCard({
   name,
   place,
   onDeleteIconClick,
-  onModifyIconClick,
   index,
   type = 'individual',
-  isKing = false,
 }: PeopleCardProps) {
   return (
     <Container>
@@ -35,18 +30,13 @@ export default function PeopleCard({
           <Place>{place}</Place>
         </div>
       </Wrapper>
-      <IconsBox>
-        {type === 'together' && isKing && (
-          <Icon onClick={onModifyIconClick}>
-            <PencilIcon width="20" height="20" />
-          </Icon>
-        )}
-        {onDeleteIconClick && (
+      {onDeleteIconClick && (
+        <IconsBox>
           <Icon onClick={onDeleteIconClick}>
             <MinusIcon width="20" height="20" />
           </Icon>
-        )}
-      </IconsBox>
+        </IconsBox>
+      )}
     </Container>
   );
 }
