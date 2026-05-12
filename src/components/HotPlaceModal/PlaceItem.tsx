@@ -1,18 +1,18 @@
 import { Card, CardBody, CardHeader } from '@nextui-org/react';
 import Link from 'next/link';
 import styled from 'styled-components';
-import Image from 'next/image';
 
-import { HotPlace } from '@/services/hot-place/types';
 import { CafeIcon } from '@/assets/icons/Cafe';
 import { RestaurantIcon } from '@/assets/icons/Restaurant';
+import { HotPlace } from '@/services/hot-place/types';
 
 interface PlaceItemProps {
   place: HotPlace;
 }
 
-type CategoryIcons = {
-  [key: string]: JSX.Element;
+const categoryIcons: Record<string, JSX.Element> = {
+  음식점: <RestaurantIcon color="gray" width="16" height="16" />,
+  카페: <CafeIcon color="gray" width="16" height="16" />,
 };
 
 export default function PlaceItem({ place }: PlaceItemProps) {
@@ -28,11 +28,6 @@ export default function PlaceItem({ place }: PlaceItemProps) {
   const today = day_business_hours_infos?.[0];
   const dayOfWeek = today?.day_of_the_week ?? '영업시간 미기재';
   const timeSE = today?.day_time?.start_end_time ?? '';
-
-  const categoryIcons: CategoryIcons = {
-    음식점: <RestaurantIcon color="gray" width="16" height="16" />,
-    카페: <CafeIcon color="gray" width="16" height="16" />,
-  };
 
   return (
     <Link href={place_url} passHref legacyBehavior>
