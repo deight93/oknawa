@@ -1,29 +1,23 @@
 import type { SupabaseClient } from 'jsr:@supabase/supabase-js';
+import type {
+  KakaoKeywordDocument,
+  PopularLocationType,
+} from './location-types.ts';
 import { normalizeStationName } from './normalize.ts';
 import { responseJson } from './utils.ts';
-
-type PopularLocationType = 'station' | 'terminal';
-
-interface PopularLocationSource {
-  place_name: string;
-  place_url: string;
-  road_address_name?: string;
-  x: string;
-  y: string;
-}
 
 interface SyncPopularLocationsOptions {
   supabase: SupabaseClient;
   type: PopularLocationType;
   sourceNames: string[];
-  fetchLocationData: (sourceName: string) => Promise<PopularLocationSource[]>;
+  fetchLocationData: (sourceName: string) => Promise<KakaoKeywordDocument[]>;
   successMessage: string;
 }
 
 const TABLE_NAME = 'popular_meeting_location';
 
 const toUpsertItem = (
-  location: PopularLocationSource,
+  location: KakaoKeywordDocument,
   type: PopularLocationType,
   now: string,
 ) => ({

@@ -2,6 +2,12 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js';
 import { getEnv } from '../lib/env.ts';
 import { getCenterCoordinates, getCenterLocations } from '../lib/distance.ts';
+import type {
+  LocationPointsRequestBody,
+  PopularMeetingLocation,
+  StationInfoInsert,
+} from '../lib/location-types.ts';
+import { isRouteParticipantList } from '../lib/location-types.ts';
 import { callGoogleMapItineraries } from '../lib/mapapi.ts';
 import { responseError, responseJson } from '../lib/utils.ts';
 
@@ -18,9 +24,9 @@ Deno.serve(async req => {
   }
 
   try {
-    let body: { participant?: any[] } | null = null;
+    let body: LocationPointsRequestBody | null = null;
     try {
-      body = await req.json();
+      body = (await req.json()) as LocationPointsRequestBody;
     } catch {
       return responseJson({ error: 'invalid JSON body' }, 400);
     }
@@ -30,11 +36,7 @@ Deno.serve(async req => {
       new URL(req.url).searchParams.get('priority') ?? '4',
     );
 
-    if (
-      !participants ||
-      !Array.isArray(participants) ||
-      participants.length === 0
-    ) {
+    if (!isRouteParticipantList(participants)) {
       return responseJson({ error: 'invalid participant' }, 400);
     }
 
@@ -52,13 +54,15 @@ Deno.serve(async req => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // 1. 인기역 데이터 가져오기
-    const { data: stations, error } = await supabase
+    const { data: stationRows, error } = await supabase
       .from('popular_meeting_location')
       .select('*')
       .eq('type', recommendType)
       .is('deleted_at', null);
     if (error) throw new Error(error.message);
-    if (!stations?.length) {
+    const stations = (stationRows ?? []) as PopularMeetingLocation[];
+
+    if (!stations.length) {
       return responseJson({ error: 'popular_meeting_location is empty' }, 500);
     }
 
@@ -111,17 +115,19 @@ Deno.serve(async req => {
       );
     }
 
-    const stationInfoBulk = stationInfoList.map(station => ({
-      map_id: mapId,
-      share_key: crypto.randomUUID(),
-      vote: 0,
-      end_x: station.end_x,
-      end_y: station.end_y,
-      address_name: station.address_name,
-      station_name: station.station_name,
-      itinerary: station.itinerary || [],
-      request_info: { participant: participants },
-    }));
+    const stationInfoBulk: StationInfoInsert[] = stationInfoList.map(
+      station => ({
+        map_id: mapId,
+        share_key: crypto.randomUUID(),
+        vote: 0,
+        end_x: station.end_x,
+        end_y: station.end_y,
+        address_name: station.address_name,
+        station_name: station.station_name,
+        itinerary: station.itinerary || [],
+        request_info: { participant: participants },
+      }),
+    );
 
     const { error: stationErr } = await supabase
       .from('station_info')

@@ -1,4 +1,5 @@
 import { getEnv } from './env.ts';
+import type { KakaoKeywordDocument } from './location-types.ts';
 import { fetchJson } from './utils.ts';
 
 const KAKAO_API_KEY = getEnv('KAKAO_REST_API_KEY')!;
@@ -15,16 +16,6 @@ interface SubwayStatsResponse {
   CardSubwayStatsNew?: {
     row?: SubwayStatsRow[];
   };
-}
-
-interface KakaoKeywordDocument {
-  place_name: string;
-  place_url: string;
-  road_address_name?: string;
-  x: string;
-  y: string;
-  category_group_name?: string;
-  category_name?: string;
 }
 
 interface KakaoKeywordResponse {

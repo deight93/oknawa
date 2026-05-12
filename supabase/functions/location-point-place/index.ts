@@ -1,13 +1,12 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { getEnv } from '../lib/env.ts';
+import type {
+  KakaoPlaceDocument,
+  KakaoPlaceSearchResponse,
+} from '../lib/location-types.ts';
 import { fetchJson, responseError, responseJson } from '../lib/utils.ts';
 
 const KAKAO_REST_API_KEY = getEnv('KAKAO_REST_API_KEY');
-
-interface KakaoPlaceSearchResponse {
-  documents?: any[];
-  meta?: Record<string, unknown>;
-}
 
 interface KakaoPlaceDetailResponse {
   photos?: {
@@ -97,7 +96,7 @@ Deno.serve(async req => {
     const meta = kakaoData.meta ?? {};
 
     const details = await Promise.all(
-      documents.map(async (doc: any) => {
+      documents.map(async (doc: KakaoPlaceDocument) => {
         const placeUrl = doc.place_url;
         if (!placeUrl) return doc;
         const placeId = placeUrl.split('/').pop();

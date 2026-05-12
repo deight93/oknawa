@@ -1,5 +1,11 @@
 import polyline from 'https://esm.sh/@mapbox/polyline';
 import { getEnv } from './env.ts';
+import type {
+  PopularMeetingLocation,
+  RouteItinerary,
+  RouteParticipant,
+  StationItineraryResult,
+} from './location-types.ts';
 import { fetchJson } from './utils.ts';
 
 interface GoogleRoute {
@@ -14,9 +20,9 @@ interface GoogleRoutesResponse {
 }
 
 export async function callGoogleMapItineraries(
-  participants: any[],
-  stations: any[],
-) {
+  participants: RouteParticipant[],
+  stations: PopularMeetingLocation[],
+): Promise<StationItineraryResult[]> {
   const GOOGLE_API_KEY = getEnv('GOOGLE_API_KEY');
   const GOOGLE_API_URL = getEnv('GOOGLE_API_URL');
 
@@ -26,10 +32,10 @@ export async function callGoogleMapItineraries(
     'X-Goog-FieldMask': 'routes.duration,routes.polyline.encodedPolyline',
   };
 
-  const stationInfoList = [];
+  const stationInfoList: StationItineraryResult[] = [];
 
   for (const station of stations) {
-    const itineraryList = [];
+    const itineraryList: RouteItinerary[] = [];
 
     for (const participant of participants) {
       const origin = {
@@ -44,8 +50,8 @@ export async function callGoogleMapItineraries(
       const destination = {
         location: {
           latLng: {
-            latitude: parseFloat(station.location_y),
-            longitude: parseFloat(station.location_x),
+            latitude: Number(station.location_y),
+            longitude: Number(station.location_x),
           },
         },
       };
@@ -91,8 +97,8 @@ export async function callGoogleMapItineraries(
     stationInfoList.push({
       station_name: station.name,
       address_name: station.address,
-      end_x: station.location_x,
-      end_y: station.location_y,
+      end_x: Number(station.location_x),
+      end_y: Number(station.location_y),
       itinerary: itineraryList,
     });
   }
