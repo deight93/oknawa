@@ -19,6 +19,11 @@
 # misc
 .DS_Store
 *.pem
+.idea/
+.vscode/
+*.orig
+*.pyc
+*.swp
 
 # debug
 npm-debug.log*
@@ -32,6 +37,10 @@ yarn-error.log*
 
 # vercel
 .vercel
+
+# supabase
+supabase/.branches
+supabase/.temp
 
 # typescript
 *.tsbuildinfo
