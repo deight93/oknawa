@@ -40,6 +40,17 @@ export default function SearchCompleteListWithTogetherView() {
     isSuccess,
   } = usePlaceSearchMutation();
   const { mutate: placeSearchMapIdMutate } = usePlaceSearchMapIdMutation();
+  const participantList = participants ?? [];
+
+  const toSearchState = (participant: any): SearchState => ({
+    name: participant.name,
+    address: {
+      fullAddress: participant.full_address ?? participant.region_name,
+      latitude: participant.start_y,
+      longitude: participant.start_x,
+      regionName: participant.region_name,
+    },
+  });
 
   const handleInviteBtnClick = () => {
     navigator.clipboard
@@ -54,7 +65,7 @@ export default function SearchCompleteListWithTogetherView() {
       return toast.error('방장의 권한입니다.');
     }
 
-    setSearchList(participants);
+    setSearchList(participantList.map(toSearchState));
     router.push('/search/together');
   };
 
@@ -63,24 +74,8 @@ export default function SearchCompleteListWithTogetherView() {
       return toast.error('방장의 권한입니다.');
     }
 
-    const transformedParticipants: SearchState[] = participants.map(
-      (participant: any, index: number) => {
-        const latitude =
-          index === 0 ? participant.start_y : participant.start_x;
-        const longitude =
-          index === 0 ? participant.start_x : participant.start_y;
-
-        return {
-          name: participant.name,
-          address: {
-            fullAddress: participant.region_name,
-            latitude: latitude,
-            longitude: longitude,
-            regionName: participant.region_name,
-          },
-        };
-      },
-    );
+    const transformedParticipants: SearchState[] =
+      participantList.map(toSearchState);
 
     placeSearchMutate(transformedParticipants, {
       onSuccess: data => {
@@ -125,7 +120,7 @@ export default function SearchCompleteListWithTogetherView() {
           </TitleBox>
         </Section>
         <div className="flex flex-col gap-3">
-          {participants?.map((participant: any, index: number) => {
+          {participantList.map((participant: any, index: number) => {
             return (
               <PeopleCard
                 key={index}
@@ -162,7 +157,7 @@ export default function SearchCompleteListWithTogetherView() {
           size="lg"
           color="success"
           onClick={handleSearchBtnClick}
-          isDisabled={participants?.length < 2}
+          isDisabled={participantList.length < 2}
           className="w-full"
         >
           만나기 편한 장소 추천받기

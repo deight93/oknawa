@@ -9,19 +9,21 @@ export const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 export default function useDistanceSummary() {
   const [result] = useAtom(resultState);
 
-  const { station_info, request_info } = result;
+  const { station_info = [], request_info } = result;
 
   const distanceSummaries = station_info.map(station => {
-    const stationName = station.station_name.split(' ')[0];
-    const itinerary = station.itinerary;
+    const stationName = station.station_name?.split(' ')[0] ?? '';
+    const itinerary = station.itinerary ?? [];
     const shareKey = station.share_key;
-    const stationParticipants = station.request_info.participant;
-    const totalTravelTime = station.itinerary.reduce(
+    const stationParticipants = station.request_info?.participant ?? [];
+    const totalTravelTime = itinerary.reduce(
       (sum, itinerary) => sum + itinerary.itinerary.totalTime,
       0,
     );
     const vote = station.vote;
-    const averageTravelTime = totalTravelTime / itinerary.length;
+    const averageTravelTime = itinerary.length
+      ? totalTravelTime / itinerary.length
+      : 0;
 
     return {
       station,
@@ -68,6 +70,6 @@ export default function useDistanceSummary() {
     distanceSummaries,
     initKakao,
     kakaoShareSendDefault,
-    participants: request_info.participant,
+    participants: request_info?.participant ?? [],
   };
 }

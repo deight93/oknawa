@@ -66,6 +66,7 @@ Deno.serve(async (req) => {
         address: station.road_address_name ?? "",
         location_x: Number(station.x),
         location_y: Number(station.y),
+        created_at: now,
         updated_at: now,
         deleted_at: null
       });
@@ -95,6 +96,7 @@ Deno.serve(async (req) => {
     const { error: deleteError } = await supabase
         .from("popular_meeting_location")
         .update({ deleted_at: now })
+        .eq("type", "station")
         .filter("name", "in", `(${encodedNames})`)
         .is("deleted_at", null);
 
@@ -104,6 +106,4 @@ Deno.serve(async (req) => {
   }
   return responseJson({ msg: "지하철 이용객 상위 100개 장소 최신화 완료" });
 });
-
-
 

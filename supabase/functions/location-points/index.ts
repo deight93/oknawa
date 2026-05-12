@@ -47,6 +47,9 @@ Deno.serve(async (req) => {
         .eq("type", recommendType)
         .is("deleted_at", null);
     if (error) throw new Error(error.message);
+    if (!stations?.length) {
+      return responseJson({ error: "popular_meeting_location is empty" }, 500);
+    }
 
     // 2. 중간좌표 계산
     const centerCoordinates = getCenterCoordinates(participants);
@@ -56,6 +59,9 @@ Deno.serve(async (req) => {
 
     // 4. 각 역에 대해 Google Map Itinerary 생성
     const stationInfoList = await callGoogleMapItineraries(participants, centerLocationDataList);
+    if (!stationInfoList.length || stationInfoList.every((station) => station.itinerary.length === 0)) {
+      return responseJson({ error: "no route result" }, 500);
+    }
 
     // 5. 추가정보 세팅
     const mapId = crypto.randomUUID();

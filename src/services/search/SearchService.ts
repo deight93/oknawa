@@ -16,19 +16,19 @@ export default class SearchService {
   }
 
   static async searchPolling(mapId: string) {
-    const { data } = await pollingApi.get(`/rest/v1/location_result?map_id=eq.${mapId}&select=*,station_info!station_info_map_id_fkey(*)`);
+    const { data } = await api.get(`/rest/v1/location_result?map_id=eq.${mapId}&select=*,station_info!station_info_map_id_fkey(*)&limit=1`);
 
-    return data;
+    return data?.[0] ?? null;
   }
 
   static async searchPlacesWithShareKey(shareKey?: string | null) {
     if (!shareKey) {
-      return;
+      return null;
     }
 
-    const { data } = await pollingApi.get(`/rest/v1/station_info?share_key=eq.${shareKey}&select=*`);
+    const { data } = await api.get(`/rest/v1/station_info?share_key=eq.${shareKey}&select=*&limit=1`);
 
-    return data;
+    return data?.[0] ?? null;
   }
 
   static async makeRoom(searchForm: any) {

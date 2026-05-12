@@ -28,6 +28,9 @@ const getStrokeColor = (index: number) => {
   }
 };
 
+const isFiniteNumber = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value);
+
 export default function ResultMap({
   station,
   stationName,
@@ -36,34 +39,54 @@ export default function ResultMap({
 }: any) {
   const [loaded, setLoaded] = useState(false);
   const [map, setMap] = useState<kakao.maps.Map | undefined>(undefined);
+  const destination = station?.station ?? station;
+  const center = {
+    lat: Number(destination?.end_y),
+    lng: Number(destination?.end_x),
+  };
+  const validParticipants = (participants ?? []).filter(
+    (user: any) =>
+      Number.isFinite(Number(user.start_y)) &&
+      Number.isFinite(Number(user.start_x)),
+  );
+  const polylines = (itinerary ?? [])
+    .map((user: any) => user.itinerary?.total_polyline ?? [])
+    .map((polyline: any[]) =>
+      polyline.filter(
+        path => Number.isFinite(Number(path.lat)) && Number.isFinite(Number(path.lng)),
+      ),
+    )
+    .filter((polyline: any[]) => polyline.length > 0);
+  const canRenderMap =
+    loaded && isFiniteNumber(center.lat) && isFiniteNumber(center.lng);
 
   const getMapBounds = useCallback(() => {
     if (!map) return;
 
     const bounds = new kakao.maps.LatLngBounds();
 
-    participants.forEach((user: any) => {
+    validParticipants.forEach((user: any) => {
       const { start_y, start_x } = user;
       const position = new kakao.maps.LatLng(start_y, start_x);
       bounds.extend(position);
     });
 
-    return bounds;
-  }, [participants, map]);
+    bounds.extend(new kakao.maps.LatLng(center.lat, center.lng));
 
-  const polylines = itinerary?.map((user: any) => {
-    return user.itinerary.total_polyline;
-  });
+    return bounds;
+  }, [center.lat, center.lng, validParticipants, map]);
 
   const handleMarkerClick = (marker: kakao.maps.Marker, index: number) => {
     if (!map) return;
+    const polyline = polylines[index];
+    if (!polyline) return;
 
     map.panTo(marker.getPosition());
 
     const strokeColor = getStrokeColor(index);
     new kakao.maps.Polyline({
       map: map,
-      path: polylines[index].map((path: any) => {
+      path: polyline.map((path: any) => {
         return new kakao.maps.LatLng(path.lat, path.lng);
       }),
       strokeWeight: 7,
@@ -75,7 +98,8 @@ export default function ResultMap({
   useEffect(() => {
     if (!map) return;
 
-    const bounds = getMapBounds()!;
+    const bounds = getMapBounds();
+    if (!bounds) return;
 
     map.setBounds(bounds);
   }, [map, station, getMapBounds]);
@@ -93,18 +117,18 @@ export default function ResultMap({
     } else {
       loadKakaoMapScript();
     }
-  }, [station, polylines]);
+  }, [station]);
 
   return (
     <>
-      {loaded && (
+      {canRenderMap && (
         <Map
-          center={{ lat: station.station.end_y, lng: station.station.end_x }}
+          center={center}
           level={3}
           isPanto
           onCreate={setMap}
         >
-          {participants.map((user: any, index: number) => {
+          {validParticipants.map((user: any, index: number) => {
             return (
               <MapMarker
                 key={index}
@@ -120,9 +144,7 @@ export default function ResultMap({
               />
             );
           })}
-          <CustomOverlayMap
-            position={{ lat: station.end_y, lng: station.end_x }}
-          >
+          <CustomOverlayMap position={center}>
             <CenterMarker>{stationName}</CenterMarker>
           </CustomOverlayMap>
           {polylines.map((polyline: any, index: number) => {

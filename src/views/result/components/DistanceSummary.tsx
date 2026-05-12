@@ -88,21 +88,31 @@ export default function DistanceSummary({
 
   const [fullUrl, setFullUrl] = useState('');
   const [isExpandTail, setExpandTail] = useState(true);
+  const [isVote, setIsVote] = useState(false);
 
   const queryMapId = useSearchParams().get('mapId');
+  const activeMapId = (mapIdInfo.mapId || queryMapId) ?? '';
+  const voteStorageKey = activeMapId ? `isVote:${activeMapId}` : '';
 
   const { setModalContents } = useModal();
 
   const { mutate: placeSearchWithShareKey } =
     usePlaceSearchWithShareKeyMutation();
 
-  const isVote = localStorage.getItem('isVote') === 'true';
-
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setFullUrl(window.location.href);
     }
   }, []);
+
+  useEffect(() => {
+    if (!voteStorageKey) {
+      setIsVote(false);
+      return;
+    }
+
+    setIsVote(localStorage.getItem(voteStorageKey) === 'true');
+  }, [voteStorageKey]);
 
   const clickInvitation = async () => {
     if (queryMapId) {
@@ -144,13 +154,17 @@ export default function DistanceSummary({
     reset();
     try {
       await VoteService.setVote(
-        (mapIdInfo.mapId || queryMapId) ?? '',
+        activeMapId,
         shareKey,
       );
+      if (voteStorageKey) {
+        localStorage.setItem(voteStorageKey, 'true');
+        localStorage.removeItem('isVote');
+      }
+      setIsVote(true);
     } catch (error) {
       console.error('Error voting:', error);
     }
-    localStorage.setItem('isVote', 'true');
   };
 
   const clickVoteConfirm = async () => {
@@ -174,14 +188,17 @@ export default function DistanceSummary({
     placeSearchWithShareKey(shareKey, {
       onSuccess: data => {
         setResultConfirm(data);
+        if (voteStorageKey) {
+          localStorage.removeItem(voteStorageKey);
+        }
         localStorage.removeItem('isVote');
+        router.replace(`/result/confirm?sharekey=${shareKey}`);
+        reset();
       },
       onError: error => {
         console.error('Error fetching map data:', error);
       },
     });
-    router.replace('/result/confirm');
-    reset();
   };
 
   const handleVoteConfirm = async () => {

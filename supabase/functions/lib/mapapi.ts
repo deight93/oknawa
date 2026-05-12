@@ -1,10 +1,10 @@
 import polyline from "https://esm.sh/@mapbox/polyline";
 import { getEnv } from "./env.ts";
 
-const GOOGLE_API_KEY = getEnv("GOOGLE_API_KEY");
-const GOOGLE_API_URL = getEnv("GOOGLE_API_URL");
-
 export async function callGoogleMapItineraries(participants: any[], stations: any[]) {
+    const GOOGLE_API_KEY = getEnv("GOOGLE_API_KEY");
+    const GOOGLE_API_URL = getEnv("GOOGLE_API_URL");
+
     const headers = {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": GOOGLE_API_KEY,

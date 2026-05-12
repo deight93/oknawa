@@ -14,7 +14,7 @@ export interface ItineraryItem {
 
 export interface Participant {
   name: string;
-  region_nmae: string;
+  region_name: string;
   start_x: number;
   start_y: number;
 }
@@ -38,24 +38,13 @@ const InitialRequestInfo: RequestInfo = {
   participant: [],
 };
 
-const initialResultObject: ResultObject = {
-  station_name: '',
-  address_name: '',
-  end_x: 0,
-  end_y: 0,
-  share_key: '',
-  itinerary: [],
-  request_info: InitialRequestInfo,
-  vote: 0,
-};
-
 interface ResultState {
   station_info: ResultObject[];
   request_info: RequestInfo;
 }
 
 const initialState: ResultState = {
-  station_info: [initialResultObject],
+  station_info: [],
   request_info: InitialRequestInfo,
 };
 

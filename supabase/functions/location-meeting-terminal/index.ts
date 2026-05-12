@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
       .from("popular_meeting_location")
       .select("name, type")
       .is("deleted_at", null)
-      .eq("type", "station");
+      .eq("type", "terminal");
 
   if (existingListError) {
     console.error("DB 조회 실패:", existingListError);
@@ -65,6 +65,7 @@ Deno.serve(async (req) => {
         address: station.road_address_name ?? "",
         location_x: Number(station.x),
         location_y: Number(station.y),
+        created_at: now,
         updated_at: now,
         deleted_at: null
       });
@@ -81,7 +82,7 @@ Deno.serve(async (req) => {
         .upsert(uniqueUpsertItems, { onConflict: "name" });
     if (upsertError) {
       console.error("Upsert Error:", upsertError);
-      return new Response(JSON.stringify({ msg: "DB upsert 실패" }), { status: 500 });
+      return responseJson({ msg: "DB upsert 실패", detail: upsertError.message }, 500);
     }
   }
 
@@ -95,6 +96,7 @@ Deno.serve(async (req) => {
     const { error: deleteError } = await supabase
         .from("popular_meeting_location")
         .update({ deleted_at: now })
+        .eq("type", "terminal")
         .filter("name", "in", `(${encodedNames})`)
         .is("deleted_at", null);
 

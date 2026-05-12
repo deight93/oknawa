@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useAtom, useSetAtom } from 'jotai';
 import { bottomSheetState } from '@/jotai/global/store';
@@ -21,8 +21,9 @@ export default function ResultConfirmBody() {
 
   const setBottomSheet = useSetAtom(bottomSheetState);
   const [resultConfirm, setResultConfirm] = useAtom(resultConfirmState);
+  const [loadFailed, setLoadFailed] = useState(false);
 
-  const { mutate: placeSearchWithShareKey } =
+  const { mutate: placeSearchWithShareKey, isPending } =
     usePlaceSearchWithShareKeyMutation();
 
   const { station_name, share_key, itinerary, request_info, end_x, end_y } =
@@ -32,8 +33,16 @@ export default function ResultConfirmBody() {
     (sum, itinerary) => sum + itinerary.itinerary.totalTime,
     0,
   );
-  const averageTravelTime = totalTravelTime / itinerary.length;
+  const averageTravelTime = itinerary.length
+    ? totalTravelTime / itinerary.length
+    : 0;
   const stationName = station_name.split(' ')[0];
+  const shouldFetchShareResult = Boolean(shareKey && share_key !== shareKey);
+  const hasResult =
+    Boolean(station_name) &&
+    itinerary.length > 0 &&
+    Boolean(request_info?.participant?.length) &&
+    !shouldFetchShareResult;
 
   const handleHotplaceBtnClick = (station: any) => {
     setBottomSheet(prevState => ({
@@ -51,17 +60,45 @@ export default function ResultConfirmBody() {
   };
 
   useEffect(() => {
-    if (shareKey && station_name === '') {
+    if (shouldFetchShareResult && shareKey) {
+      setLoadFailed(false);
       placeSearchWithShareKey(shareKey, {
         onSuccess: data => {
-          setResultConfirm(data);
+          if (data) {
+            setResultConfirm(data);
+          } else {
+            setLoadFailed(true);
+          }
         },
-        onError: error => {
-          console.error('Error fetching shareKey result data:', error);
+        onError: () => {
+          setLoadFailed(true);
         },
       });
     }
-  }, [shareKey, station_name, placeSearchWithShareKey, setResultConfirm]);
+  }, [
+    shareKey,
+    shouldFetchShareResult,
+    placeSearchWithShareKey,
+    setResultConfirm,
+  ]);
+
+  if (!hasResult) {
+    return (
+      <EmptyContainer>
+        {shareKey && !loadFailed && (isPending || shouldFetchShareResult) ? (
+          <>
+            <EmptyTitle>확정된 장소를 불러오는 중입니다.</EmptyTitle>
+            <EmptyText>잠시만 기다려주세요.</EmptyText>
+          </>
+        ) : (
+          <>
+            <EmptyTitle>확정된 장소를 찾을 수 없습니다.</EmptyTitle>
+            <EmptyText>공유 링크를 다시 확인해주세요.</EmptyText>
+          </>
+        )}
+      </EmptyContainer>
+    );
+  }
 
   return (
     <>
@@ -106,4 +143,25 @@ const FloatingButton = styled(Button)`
   transform: translateX(-50%);
   font-weight: 600;
   z-index: 2;
+`;
+
+const EmptyContainer = styled.main`
+  display: flex;
+  min-height: 100dvh;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px;
+  text-align: center;
+`;
+
+const EmptyTitle = styled.h1`
+  font-size: 24px;
+  font-weight: 700;
+`;
+
+const EmptyText = styled.p`
+  color: #777;
+  line-height: 1.5;
 `;
