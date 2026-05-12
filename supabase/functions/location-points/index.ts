@@ -1,14 +1,16 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js';
 import { getEnv } from '../lib/env.ts';
-import { getCenterCoordinates, getCenterLocations } from '../lib/distance.ts';
-import type {
-  LocationPointsRequestBody,
-  PopularMeetingLocation,
-  StationInfoInsert,
-} from '../lib/location-types.ts';
-import { isRouteParticipantList } from '../lib/location-types.ts';
-import { callGoogleMapItineraries } from '../lib/mapapi.ts';
+import {
+  buildStationInfoInserts,
+  buildStationItineraries,
+  createLocationResult,
+  fetchPopularMeetingLocations,
+  insertStationInfo,
+  isResponse,
+  parseLocationPointsRequest,
+  resolveRecommendType,
+} from '../lib/location-points.ts';
 import { responseError, responseJson } from '../lib/utils.ts';
 
 const SUPABASE_URL = getEnv('SUPABASE_URL');
@@ -24,124 +26,44 @@ Deno.serve(async req => {
   }
 
   try {
-    let body: LocationPointsRequestBody | null = null;
-    try {
-      body = (await req.json()) as LocationPointsRequestBody;
-    } catch {
-      return responseJson({ error: 'invalid JSON body' }, 400);
-    }
-
-    const participants = body?.participant;
-    const priority = Number(
-      new URL(req.url).searchParams.get('priority') ?? '4',
-    );
-
-    if (!isRouteParticipantList(participants)) {
-      return responseJson({ error: 'invalid participant' }, 400);
-    }
-
-    // 2. 서울/경기 판별 함수
-    function isSeoulOrGyeonggi(full_address: string): boolean {
-      return full_address.includes('서울') || full_address.includes('경기');
-    }
-
-    // 3. 추천 타입 결정
-    const hasNonSeoulGyeonggi = participants.some(
-      p => !isSeoulOrGyeonggi(p.full_address),
-    );
-    const recommendType = hasNonSeoulGyeonggi ? 'terminal' : 'station';
+    const requestData = await parseLocationPointsRequest(req);
+    if (isResponse(requestData)) return requestData;
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const recommendType = resolveRecommendType(requestData.participants);
+    const locations = await fetchPopularMeetingLocations(
+      supabase,
+      recommendType,
+    );
+    if (isResponse(locations)) return locations;
 
-    // 1. 인기역 데이터 가져오기
-    const { data: stationRows, error } = await supabase
-      .from('popular_meeting_location')
-      .select('*')
-      .eq('type', recommendType)
-      .is('deleted_at', null);
-    if (error) throw new Error(error.message);
-    const stations = (stationRows ?? []) as PopularMeetingLocation[];
+    const stationInfoList = await buildStationItineraries(
+      requestData.participants,
+      locations,
+      requestData.priority,
+    );
+    if (isResponse(stationInfoList)) return stationInfoList;
 
-    if (!stations.length) {
-      return responseJson({ error: 'popular_meeting_location is empty' }, 500);
-    }
+    const locationResult = await createLocationResult(
+      supabase,
+      requestData.participants,
+    );
+    if (isResponse(locationResult)) return locationResult;
 
-    // 2. 중간좌표 계산
-    const centerCoordinates = getCenterCoordinates(participants);
-
-    // 3. 가까운 역 추출
-    const centerLocationDataList = getCenterLocations(
-      centerCoordinates,
-      stations,
-      priority,
+    const stationInfoBulk = buildStationInfoInserts(
+      locationResult.map_id,
+      requestData.participants,
+      stationInfoList,
     );
 
-    // 4. 각 역에 대해 Google Map Itinerary 생성
-    const stationInfoList = await callGoogleMapItineraries(
-      participants,
-      centerLocationDataList,
+    const stationInfoError = await insertStationInfo(
+      supabase,
+      locationResult.map_id,
+      stationInfoBulk,
     );
-    if (
-      !stationInfoList.length ||
-      stationInfoList.every(station => station.itinerary.length === 0)
-    ) {
-      return responseJson({ error: 'no route result' }, 500);
-    }
+    if (stationInfoError) return stationInfoError;
 
-    // 5. 추가정보 세팅
-    const mapId = crypto.randomUUID();
-    const mapHostId = mapId
-      .replace(/-/g, '')
-      .slice(0, 8)
-      .split('')
-      .reverse()
-      .join('');
-
-    const { data: locRes, error: locErr } = await supabase
-      .from('location_result')
-      .insert({
-        map_id: mapId,
-        map_host_id: mapHostId,
-        request_info: { participant: participants },
-        confirmed: null,
-      })
-      .select('map_id, map_host_id')
-      .maybeSingle();
-
-    if (locErr || !locRes) {
-      return responseJson(
-        { msg: 'location_result insert error', detail: locErr?.message },
-        500,
-      );
-    }
-
-    const stationInfoBulk: StationInfoInsert[] = stationInfoList.map(
-      station => ({
-        map_id: mapId,
-        share_key: crypto.randomUUID(),
-        vote: 0,
-        end_x: station.end_x,
-        end_y: station.end_y,
-        address_name: station.address_name,
-        station_name: station.station_name,
-        itinerary: station.itinerary || [],
-        request_info: { participant: participants },
-      }),
-    );
-
-    const { error: stationErr } = await supabase
-      .from('station_info')
-      .insert(stationInfoBulk);
-
-    if (stationErr) {
-      await supabase.from('location_result').delete().eq('map_id', mapId);
-      return responseJson(
-        { msg: 'station_info insert error', detail: stationErr.message },
-        500,
-      );
-    }
-
-    return responseJson(locRes);
+    return responseJson(locationResult);
   } catch (err) {
     console.error('Error:', err);
     return responseError(err);
