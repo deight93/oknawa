@@ -12,7 +12,7 @@ import { isRouteParticipantList } from './location-types.ts';
 import { callGoogleMapItineraries } from './mapapi.ts';
 import { responseJson } from './utils.ts';
 
-interface LocationPointsRequest {
+export interface LocationPointsRequest {
   participants: RouteParticipant[];
   priority: number;
 }
@@ -22,31 +22,38 @@ interface LocationResultRow {
   map_host_id: string;
 }
 
-export const isResponse = (value: unknown): value is Response =>
-  value instanceof Response;
+export type StepResult<T> =
+  | { ok: true; data: T }
+  | { ok: false; response: Response };
+
+const ok = <T>(data: T): StepResult<T> => ({ ok: true, data });
+const fail = (response: Response): StepResult<never> => ({
+  ok: false,
+  response,
+});
 
 export async function parseLocationPointsRequest(
   req: Request,
-): Promise<LocationPointsRequest | Response> {
+): Promise<StepResult<LocationPointsRequest>> {
   let body: LocationPointsRequestBody | null = null;
 
   try {
     body = (await req.json()) as LocationPointsRequestBody;
   } catch {
-    return responseJson({ error: 'invalid JSON body' }, 400);
+    return fail(responseJson({ error: 'invalid JSON body' }, 400));
   }
 
   const participants = body?.participant;
   if (!isRouteParticipantList(participants)) {
-    return responseJson({ error: 'invalid participant' }, 400);
+    return fail(responseJson({ error: 'invalid participant' }, 400));
   }
 
   const priority = Number(new URL(req.url).searchParams.get('priority') ?? '4');
 
-  return {
+  return ok({
     participants,
     priority,
-  };
+  });
 }
 
 export function resolveRecommendType(
@@ -62,7 +69,7 @@ export function resolveRecommendType(
 export async function fetchPopularMeetingLocations(
   supabase: SupabaseClient,
   type: PopularLocationType,
-): Promise<PopularMeetingLocation[] | Response> {
+): Promise<StepResult<PopularMeetingLocation[]>> {
   const { data, error } = await supabase
     .from('popular_meeting_location')
     .select('*')
@@ -73,17 +80,19 @@ export async function fetchPopularMeetingLocations(
 
   const locations = (data ?? []) as PopularMeetingLocation[];
   if (!locations.length) {
-    return responseJson({ error: 'popular_meeting_location is empty' }, 500);
+    return fail(
+      responseJson({ error: 'popular_meeting_location is empty' }, 500),
+    );
   }
 
-  return locations;
+  return ok(locations);
 }
 
 export async function buildStationItineraries(
   participants: RouteParticipant[],
   locations: PopularMeetingLocation[],
   priority: number,
-): Promise<StationItineraryResult[] | Response> {
+): Promise<StepResult<StationItineraryResult[]>> {
   const centerCoordinates = getCenterCoordinates(participants);
   const centerLocationDataList = getCenterLocations(
     centerCoordinates,
@@ -99,16 +108,16 @@ export async function buildStationItineraries(
     !stationInfoList.length ||
     stationInfoList.every(station => station.itinerary.length === 0)
   ) {
-    return responseJson({ error: 'no route result' }, 500);
+    return fail(responseJson({ error: 'no route result' }, 500));
   }
 
-  return stationInfoList;
+  return ok(stationInfoList);
 }
 
 export async function createLocationResult(
   supabase: SupabaseClient,
   participants: RouteParticipant[],
-): Promise<LocationResultRow | Response> {
+): Promise<StepResult<LocationResultRow>> {
   const mapId = crypto.randomUUID();
   const mapHostId = toMapHostId(mapId);
 
@@ -124,13 +133,15 @@ export async function createLocationResult(
     .maybeSingle();
 
   if (error || !data) {
-    return responseJson(
-      { msg: 'location_result insert error', detail: error?.message },
-      500,
+    return fail(
+      responseJson(
+        { msg: 'location_result insert error', detail: error?.message },
+        500,
+      ),
     );
   }
 
-  return data as LocationResultRow;
+  return ok(data as LocationResultRow);
 }
 
 export function buildStationInfoInserts(
@@ -155,16 +166,55 @@ export async function insertStationInfo(
   supabase: SupabaseClient,
   mapId: string,
   stationInfoBulk: StationInfoInsert[],
-): Promise<Response | null> {
+): Promise<StepResult<null>> {
   const { error } = await supabase.from('station_info').insert(stationInfoBulk);
 
-  if (!error) return null;
+  if (!error) return ok(null);
 
   await supabase.from('location_result').delete().eq('map_id', mapId);
-  return responseJson(
-    { msg: 'station_info insert error', detail: error.message },
-    500,
+  return fail(
+    responseJson(
+      { msg: 'station_info insert error', detail: error.message },
+      500,
+    ),
   );
+}
+
+export async function runLocationPointsFlow(
+  supabase: SupabaseClient,
+  request: LocationPointsRequest,
+): Promise<StepResult<LocationResultRow>> {
+  const recommendType = resolveRecommendType(request.participants);
+  const locations = await fetchPopularMeetingLocations(supabase, recommendType);
+  if (!locations.ok) return locations;
+
+  const stationInfoList = await buildStationItineraries(
+    request.participants,
+    locations.data,
+    request.priority,
+  );
+  if (!stationInfoList.ok) return stationInfoList;
+
+  const locationResult = await createLocationResult(
+    supabase,
+    request.participants,
+  );
+  if (!locationResult.ok) return locationResult;
+
+  const stationInfoBulk = buildStationInfoInserts(
+    locationResult.data.map_id,
+    request.participants,
+    stationInfoList.data,
+  );
+
+  const stationInsert = await insertStationInfo(
+    supabase,
+    locationResult.data.map_id,
+    stationInfoBulk,
+  );
+  if (!stationInsert.ok) return stationInsert;
+
+  return locationResult;
 }
 
 function isSeoulOrGyeonggi(fullAddress: string): boolean {

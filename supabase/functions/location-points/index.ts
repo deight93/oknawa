@@ -2,14 +2,8 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js';
 import { getEnv } from '../lib/env.ts';
 import {
-  buildStationInfoInserts,
-  buildStationItineraries,
-  createLocationResult,
-  fetchPopularMeetingLocations,
-  insertStationInfo,
-  isResponse,
   parseLocationPointsRequest,
-  resolveRecommendType,
+  runLocationPointsFlow,
 } from '../lib/location-points.ts';
 import { responseError, responseJson } from '../lib/utils.ts';
 
@@ -27,43 +21,16 @@ Deno.serve(async req => {
 
   try {
     const requestData = await parseLocationPointsRequest(req);
-    if (isResponse(requestData)) return requestData;
+    if (!requestData.ok) return requestData.response;
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const recommendType = resolveRecommendType(requestData.participants);
-    const locations = await fetchPopularMeetingLocations(
+    const locationResult = await runLocationPointsFlow(
       supabase,
-      recommendType,
+      requestData.data,
     );
-    if (isResponse(locations)) return locations;
+    if (!locationResult.ok) return locationResult.response;
 
-    const stationInfoList = await buildStationItineraries(
-      requestData.participants,
-      locations,
-      requestData.priority,
-    );
-    if (isResponse(stationInfoList)) return stationInfoList;
-
-    const locationResult = await createLocationResult(
-      supabase,
-      requestData.participants,
-    );
-    if (isResponse(locationResult)) return locationResult;
-
-    const stationInfoBulk = buildStationInfoInserts(
-      locationResult.map_id,
-      requestData.participants,
-      stationInfoList,
-    );
-
-    const stationInfoError = await insertStationInfo(
-      supabase,
-      locationResult.map_id,
-      stationInfoBulk,
-    );
-    if (stationInfoError) return stationInfoError;
-
-    return responseJson(locationResult);
+    return responseJson(locationResult.data);
   } catch (err) {
     console.error('Error:', err);
     return responseError(err);
