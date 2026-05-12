@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import styled from 'styled-components';
-import { useAtom, useAtomValue, useSetAtom } from 'jotai';
+import { useAtom, useSetAtom } from 'jotai';
 import { Link, CirclePlus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Button as FloatingButton } from '@nextui-org/react';
@@ -14,33 +14,20 @@ import PeopleCard from './components/PeopleCard';
 import Button from '@/components/Button';
 import { baseUrl } from '@/hooks/useDistanceSummary';
 import SearchLoading from './components/SearchLoading';
-import {
-  usePlaceSearchMapIdMutation,
-  usePlaceSearchMutation,
-} from '@/hooks/mutation/search';
-import { resultState } from '@/jotai/result/store';
 import { roomState } from '@/jotai/global/room';
-import { MapIdType } from '@/services/search/types';
-import { mapIdState } from '@/jotai/mapId/store';
 import { Participant } from '@/types/location';
+import useCreateResultFlow from '@/hooks/search/useCreateResultFlow';
 
 export default function SearchCompleteListWithTogetherView() {
   const router = useRouter();
 
-  const [searchList, setSearchList] = useAtom(searchState);
-  const setResult = useSetAtom(resultState);
+  const setSearchList = useSetAtom(searchState);
   const [storageRoomData, setStorageRoomData] = useAtom(roomState);
-  const setMapIdInfo = useSetAtom(mapIdState);
+  const { requestResult, isLoading } = useCreateResultFlow();
 
   const { participant: participants } = useInputStatusListQuery(
     storageRoomData.roomId || '',
   );
-  const {
-    mutate: placeSearchMutate,
-    isPending,
-    isSuccess,
-  } = usePlaceSearchMutation();
-  const { mutate: placeSearchMapIdMutate } = usePlaceSearchMapIdMutation();
   const participantList = (participants ?? []) as Participant[];
 
   const toSearchState = (participant: Participant): SearchState => ({
@@ -78,28 +65,7 @@ export default function SearchCompleteListWithTogetherView() {
     const transformedParticipants: SearchState[] =
       participantList.map(toSearchState);
 
-    placeSearchMutate(transformedParticipants, {
-      onSuccess: data => {
-        const mapIdInfo: MapIdType = {
-          mapId: data.map_id,
-          mapHostId: data.map_host_id,
-        };
-
-        setMapIdInfo(mapIdInfo);
-
-        placeSearchMapIdMutate(data.map_id, {
-          onSuccess: mapData => {
-            setSearchList(searchList);
-            setResult(mapData);
-            router.push('/result');
-            localStorage.removeItem('isVote');
-          },
-          onError: error => {
-            console.error('Error fetching map data:', error);
-          },
-        });
-      },
-    });
+    requestResult(transformedParticipants);
   };
 
   const handleQuiteRoomBtnClick = () => {
@@ -164,7 +130,7 @@ export default function SearchCompleteListWithTogetherView() {
           만나기 편한 장소 추천받기
         </SubmitButton>
       </div>
-      {(isPending || isSuccess) && <SearchLoading />}
+      {isLoading && <SearchLoading />}
     </Container>
   );
 }

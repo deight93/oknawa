@@ -4,11 +4,6 @@ import { useRouter } from 'next/navigation';
 
 import { useEffect } from 'react';
 
-import {
-  usePlaceSearchMapIdMutation,
-  usePlaceSearchMutation,
-} from '@/hooks/mutation/search';
-
 import styled from 'styled-components';
 
 import Button from '@/components/Button';
@@ -16,54 +11,21 @@ import PeopleCard from './components/PeopleCard';
 import SearchLoading from './components/SearchLoading';
 import { ArrowBackIcon } from '@/assets/icons/ArrowBack';
 
-import { useAtom, useSetAtom } from 'jotai';
+import { useAtom } from 'jotai';
 import { searchState } from '@/jotai/global/store';
 
 import { Button as FloatingButton } from '@nextui-org/react';
 
-import { resultState } from '@/jotai/result/store';
-import { mapIdState } from '@/jotai/mapId/store';
-
-import { MapIdType } from '@/services/search/types';
+import useCreateResultFlow from '@/hooks/search/useCreateResultFlow';
 
 export default function SearchCompleteList() {
   const router = useRouter();
 
   const [searchList, setSearchList] = useAtom(searchState);
-  const setResult = useSetAtom(resultState);
-  const setSearchState = useSetAtom(searchState);
-  const setMapIdInfo = useSetAtom(mapIdState);
-
-  const {
-    mutate: placeSearchMutate,
-    isPending,
-    isSuccess,
-  } = usePlaceSearchMutation();
-  const { mutate: placeSearchMapIdMutate } = usePlaceSearchMapIdMutation();
+  const { requestResult, isLoading } = useCreateResultFlow();
 
   const handleSearchBtnClick = () => {
-    placeSearchMutate(searchList, {
-      onSuccess: data => {
-        const mapIdInfo: MapIdType = {
-          mapId: data.map_id,
-          mapHostId: data.map_host_id,
-        };
-
-        setMapIdInfo(mapIdInfo);
-
-        placeSearchMapIdMutate(data.map_id, {
-          onSuccess: mapData => {
-            setSearchState(searchList);
-            setResult(mapData);
-            router.push('/result');
-            localStorage.removeItem('isVote');
-          },
-          onError: error => {
-            console.error('Error fetching map data:', error);
-          },
-        });
-      },
-    });
+    requestResult(searchList);
   };
 
   const handleDeleteIconClick = (index: number) => {
@@ -117,7 +79,7 @@ export default function SearchCompleteList() {
       >
         이대로 추천 받기
       </SubmitButton>
-      {(isPending || isSuccess) && <SearchLoading />}
+      {isLoading && <SearchLoading />}
     </Container>
   );
 }
