@@ -41,6 +41,8 @@ export interface LocationResult {
   confirmed?: string | null;
 }
 
+export type ResultSortOption = 'averageTime' | 'maxTime' | 'vote';
+
 export interface DistanceSummaryItem {
   station: StationInfo;
   stationName: string;
@@ -49,5 +51,6 @@ export interface DistanceSummaryItem {
   stationParticipants: Participant[];
   totalTravelTime: number;
   averageTravelTime: number;
+  maxTravelTime: number;
   vote: number;
 }

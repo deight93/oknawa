@@ -28,7 +28,11 @@ import ButtonPrimary from '@/components/ButtonPrimary';
 import Button from '@/components/Button';
 
 import { convertToKoreanTime } from '@/utils/date';
-import { DistanceSummaryItem, Participant } from '@/types/location';
+import {
+  DistanceSummaryItem,
+  Participant,
+  ResultSortOption,
+} from '@/types/location';
 
 import {
   Container,
@@ -63,12 +67,22 @@ import {
   RightWrapper,
   LikeButton,
   ConfirmButton,
+  SortButton,
+  SortWrapper,
 } from '../style';
 import styled from 'styled-components';
+
+const SORT_OPTIONS: { label: string; value: ResultSortOption }[] = [
+  { label: '평균 빠른순', value: 'averageTime' },
+  { label: '최장 짧은순', value: 'maxTime' },
+  { label: '득표 많은순', value: 'vote' },
+];
 
 interface DistanceSummaryProps {
   station: DistanceSummaryItem;
   queryMapId: string | null;
+  sortOption: ResultSortOption;
+  onSortChange: (sortOption: ResultSortOption) => void;
   stationName: string;
   shareKey: string;
   stationIndex: string;
@@ -82,6 +96,8 @@ interface DistanceSummaryProps {
 export default function DistanceSummary({
   station,
   queryMapId,
+  sortOption,
+  onSortChange,
   stationName,
   shareKey,
   stationIndex,
@@ -162,6 +178,18 @@ export default function DistanceSummary({
               </ChevronButton>
             </IndicatorWrapper>
           </ContentWrapper>
+          <SortWrapper>
+            {SORT_OPTIONS.map(option => (
+              <SortButton
+                key={option.value}
+                type="button"
+                $isActive={sortOption === option.value}
+                onClick={() => onSortChange(option.value)}
+              >
+                {option.label}
+              </SortButton>
+            ))}
+          </SortWrapper>
           <PreffertWrapper>
             <VoteWrapper>
               <VoteTitle>

@@ -105,6 +105,29 @@ export const PreffertWrapper = styled.div`
   align-items: center;
 `;
 
+export const SortWrapper = styled.div`
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+`;
+
+export const SortButton = styled.button<{ $isActive: boolean }>`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: fit-content;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid ${({ $isActive }) => ($isActive ? '#18c964' : '#28282d')};
+  border-radius: 999px;
+  background-color: ${({ $isActive }) => ($isActive ? '#123925' : '#1c1c20')};
+  color: ${({ $isActive }) => ($isActive ? '#18c964' : '#bdbdbd')};
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+`;
+
 export const VoteWrapper = styled.div`
   display: flex;
   flex-direction: column;

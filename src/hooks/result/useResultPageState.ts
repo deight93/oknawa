@@ -6,14 +6,16 @@ import { usePlaceSearchMapIdQuery } from '@/hooks/query/search';
 import useResultSummary from '@/hooks/result/useResultSummary';
 import { mapIdState } from '@/jotai/mapId/store';
 import { resultState } from '@/jotai/result/store';
+import { ResultSortOption } from '@/types/location';
 import { clearLegacyVoteState } from '@/utils/voteStorage';
 
 export default function useResultPageState(queryMapId: string | null) {
   const mapIdInfo = useAtomValue(mapIdState);
   const setResult = useSetAtom(resultState);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [sortOption, setSortOption] = useState<ResultSortOption>('averageTime');
 
-  const { distanceSummaries, participants } = useResultSummary();
+  const { distanceSummaries, participants } = useResultSummary(sortOption);
   const activeMapId = (mapIdInfo.mapId || queryMapId) ?? '';
   const currentStation = distanceSummaries[currentIndex];
   const stationCount = distanceSummaries.length;
@@ -45,6 +47,10 @@ export default function useResultPageState(queryMapId: string | null) {
     }
   }, [currentIndex, stationCount]);
 
+  useEffect(() => {
+    setCurrentIndex(0);
+  }, [sortOption]);
+
   const handleNext = () => {
     if (!stationCount) {
       return;
@@ -68,6 +74,8 @@ export default function useResultPageState(queryMapId: string | null) {
     distanceSummaries,
     participants,
     isLoading,
+    sortOption,
+    setSortOption,
     handleNext,
     handlePrev,
   };

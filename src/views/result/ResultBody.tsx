@@ -27,6 +27,8 @@ export default function ResultBody({ queryMapId }: ResultBodyProps) {
     distanceSummaries,
     participants,
     isLoading,
+    sortOption,
+    setSortOption,
     handleNext,
     handlePrev,
   } = useResultPageState(queryMapId);
@@ -73,6 +75,8 @@ export default function ResultBody({ queryMapId }: ResultBodyProps) {
         <DistanceSummary
           station={currentStation}
           queryMapId={queryMapId}
+          sortOption={sortOption}
+          onSortChange={setSortOption}
           stationIndex={`0${currentIndex + 1}`}
           stationLength={`0${distanceSummaries.length}`}
           stationName={currentStation.stationName}
