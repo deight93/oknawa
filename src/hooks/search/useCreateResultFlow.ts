@@ -2,6 +2,7 @@ import { useRouter } from 'next/navigation';
 
 import { useSetAtom } from 'jotai';
 
+import { getApiErrorMessage, logApiError } from '@/api/errors';
 import useModal from '@/hooks/common/useModal';
 import {
   usePlaceSearchMapIdMutation,
@@ -39,10 +40,14 @@ export default function useCreateResultFlow() {
             router.push('/result');
             clearLegacyVoteState();
           },
-          onError: () => {
+          onError: error => {
+            logApiError('fetchResult', error);
             setModalContents({
               buttonLabel: '확인',
-              contents: '추천 결과를 불러오지 못했습니다. 다시 시도해주세요.',
+              contents: getApiErrorMessage(
+                error,
+                '추천 결과를 불러오지 못했습니다. 다시 시도해주세요.',
+              ),
             });
           },
         });

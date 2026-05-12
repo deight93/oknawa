@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAtomValue, useSetAtom } from 'jotai';
 import { useResetAtom } from 'jotai/utils';
 
-import { logApiError } from '@/api/errors';
+import { getApiErrorMessage, logApiError } from '@/api/errors';
 import useModal from '@/hooks/common/useModal';
 import { usePlaceSearchWithShareKeyMutation } from '@/hooks/mutation/search';
 import { modalState } from '@/jotai/global/store';
@@ -53,7 +53,10 @@ export default function useVoteFlow(shareKey: string) {
       logApiError('vote', error);
       setModalContents({
         buttonLabel: '확인',
-        contents: '투표에 실패했습니다. 다시 시도해주세요.',
+        contents: getApiErrorMessage(
+          error,
+          '투표에 실패했습니다. 다시 시도해주세요.',
+        ),
       });
     }
   };
@@ -68,10 +71,14 @@ export default function useVoteFlow(shareKey: string) {
         router.replace(`/result/confirm?sharekey=${shareKey}`);
         resetModal();
       },
-      onError: () => {
+      onError: error => {
+        logApiError('moveToFinal', error);
         setModalContents({
           buttonLabel: '확인',
-          contents: '확정 결과를 불러오지 못했습니다. 다시 시도해주세요.',
+          contents: getApiErrorMessage(
+            error,
+            '확정 결과를 불러오지 못했습니다. 다시 시도해주세요.',
+          ),
         });
       },
     });
@@ -90,7 +97,10 @@ export default function useVoteFlow(shareKey: string) {
       logApiError('voteConfirm', error);
       setModalContents({
         buttonLabel: '확인',
-        contents: '확정에 실패했습니다. 다시 시도해주세요.',
+        contents: getApiErrorMessage(
+          error,
+          '확정에 실패했습니다. 다시 시도해주세요.',
+        ),
       });
     }
   };

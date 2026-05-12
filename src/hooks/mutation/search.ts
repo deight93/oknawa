@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 
-import { logApiError } from '@/api/errors';
+import { getApiErrorMessage, logApiError } from '@/api/errors';
 import SearchService from '@/services/search/SearchService';
 import { SubmitDeparturePointRequestBody } from '@/services/search/types';
 
@@ -19,7 +19,10 @@ export const usePlaceSearchMutation = () => {
       logApiError('placeSearch', error);
       setModalContents({
         buttonLabel: '확인',
-        contents: '지점을 찾을 수 없습니다.\n다시 검색해주세요.',
+        contents: getApiErrorMessage(
+          error,
+          '지점을 찾을 수 없습니다.\n다시 검색해주세요.',
+        ),
       });
     },
   });
