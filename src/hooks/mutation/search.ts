@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 
+import { logApiError } from '@/api/errors';
 import SearchService from '@/services/search/SearchService';
-import { MapIdType } from '@/services/search/types';
 import { SubmitDeparturePointRequestBody } from '@/services/search/types';
 
 import { SearchState } from '@/jotai/global/store';
@@ -16,7 +16,7 @@ export const usePlaceSearchMutation = () => {
     mutationFn: (searchForm: SearchState[]) =>
       SearchService.searchPlaces(searchForm),
     onError: error => {
-      console.log('error 발생!', error);
+      logApiError('placeSearch', error);
       setModalContents({
         buttonLabel: '확인',
         contents: '지점을 찾을 수 없습니다.\n다시 검색해주세요.',
@@ -30,7 +30,7 @@ export const usePlaceSearchMapIdMutation = () => {
     mutationKey: ['placeSearchMapId'],
     mutationFn: (mapId: string) => SearchService.searchPolling(mapId),
     onError: error => {
-      console.log('error 발생!', error);
+      logApiError('placeSearchMapId', error);
     },
   });
 };
@@ -40,6 +40,9 @@ export const usePlaceSearchWithShareKeyMutation = () => {
     mutationKey: ['placeSearchWithShareKey'],
     mutationFn: (shareKey?: string | null) =>
       SearchService.searchPlacesWithShareKey(shareKey),
+    onError: error => {
+      logApiError('placeSearchWithShareKey', error);
+    },
   });
 };
 
@@ -48,7 +51,7 @@ export const useMakeRoomMutation = () => {
     mutationKey: ['roomMake'],
     mutationFn: (searchForm: SearchState) => SearchService.makeRoom(searchForm),
     onError: error => {
-      console.log('error 발생!', error);
+      logApiError('roomMake', error);
     },
   });
 };
@@ -62,7 +65,7 @@ export const useSubmitDeparturePointMutation = () => {
       requestBody: SubmitDeparturePointRequestBody;
     }) => SearchService.submitDeparturePoint(requestBody),
     onError: error => {
-      console.log('error 발생!', error);
+      logApiError('submitDeparturePoint', error);
     },
   });
 };

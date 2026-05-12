@@ -1,4 +1,4 @@
-import { api } from '@/axois';
+import { api } from '@/api/client';
 
 import { MapIdType } from '../search/types';
 

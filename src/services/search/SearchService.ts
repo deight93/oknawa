@@ -1,4 +1,4 @@
-import { api, edgeApi } from '@/axois';
+import { api, edgeApi } from '@/api/client';
 
 import SearchForm from '@/model/search/SearchForm';
 

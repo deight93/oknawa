@@ -1,4 +1,4 @@
-import { api } from '@/axois';
+import { api } from '@/api/client';
 import { HotPlace, HotPlaceCategory, HotPlacePoint } from './types';
 
 export default class HotPlaceService {
@@ -8,16 +8,19 @@ export default class HotPlaceService {
     page = 1,
     size = 5,
   ) {
-    const res = await api.get(`/functions/v1/location-point-place/${category}`, {
-      params: {
-        x: point.x,
-        y: point.y,
-        radius: 500,
-        page,
-        size,
-        sort: 'accuracy',
+    const res = await api.get(
+      `/functions/v1/location-point-place/${category}`,
+      {
+        params: {
+          x: point.x,
+          y: point.y,
+          radius: 500,
+          page,
+          size,
+          sort: 'accuracy',
+        },
       },
-    });
+    );
 
     return res.data;
   }

@@ -50,7 +50,6 @@ export const usePlaceSearchMapIdQuery = (mapId: string) => {
     queryClient.setQueryDefaults(['placeSearchMapId', mapId], {
       refetchInterval: false,
     });
-    console.log('종료 성공!');
   };
 
   return {
