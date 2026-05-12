@@ -68,6 +68,7 @@ import styled from 'styled-components';
 
 interface DistanceSummaryProps {
   station: DistanceSummaryItem;
+  queryMapId: string | null;
   stationName: string;
   shareKey: string;
   stationIndex: string;
@@ -80,6 +81,7 @@ interface DistanceSummaryProps {
 
 export default function DistanceSummary({
   station,
+  queryMapId,
   stationName,
   shareKey,
   stationIndex,
@@ -96,9 +98,11 @@ export default function DistanceSummary({
   const [isExpandTail, setExpandTail] = useState(true);
 
   const { setModalContents } = useModal();
-  const { copyInvitationLink } = useResultShare();
-  const { isVote, requestVote, requestConfirm, canConfirm } =
-    useVoteFlow(shareKey);
+  const { copyInvitationLink } = useResultShare(queryMapId);
+  const { isVote, requestVote, requestConfirm, canConfirm } = useVoteFlow(
+    shareKey,
+    queryMapId,
+  );
 
   const clickHome = () => {
     setModalContents({

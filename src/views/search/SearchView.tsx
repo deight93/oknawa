@@ -28,9 +28,10 @@ const numberConfig: { [key: number]: string } = {
 
 interface SearchViewProps {
   type: 'individual' | 'together';
+  shareRoomId: string | null;
 }
 
-export default function SearchView({ type }: SearchViewProps) {
+export default function SearchView({ type, shareRoomId }: SearchViewProps) {
   const router = useRouter();
 
   const setBottomSheet = useSetAtom(bottomSheetState);
@@ -38,6 +39,7 @@ export default function SearchView({ type }: SearchViewProps) {
   const { register, setValue, handleSubmit, watch, reset } = useSearchForm();
   const { isIndividualView, searchCount, submitSearch } = useSearchEntryFlow(
     type,
+    shareRoomId,
     reset,
   );
 

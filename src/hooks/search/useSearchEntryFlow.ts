@@ -1,4 +1,4 @@
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 import { useAtom } from 'jotai';
 
@@ -26,10 +26,10 @@ const toDeparturePointRequestBody = (
 
 export default function useSearchEntryFlow(
   type: SearchViewType,
+  shareRoomId: string | null,
   resetForm: () => void,
 ) {
   const router = useRouter();
-  const shareRoomId = useSearchParams().get('roomId');
   const [searchList, setSearchList] = useAtom(searchState);
   const [storageRoomData, setStorageRoomData] = useAtom(roomState);
 

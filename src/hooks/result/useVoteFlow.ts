@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 import { useAtomValue, useSetAtom } from 'jotai';
 import { useResetAtom } from 'jotai/utils';
@@ -17,9 +17,11 @@ import {
   setVotedForMap,
 } from '@/utils/voteStorage';
 
-export default function useVoteFlow(shareKey: string) {
+export default function useVoteFlow(
+  shareKey: string,
+  queryMapId: string | null,
+) {
   const router = useRouter();
-  const queryMapId = useSearchParams().get('mapId');
   const mapIdInfo = useAtomValue(mapIdState);
   const setResultConfirm = useSetAtom(resultConfirmState);
   const resetModal = useResetAtom(modalState);

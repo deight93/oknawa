@@ -12,7 +12,13 @@ import { Button } from '@nextui-org/react';
 
 import useConfirmedResult from '@/hooks/result/useConfirmedResult';
 
-export default function ResultConfirmBody() {
+interface ResultConfirmBodyProps {
+  queryShareKey: string | null;
+}
+
+export default function ResultConfirmBody({
+  queryShareKey,
+}: ResultConfirmBodyProps) {
   const setBottomSheet = useSetAtom(bottomSheetState);
   const {
     resultConfirm,
@@ -21,7 +27,7 @@ export default function ResultConfirmBody() {
     averageTravelTime,
     hasResult,
     isLoading,
-  } = useConfirmedResult();
+  } = useConfirmedResult(queryShareKey);
 
   const { station_name, itinerary, request_info, end_x, end_y } = resultConfirm;
 

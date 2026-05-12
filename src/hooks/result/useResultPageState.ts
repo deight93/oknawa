@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
 
 import { useAtomValue, useSetAtom } from 'jotai';
 
@@ -9,8 +8,7 @@ import { mapIdState } from '@/jotai/mapId/store';
 import { resultState } from '@/jotai/result/store';
 import { clearLegacyVoteState } from '@/utils/voteStorage';
 
-export default function useResultPageState() {
-  const queryMapId = useSearchParams().get('mapId');
+export default function useResultPageState(queryMapId: string | null) {
   const mapIdInfo = useAtomValue(mapIdState);
   const setResult = useSetAtom(resultState);
   const [currentIndex, setCurrentIndex] = useState(0);

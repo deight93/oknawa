@@ -13,7 +13,11 @@ import { Button } from '@nextui-org/react';
 import useResultPageState from '@/hooks/result/useResultPageState';
 import { DistanceSummaryItem } from '@/types/location';
 
-export default function ResultBody() {
+interface ResultBodyProps {
+  queryMapId: string | null;
+}
+
+export default function ResultBody({ queryMapId }: ResultBodyProps) {
   const router = useRouter();
   const setBottomSheet = useSetAtom(bottomSheetState);
   const {
@@ -25,7 +29,7 @@ export default function ResultBody() {
     isLoading,
     handleNext,
     handlePrev,
-  } = useResultPageState();
+  } = useResultPageState(queryMapId);
 
   const handleHotplaceBtnClick = (station: DistanceSummaryItem) => {
     setBottomSheet(prevState => ({
@@ -68,6 +72,7 @@ export default function ResultBody() {
       <Container>
         <DistanceSummary
           station={currentStation}
+          queryMapId={queryMapId}
           stationIndex={`0${currentIndex + 1}`}
           stationLength={`0${distanceSummaries.length}`}
           stationName={currentStation.stationName}

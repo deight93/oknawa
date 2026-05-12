@@ -1,5 +1,3 @@
-import { useSearchParams } from 'next/navigation';
-
 import useModal from '@/hooks/common/useModal';
 import { useAtomValue } from 'jotai';
 import { mapIdState } from '@/jotai/mapId/store';
@@ -14,8 +12,7 @@ const getShareUrl = (mapId: string, queryMapId?: string | null) => {
   return url.toString();
 };
 
-export default function useResultShare() {
-  const queryMapId = useSearchParams().get('mapId');
+export default function useResultShare(queryMapId: string | null) {
   const { mapId } = useAtomValue(mapIdState);
   const { setModalContents } = useModal();
 

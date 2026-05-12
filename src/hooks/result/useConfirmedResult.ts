@@ -1,13 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
 
 import { useAtom } from 'jotai';
 
 import { usePlaceSearchWithShareKeyMutation } from '@/hooks/mutation/search';
 import { resultConfirmState } from '@/jotai/result-confirm/store';
 
-export default function useConfirmedResult() {
-  const queryShareKey = useSearchParams().get('sharekey');
+export default function useConfirmedResult(queryShareKey: string | null) {
   const [resultConfirm, setResultConfirm] = useAtom(resultConfirmState);
   const [loadFailed, setLoadFailed] = useState(false);
 
