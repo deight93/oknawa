@@ -1,88 +1,105 @@
-import polyline from "https://esm.sh/@mapbox/polyline";
-import { getEnv } from "./env.ts";
+import polyline from 'https://esm.sh/@mapbox/polyline';
+import { getEnv } from './env.ts';
+import { fetchJson } from './utils.ts';
 
-export async function callGoogleMapItineraries(participants: any[], stations: any[]) {
-    const GOOGLE_API_KEY = getEnv("GOOGLE_API_KEY");
-    const GOOGLE_API_URL = getEnv("GOOGLE_API_URL");
+interface GoogleRoute {
+  duration?: string;
+  polyline?: {
+    encodedPolyline?: string;
+  };
+}
 
-    const headers = {
-        "Content-Type": "application/json",
-        "X-Goog-Api-Key": GOOGLE_API_KEY,
-        "X-Goog-FieldMask": "routes.duration,routes.polyline.encodedPolyline",
-    };
+interface GoogleRoutesResponse {
+  routes?: GoogleRoute[];
+}
 
-    const stationInfoList = [];
+export async function callGoogleMapItineraries(
+  participants: any[],
+  stations: any[],
+) {
+  const GOOGLE_API_KEY = getEnv('GOOGLE_API_KEY');
+  const GOOGLE_API_URL = getEnv('GOOGLE_API_URL');
 
-    for (const station of stations) {
-        const itineraryList = [];
+  const headers = {
+    'Content-Type': 'application/json',
+    'X-Goog-Api-Key': GOOGLE_API_KEY,
+    'X-Goog-FieldMask': 'routes.duration,routes.polyline.encodedPolyline',
+  };
 
-        for (const participant of participants) {
-            const origin = {
-                location: {
-                    latLng: {
-                        latitude: participant.start_y,
-                        longitude: participant.start_x,
-                    },
-                },
-            };
+  const stationInfoList = [];
 
-            const destination = {
-                location: {
-                    latLng: {
-                        latitude: parseFloat(station.location_y),
-                        longitude: parseFloat(station.location_x),
-                    },
-                },
-            };
+  for (const station of stations) {
+    const itineraryList = [];
 
-            const payload = {
-                origin,
-                destination,
-                travelMode: "TRANSIT",
-                transitPreferences: {
-                    allowedTravelModes: ["SUBWAY"],
-                },
-                languageCode: "ko-KR",
-            };
+    for (const participant of participants) {
+      const origin = {
+        location: {
+          latLng: {
+            latitude: participant.start_y,
+            longitude: participant.start_x,
+          },
+        },
+      };
 
-            const response = await fetch(`${GOOGLE_API_URL}/directions/v2:computeRoutes`, {
-                method: "POST",
-                headers,
-                body: JSON.stringify(payload),
-            });
+      const destination = {
+        location: {
+          latLng: {
+            latitude: parseFloat(station.location_y),
+            longitude: parseFloat(station.location_x),
+          },
+        },
+      };
 
-            const json = await response.json();
+      const payload = {
+        origin,
+        destination,
+        travelMode: 'TRANSIT',
+        transitPreferences: {
+          allowedTravelModes: ['SUBWAY'],
+        },
+        languageCode: 'ko-KR',
+      };
 
-            const route = json.routes?.[0];
-            if (!route) continue;
+      const json = await fetchJson<GoogleRoutesResponse>(
+        `${GOOGLE_API_URL}/directions/v2:computeRoutes`,
+        {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(payload),
+          errorMessage: 'Google Routes API 조회 실패',
+        },
+      );
 
-            const durationSeconds = parseDuration(route.duration);
-            const polylineEncoded = route.polyline?.encodedPolyline;
-            const decodedPolyline = polyline.decode(polylineEncoded);
-            const totalPolyline = decodedPolyline.map(([lat, lng]) => ({ lat, lng }));
+      const route = json.routes?.[0];
+      const polylineEncoded = route?.polyline?.encodedPolyline;
+      if (!route?.duration || !polylineEncoded) continue;
 
-            itineraryList.push({
-                name: participant.name,
-                region_name: participant.region_name,
-                itinerary: {
-                    totalTime: durationSeconds,
-                    total_polyline: totalPolyline,
-                },
-            });
-        }
+      const durationSeconds = parseDuration(route.duration);
+      const decodedPolyline = polyline.decode(polylineEncoded);
+      const totalPolyline = decodedPolyline.map(([lat, lng]) => ({ lat, lng }));
 
-        stationInfoList.push({
-            station_name: station.name,
-            address_name: station.address,
-            end_x: station.location_x,
-            end_y: station.location_y,
-            itinerary: itineraryList,
-        });
+      itineraryList.push({
+        name: participant.name,
+        region_name: participant.region_name,
+        itinerary: {
+          totalTime: durationSeconds,
+          total_polyline: totalPolyline,
+        },
+      });
     }
 
-    return stationInfoList;
+    stationInfoList.push({
+      station_name: station.name,
+      address_name: station.address,
+      end_x: station.location_x,
+      end_y: station.location_y,
+      itinerary: itineraryList,
+    });
+  }
+
+  return stationInfoList;
 }
 
 function parseDuration(durationStr: string): number {
-    return parseInt(durationStr.replace("s", ""));
+  return parseInt(durationStr.replace('s', ''));
 }

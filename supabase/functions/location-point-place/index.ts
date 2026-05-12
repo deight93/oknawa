@@ -1,108 +1,128 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { getEnv } from "../lib/env.ts";
-import { responseJson } from "../lib/utils.ts";
-import { corsHeaders } from "../lib/cors.ts";
+import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
+import { getEnv } from '../lib/env.ts';
+import { fetchJson, responseError, responseJson } from '../lib/utils.ts';
 
-const KAKAO_REST_API_KEY = getEnv("KAKAO_REST_API_KEY");
+const KAKAO_REST_API_KEY = getEnv('KAKAO_REST_API_KEY');
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return responseJson("ok");
-  }
+interface KakaoPlaceSearchResponse {
+  documents?: any[];
+  meta?: Record<string, unknown>;
+}
 
-  if (req.method !== "GET") {
-    return responseJson({ error: "Method Not Allowed" }, 405);
-  }
-
-  const url = new URL(req.url);
-  const pathParts = url.pathname.split("/").filter(Boolean);
-  let category = pathParts[pathParts.length - 1];
-
-  if (category === "location-point-place") {
-    category = "food";
-  } else if (!["food", "cafe", "drink"].includes(category)) {
-    return responseJson({ error: "Invalid category" }, 400);
-  }
-
-  const x = url.searchParams.get("x");
-  const y = url.searchParams.get("y");
-  const radius = url.searchParams.get("radius") ?? "500";
-  const page = url.searchParams.get("page") ?? "1";
-  const size = url.searchParams.get("size") ?? "5";
-  const sort = url.searchParams.get("sort") ?? "accuracy";
-
-  if (!x || !y) {
-    return responseJson({ error: "x, y 필수" }, 400);
-  }
-
-  let category_group_code = "";
-  let query = "";
-  if (category === "food") {
-    category_group_code = "FD6";
-    query = "음식점";
-  } else if (category === "drink") {
-    category_group_code = "FD6";
-    query = "술집";
-  } else if (category === "cafe") {
-    category_group_code = "CE7";
-    query = "카페";
-  }
-
-  const kakaoUrl = "https://dapi.kakao.com/v2/local/search/keyword.json";
-  const kakaoParams = new URLSearchParams({
-    x,
-    y,
-    radius,
-    page,
-    size,
-    sort,
-    category_group_code,
-    query,
-  });
-
-  const kakaoHeaders = {
-    Authorization: `KakaoAK ${KAKAO_REST_API_KEY}`,
+interface KakaoPlaceDetailResponse {
+  photos?: {
+    photos?: Array<{ url?: string }>;
   };
+  menu?: {
+    menus?: {
+      photos?: Array<{ url?: string }>;
+    };
+  };
+  business_hours?: {
+    real_time_info?: {
+      day_business_hours_infos?: unknown[];
+    };
+  };
+}
 
-  const kakaoRes = await fetch(`${kakaoUrl}?${kakaoParams.toString()}`, {
-    method: "GET",
-    headers: kakaoHeaders,
-  });
-  if (!kakaoRes.ok) {
-    return responseJson({ error: "카카오 API 에러" }, 500);
+Deno.serve(async req => {
+  if (req.method === 'OPTIONS') {
+    return responseJson('ok');
   }
 
-  const kakaoData = await kakaoRes.json();
-  const documents = kakaoData.documents ?? [];
-  const meta = kakaoData.meta ?? {};
+  if (req.method !== 'GET') {
+    return responseJson({ error: 'Method Not Allowed' }, 405);
+  }
 
-  const details = await Promise.all(
+  try {
+    const url = new URL(req.url);
+    const pathParts = url.pathname.split('/').filter(Boolean);
+    let category = pathParts[pathParts.length - 1];
+
+    if (category === 'location-point-place') {
+      category = 'food';
+    } else if (!['food', 'cafe', 'drink'].includes(category)) {
+      return responseJson({ error: 'Invalid category' }, 400);
+    }
+
+    const x = url.searchParams.get('x');
+    const y = url.searchParams.get('y');
+    const radius = url.searchParams.get('radius') ?? '500';
+    const page = url.searchParams.get('page') ?? '1';
+    const size = url.searchParams.get('size') ?? '5';
+    const sort = url.searchParams.get('sort') ?? 'accuracy';
+
+    if (!x || !y) {
+      return responseJson({ error: 'x, y 필수' }, 400);
+    }
+
+    let category_group_code = '';
+    let query = '';
+    if (category === 'food') {
+      category_group_code = 'FD6';
+      query = '음식점';
+    } else if (category === 'drink') {
+      category_group_code = 'FD6';
+      query = '술집';
+    } else if (category === 'cafe') {
+      category_group_code = 'CE7';
+      query = '카페';
+    }
+
+    const kakaoUrl = 'https://dapi.kakao.com/v2/local/search/keyword.json';
+    const kakaoParams = new URLSearchParams({
+      x,
+      y,
+      radius,
+      page,
+      size,
+      sort,
+      category_group_code,
+      query,
+    });
+
+    const kakaoHeaders = {
+      Authorization: `KakaoAK ${KAKAO_REST_API_KEY}`,
+    };
+
+    const kakaoData = await fetchJson<KakaoPlaceSearchResponse>(
+      `${kakaoUrl}?${kakaoParams.toString()}`,
+      {
+        method: 'GET',
+        headers: kakaoHeaders,
+        errorMessage: '카카오 장소 검색 실패',
+      },
+    );
+    const documents = kakaoData.documents ?? [];
+    const meta = kakaoData.meta ?? {};
+
+    const details = await Promise.all(
       documents.map(async (doc: any) => {
         const placeUrl = doc.place_url;
         if (!placeUrl) return doc;
-        const placeId = placeUrl.split("/").pop();
+        const placeId = placeUrl.split('/').pop();
         if (!placeId) return doc;
 
         const apiUrl = `https://place-api.map.kakao.com/places/panel3/${placeId}`;
 
         try {
-          const res = await fetch(apiUrl, {
+          const data = await fetchJson<KakaoPlaceDetailResponse>(apiUrl, {
             headers: {
-              "Accept": "application/json, text/plain, */*",
-              "Accept-Encoding": "gzip, deflate, br, zstd",
-              "Referer": `https://place.map.kakao.com/${placeId}`,
-              pf: "web",
+              Accept: 'application/json, text/plain, */*',
+              'Accept-Encoding': 'gzip, deflate, br, zstd',
+              Referer: `https://place.map.kakao.com/${placeId}`,
+              pf: 'web',
             },
+            errorMessage: '카카오 장소 상세 조회 실패',
           });
-          if (!res.ok) return doc;
-          const data = await res.json();
 
           const mainPhoto =
-              data.photos?.photos?.[0]?.url ??
-              data.menu?.menus?.photos?.[0]?.url ?? null;
+            data.photos?.photos?.[0]?.url ??
+            data.menu?.menus?.photos?.[0]?.url ??
+            null;
 
           const dayInfos =
-              data.business_hours?.real_time_info?.day_business_hours_infos ?? [];
+            data.business_hours?.real_time_info?.day_business_hours_infos ?? [];
 
           return {
             ...doc,
@@ -113,10 +133,17 @@ Deno.serve(async (req) => {
           return doc;
         }
       }),
-  );
+    );
 
-  return responseJson({
-    documents: details,
-    meta,
-  }, 200);
+    return responseJson(
+      {
+        documents: details,
+        meta,
+      },
+      200,
+    );
+  } catch (error) {
+    console.error('location-point-place error:', error);
+    return responseError(error);
+  }
 });

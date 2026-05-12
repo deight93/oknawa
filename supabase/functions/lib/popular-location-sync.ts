@@ -52,6 +52,10 @@ export async function syncPopularMeetingLocations({
 }: SyncPopularLocationsOptions): Promise<Response> {
   const now = new Date().toISOString();
 
+  if (sourceNames.length === 0) {
+    return responseJson({ error: '동기화할 원본 장소 목록이 없습니다' }, 502);
+  }
+
   const { data: existingList, error: existingListError } = await supabase
     .from(TABLE_NAME)
     .select('name, type')
