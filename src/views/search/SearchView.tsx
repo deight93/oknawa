@@ -2,24 +2,16 @@
 
 import { Input } from '@nextui-org/react';
 import { MouseEvent } from 'react';
-import { useAtom, useSetAtom } from 'jotai';
+import { useSetAtom } from 'jotai';
 import { styled } from 'styled-components';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 import Address from '@/components/Address';
 import useSearchForm from '@/hooks/form/search/useSearchForm';
-import {
-  bottomSheetState,
-  SearchState,
-  searchState,
-} from '@/jotai/global/store';
+import useSearchEntryFlow from '@/hooks/search/useSearchEntryFlow';
+import { bottomSheetState, SearchState } from '@/jotai/global/store';
 import Button from '@/components/Button';
 import { ArrowBackIcon } from '@/assets/icons/ArrowBack';
-import {
-  useMakeRoomMutation,
-  useSubmitDeparturePointMutation,
-} from '@/hooks/mutation/search';
-import { roomState } from '@/jotai/global/room';
 
 const numberConfig: { [key: number]: string } = {
   1: '첫',
@@ -40,18 +32,14 @@ interface SearchViewProps {
 
 export default function SearchView({ type }: SearchViewProps) {
   const router = useRouter();
-  const shareRoomId = useSearchParams().get('roomId');
 
   const setBottomSheet = useSetAtom(bottomSheetState);
-  const [searchList, setSearchList] = useAtom(searchState);
-  const [storageRoomData, setStorageRoomData] = useAtom(roomState);
 
   const { register, setValue, handleSubmit, watch, reset } = useSearchForm();
-  const { mutate: makeRoomMutate } = useMakeRoomMutation();
-  const { mutate: submitDeparturePointMutate } =
-    useSubmitDeparturePointMutation();
-
-  const isIndividualView = type === 'individual';
+  const { isIndividualView, searchCount, submitSearch } = useSearchEntryFlow(
+    type,
+    reset,
+  );
 
   const handleSearchAddressBtnClick = (
     index: number,
@@ -67,68 +55,7 @@ export default function SearchView({ type }: SearchViewProps) {
   };
 
   const handleSearchBtnClick = (searchForm: SearchState) => {
-    if (isIndividualView) {
-      setSearchList(prevState => [...prevState, searchForm]);
-    }
-
-    if (!isIndividualView) {
-      if (shareRoomId) {
-        submitDeparturePointMutate(
-          {
-            requestBody: {
-              room_id: shareRoomId,
-              name: searchForm.name,
-              region_name: searchForm.address.regionName,
-              full_address: searchForm.address.fullAddress,
-              start_x: searchForm.address.longitude,
-              start_y: searchForm.address.latitude,
-            },
-          },
-          {
-            onSuccess: () => {
-              setStorageRoomData({ roomId: shareRoomId, hostId: '' });
-              router.push('/search/list-together');
-            },
-          },
-        );
-      } else if (storageRoomData.roomId && searchList.length > 0) {
-        submitDeparturePointMutate(
-          {
-            requestBody: {
-              room_id: storageRoomData.roomId,
-              name: searchForm.name,
-              region_name: searchForm.address.regionName,
-              full_address: searchForm.address.fullAddress,
-              start_x: searchForm.address.longitude,
-              start_y: searchForm.address.latitude,
-            },
-          },
-          {
-            onSuccess: () => {
-              router.push('/search/list-together');
-            },
-          },
-        );
-      } else {
-        makeRoomMutate(searchForm, {
-          onSuccess: data => {
-            setStorageRoomData({
-              roomId: data?.room_id,
-              hostId: data?.room_host_id,
-            });
-            router.push('/search/list-together');
-          },
-        });
-      }
-
-      return;
-    }
-
-    if (searchList.length >= 1) {
-      router.push('/search/list');
-    } else {
-      reset();
-    }
+    submitSearch(searchForm);
   };
 
   const getTitleText = (orderNums: number) => {
@@ -147,11 +74,11 @@ export default function SearchView({ type }: SearchViewProps) {
 
   const addressValue = watch('address');
   const nameValue = watch('name');
-  const titleText = getTitleText(searchList.length);
+  const titleText = getTitleText(searchCount);
   const buttonText =
-    searchList.length >= 1
+    searchCount >= 1
       ? '등록하기'
-      : `${numberConfig[searchList.length + 2]}번째 출발지 추가하기`;
+      : `${numberConfig[searchCount + 2]}번째 출발지 추가하기`;
   const isButtonDisabled = !nameValue || !addressValue?.fullAddress;
 
   const handleClearAddress = () =>
@@ -182,7 +109,7 @@ export default function SearchView({ type }: SearchViewProps) {
             value={nameValue}
           />
           <ClickableArea
-            onClick={e => handleSearchAddressBtnClick(searchList.length, e)}
+            onClick={e => handleSearchAddressBtnClick(searchCount, e)}
           >
             <Input
               isClearable
@@ -239,10 +166,6 @@ const TitleBox = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-`;
-
-const PeopleCount = styled.span`
-  font-size: 28px;
 `;
 
 const Title = styled.h1`
