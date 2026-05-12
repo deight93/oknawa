@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 
 import { usePlaceSearchMapIdQuery } from '@/hooks/query/search';
-import useDistanceSummary from '@/hooks/useDistanceSummary';
+import useResultSummary from '@/hooks/result/useResultSummary';
 
 import { useAtom, useSetAtom } from 'jotai';
 import { resultState } from '@/jotai/result/store';
@@ -29,7 +29,7 @@ export default function ResultBody() {
 
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  const { distanceSummaries, participants } = useDistanceSummary();
+  const { distanceSummaries, participants } = useResultSummary();
 
   const currentStation = distanceSummaries[currentIndex];
   const activeMapId = (mapIdInfo.mapId || queryMapId) ?? '';

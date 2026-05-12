@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 
 import useModal from '@/hooks/common/useModal';
-import useDistanceSummary from '@/hooks/useDistanceSummary';
+import useKakaoShare from '@/hooks/result/useKakaoShare';
 
 import { convertToKoreanTime } from '@/utils/date';
 
@@ -39,18 +39,14 @@ export default function DistanceSummary({
 }: DistanceSummaryProps) {
   const router = useRouter();
 
-  const { initKakao, kakaoShareSendDefault } = useDistanceSummary();
+  const { shareConfirmedResult } = useKakaoShare();
 
   const reset = useResetAtom(modalState);
 
   const { setModalContents } = useModal();
 
-  const handleKakaoSharingBtnClick = (
-    stationName: string,
-    shareKey: string,
-  ) => {
-    initKakao();
-    kakaoShareSendDefault(stationName, shareKey);
+  const handleKakaoSharingBtnClick = () => {
+    shareConfirmedResult(stationName, shareKey);
   };
 
   const clickHome = () => {
@@ -73,9 +69,7 @@ export default function DistanceSummary({
         <HomeButton onClick={clickHome}>
           <HomeIcon />
         </HomeButton>
-        <SharingButton
-          onClick={() => handleKakaoSharingBtnClick(stationName, shareKey)}
-        >
+        <SharingButton onClick={handleKakaoSharingBtnClick}>
           <ShareIcon />
           공유하기
         </SharingButton>

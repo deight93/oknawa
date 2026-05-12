@@ -12,7 +12,7 @@ import { SearchState, searchState } from '@/jotai/global/store';
 import { useInputStatusListQuery } from '@/hooks/query/search';
 import PeopleCard from './components/PeopleCard';
 import Button from '@/components/Button';
-import { baseUrl } from '@/hooks/useDistanceSummary';
+import { APP_BASE_URL } from '@/config/env';
 import SearchLoading from './components/SearchLoading';
 import { roomState } from '@/jotai/global/room';
 import { Participant } from '@/types/location';
@@ -42,7 +42,9 @@ export default function SearchCompleteListWithTogetherView() {
 
   const handleInviteBtnClick = () => {
     navigator.clipboard
-      .writeText(`${baseUrl}/search/together?roomId=${storageRoomData.roomId}`)
+      .writeText(
+        `${APP_BASE_URL}/search/together?roomId=${storageRoomData.roomId}`,
+      )
       .then(() => {
         toast.success('링크가 복사되었습니다.');
       });

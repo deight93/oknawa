@@ -1,7 +1,6 @@
 import Script from 'next/script';
 
-const KAKAO_APP_KEY = process.env.NEXT_PUBLIC_KAKAOMAP_APP_KEY;
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL
+import { APP_BASE_URL, KAKAO_APP_KEY } from '@/config/env';
 
 export default function BaseHead() {
   return (
@@ -31,11 +30,11 @@ export default function BaseHead() {
       />
       <meta
         property="og:image"
-        content={`${BASE_URL}/images/og-image.jpg`}
+        content={`${APP_BASE_URL}/images/og-image.jpg`}
       />
       <meta property="og:image:width" content="256" />
       <meta property="og:image:height" content="256" />
-      <meta property="og:url" content={BASE_URL} />
+      <meta property="og:url" content={APP_BASE_URL} />
       <meta property="og:type" content="website" />
       <meta property="og:site_name" content="Ok, 나와!" />
       <meta name="twitter:card" content="summary" />
