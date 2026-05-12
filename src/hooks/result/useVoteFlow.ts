@@ -4,12 +4,18 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAtomValue, useSetAtom } from 'jotai';
 import { useResetAtom } from 'jotai/utils';
 
+import { logApiError } from '@/api/errors';
 import useModal from '@/hooks/common/useModal';
 import { usePlaceSearchWithShareKeyMutation } from '@/hooks/mutation/search';
 import { modalState } from '@/jotai/global/store';
 import { mapIdState } from '@/jotai/mapId/store';
 import { resultConfirmState } from '@/jotai/result-confirm/store';
 import VoteService from '@/services/vote/VoteService';
+import {
+  clearVotedForMap,
+  hasVotedForMap,
+  setVotedForMap,
+} from '@/utils/voteStorage';
 
 export default function useVoteFlow(shareKey: string) {
   const router = useRouter();
@@ -22,17 +28,11 @@ export default function useVoteFlow(shareKey: string) {
     usePlaceSearchWithShareKeyMutation();
 
   const activeMapId = (mapIdInfo.mapId || queryMapId) ?? '';
-  const voteStorageKey = activeMapId ? `isVote:${activeMapId}` : '';
   const [isVote, setIsVote] = useState(false);
 
   useEffect(() => {
-    if (!voteStorageKey) {
-      setIsVote(false);
-      return;
-    }
-
-    setIsVote(localStorage.getItem(voteStorageKey) === 'true');
-  }, [voteStorageKey]);
+    setIsVote(hasVotedForMap(activeMapId));
+  }, [activeMapId]);
 
   const vote = async () => {
     resetModal();
@@ -47,11 +47,10 @@ export default function useVoteFlow(shareKey: string) {
 
     try {
       await VoteService.setVote(activeMapId, shareKey);
-      localStorage.setItem(voteStorageKey, 'true');
-      localStorage.removeItem('isVote');
+      setVotedForMap(activeMapId);
       setIsVote(true);
     } catch (error) {
-      console.error('Error voting:', error);
+      logApiError('vote', error);
       setModalContents({
         buttonLabel: '확인',
         contents: '투표에 실패했습니다. 다시 시도해주세요.',
@@ -65,15 +64,11 @@ export default function useVoteFlow(shareKey: string) {
         if (data) {
           setResultConfirm(data);
         }
-        if (voteStorageKey) {
-          localStorage.removeItem(voteStorageKey);
-        }
-        localStorage.removeItem('isVote');
+        clearVotedForMap(activeMapId);
         router.replace(`/result/confirm?sharekey=${shareKey}`);
         resetModal();
       },
-      onError: error => {
-        console.error('Error fetching map data:', error);
+      onError: () => {
         setModalContents({
           buttonLabel: '확인',
           contents: '확정 결과를 불러오지 못했습니다. 다시 시도해주세요.',
@@ -92,7 +87,7 @@ export default function useVoteFlow(shareKey: string) {
         onConfirm: moveToFinal,
       });
     } catch (error) {
-      console.error('Error voting:', error);
+      logApiError('voteConfirm', error);
       setModalContents({
         buttonLabel: '확인',
         contents: '확정에 실패했습니다. 다시 시도해주세요.',

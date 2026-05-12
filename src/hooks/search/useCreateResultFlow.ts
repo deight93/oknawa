@@ -10,6 +10,7 @@ import {
 import { searchState, SearchState } from '@/jotai/global/store';
 import { mapIdState } from '@/jotai/mapId/store';
 import { resultState } from '@/jotai/result/store';
+import { clearLegacyVoteState } from '@/utils/voteStorage';
 
 export default function useCreateResultFlow() {
   const router = useRouter();
@@ -36,10 +37,9 @@ export default function useCreateResultFlow() {
             setSearchState(searchList);
             setResult(mapData);
             router.push('/result');
-            localStorage.removeItem('isVote');
+            clearLegacyVoteState();
           },
-          onError: error => {
-            console.error('Error fetching map data:', error);
+          onError: () => {
             setModalContents({
               buttonLabel: '확인',
               contents: '추천 결과를 불러오지 못했습니다. 다시 시도해주세요.',

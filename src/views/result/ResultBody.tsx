@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { usePlaceSearchMapIdQuery } from '@/hooks/query/search';
 import useResultSummary from '@/hooks/result/useResultSummary';
 
-import { useAtom, useSetAtom } from 'jotai';
+import { useAtomValue, useSetAtom } from 'jotai';
 import { resultState } from '@/jotai/result/store';
 import { mapIdState } from '@/jotai/mapId/store';
 import { bottomSheetState } from '@/jotai/global/store';
@@ -18,12 +18,13 @@ import ResultMap from './components/ResultMap';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@nextui-org/react';
 import { DistanceSummaryItem } from '@/types/location';
+import { clearLegacyVoteState } from '@/utils/voteStorage';
 
 export default function ResultBody() {
   const router = useRouter();
   const queryMapId = useSearchParams().get('mapId');
 
-  const [mapIdInfo] = useAtom(mapIdState);
+  const mapIdInfo = useAtomValue(mapIdState);
   const setBottomSheet = useSetAtom(bottomSheetState);
   const setResult = useSetAtom(resultState);
 
@@ -44,7 +45,9 @@ export default function ResultBody() {
   }, [data, setResult]);
 
   useEffect(() => {
-    if (queryMapId) localStorage.removeItem('isVote');
+    if (queryMapId) {
+      clearLegacyVoteState();
+    }
   }, [queryMapId]);
 
   useEffect(() => {
