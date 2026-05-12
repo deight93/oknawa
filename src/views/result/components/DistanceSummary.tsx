@@ -1,20 +1,16 @@
 'use client';
 
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
-import { useAtom, useSetAtom } from 'jotai';
-import { mapIdState } from '@/jotai/mapId/store';
-import { resultConfirmState } from '@/jotai/result-confirm/store';
 import { modalState } from '@/jotai/global/store';
 
 import { useResetAtom } from 'jotai/utils';
 
-import { usePlaceSearchWithShareKeyMutation } from '@/hooks/mutation/search';
 import useModal from '@/hooks/common/useModal';
-
-import VoteService from '@/services/vote/VoteService';
+import useResultShare from '@/hooks/result/useResultShare';
+import useVoteFlow from '@/hooks/result/useVoteFlow';
 
 import { ShareIcon } from '@/assets/icons/Share';
 import { HomeIcon } from '@/assets/icons/Home';
@@ -95,137 +91,14 @@ export default function DistanceSummary({
 }: DistanceSummaryProps) {
   const router = useRouter();
 
-  const [mapIdInfo] = useAtom(mapIdState);
-  const setResultConfirm = useSetAtom(resultConfirmState);
   const reset = useResetAtom(modalState);
 
-  const [fullUrl, setFullUrl] = useState('');
   const [isExpandTail, setExpandTail] = useState(true);
-  const [isVote, setIsVote] = useState(false);
-
-  const queryMapId = useSearchParams().get('mapId');
-  const activeMapId = (mapIdInfo.mapId || queryMapId) ?? '';
-  const voteStorageKey = activeMapId ? `isVote:${activeMapId}` : '';
 
   const { setModalContents } = useModal();
-
-  const { mutate: placeSearchWithShareKey } =
-    usePlaceSearchWithShareKeyMutation();
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setFullUrl(window.location.href);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!voteStorageKey) {
-      setIsVote(false);
-      return;
-    }
-
-    setIsVote(localStorage.getItem(voteStorageKey) === 'true');
-  }, [voteStorageKey]);
-
-  const clickInvitation = async () => {
-    if (queryMapId) {
-      const link = `${fullUrl}`;
-      try {
-        await navigator.clipboard.writeText(link);
-        setModalContents({
-          buttonLabel: '확인',
-          contents: '링크가 복사되었습니다!',
-        });
-      } catch (err) {
-        console.error('클립보드에 복사 실패:', err);
-      }
-    } else {
-      const link = `${fullUrl}?mapId=${mapIdInfo.mapId}`;
-      try {
-        await navigator.clipboard.writeText(link);
-        setModalContents({
-          buttonLabel: '확인',
-          contents: '링크가 복사되었습니다!',
-        });
-      } catch (err) {
-        console.error('클립보드에 복사 실패:', err);
-      }
-    }
-  };
-
-  const clickVote = async () => {
-    if (!isVote) {
-      setModalContents({
-        buttonLabel: '취소',
-        buttonLabel02: '투표하기',
-        contents: '투표하시겠어요?\n수정이 불가능합니다.',
-        onConfirm: handleVote,
-      });
-    }
-  };
-  const handleVote = async () => {
-    reset();
-    try {
-      await VoteService.setVote(activeMapId, shareKey);
-      if (voteStorageKey) {
-        localStorage.setItem(voteStorageKey, 'true');
-        localStorage.removeItem('isVote');
-      }
-      setIsVote(true);
-    } catch (error) {
-      console.error('Error voting:', error);
-    }
-  };
-
-  const clickVoteConfirm = async () => {
-    if (!isVote) {
-      setModalContents({
-        buttonLabel: '확인',
-        contents: '아직 투표를 안하셨어요!',
-      });
-      return;
-    } else {
-      setModalContents({
-        buttonLabel: '취소',
-        buttonLabel02: '확인',
-        contents: '진짜 이대로 확정하시겠어요?',
-        onConfirm: handleVoteConfirm,
-      });
-    }
-  };
-
-  const moveToFinal = () => {
-    placeSearchWithShareKey(shareKey, {
-      onSuccess: data => {
-        if (data) {
-          setResultConfirm(data);
-        }
-        if (voteStorageKey) {
-          localStorage.removeItem(voteStorageKey);
-        }
-        localStorage.removeItem('isVote');
-        router.replace(`/result/confirm?sharekey=${shareKey}`);
-        reset();
-      },
-      onError: error => {
-        console.error('Error fetching map data:', error);
-      },
-    });
-  };
-
-  const handleVoteConfirm = async () => {
-    try {
-      await VoteService.setVoteConfirm(mapIdInfo, shareKey);
-
-      setModalContents({
-        buttonLabel: '확인',
-        contents: '이번 약속 지역이 확정되었어요!',
-        onConfirm: moveToFinal,
-      });
-    } catch (error) {
-      console.error('Error voting:', error);
-    }
-  };
+  const { copyInvitationLink } = useResultShare();
+  const { isVote, requestVote, requestConfirm, canConfirm } =
+    useVoteFlow(shareKey);
 
   const clickHome = () => {
     setModalContents({
@@ -255,7 +128,7 @@ export default function DistanceSummary({
         <HomeButton onClick={clickHome}>
           <HomeIcon />
         </HomeButton>
-        <SharingButton onClick={clickInvitation}>
+        <SharingButton onClick={copyInvitationLink}>
           <ShareIcon />
           초대하기
         </SharingButton>
@@ -302,13 +175,13 @@ export default function DistanceSummary({
             <ButtonWrapper>
               <LikeButtonWithVote
                 label={'좋아요'}
-                onClick={clickVote}
+                onClick={requestVote}
                 isVote={isVote}
               >
                 {isVote ? <LikeIconActive /> : <LikeIconInactive />}
               </LikeButtonWithVote>
-              {mapIdInfo.mapHostId && (
-                <ButtonPrimary label={'확정하기'} onClick={clickVoteConfirm} />
+              {canConfirm && (
+                <ButtonPrimary label={'확정하기'} onClick={requestConfirm} />
               )}
             </ButtonWrapper>
           </PreffertWrapper>
@@ -341,11 +214,11 @@ export default function DistanceSummary({
             </LeftWrapper>
             <RightWrapper>
               <ButtonWrapper>
-                <LikeButton onClick={clickVote}>
+                <LikeButton onClick={requestVote}>
                   {isVote ? <LikeIconActive /> : <LikeIconInactive />}
                 </LikeButton>
-                {mapIdInfo.mapHostId && (
-                  <ConfirmButton onClick={clickVoteConfirm}>
+                {canConfirm && (
+                  <ConfirmButton onClick={requestConfirm}>
                     <Check />
                   </ConfirmButton>
                 )}
