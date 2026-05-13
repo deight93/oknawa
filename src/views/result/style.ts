@@ -406,6 +406,22 @@ export const CompareMetricValue = styled.span`
   white-space: nowrap;
 `;
 
+export const CompareMetricBar = styled.span`
+  width: 100%;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background-color: #34343a;
+`;
+
+export const CompareMetricBarFill = styled.span<{ $ratio: number }>`
+  display: block;
+  width: ${({ $ratio }) => `${Math.max(0, Math.min($ratio, 100))}%`};
+  height: 100%;
+  border-radius: inherit;
+  background-color: #18c964;
+`;
+
 export const ParticipantList = styled.div`
   display: flex;
   flex-direction: column;
