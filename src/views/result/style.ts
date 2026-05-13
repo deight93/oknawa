@@ -128,6 +128,59 @@ export const SortButton = styled.button<{ $isActive: boolean }>`
   white-space: nowrap;
 `;
 
+export const PreferencePanel = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #28282d;
+  border-radius: 8px;
+  background-color: #1c1c20;
+`;
+
+export const PreferenceHeader = styled.div`
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+`;
+
+export const PreferenceTitle = styled.p`
+  color: #f4f4f5;
+  font-size: 15px;
+  font-weight: 700;
+`;
+
+export const PreferenceDescription = styled.p`
+  color: #bdbdbd;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.45;
+`;
+
+export const ConditionBadgeList = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+`;
+
+export const ConditionBadge = styled.span`
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 0 8px;
+  border: 1px solid #18c964;
+  border-radius: 999px;
+  background-color: #123925;
+  color: #18c964;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+`;
+
 export const CompareHeader = styled.div`
   display: flex;
   flex-direction: row;
@@ -152,10 +205,10 @@ export const CompareList = styled.div`
 export const CompareCard = styled.button<{ $isActive: boolean }>`
   display: flex;
   flex: 0 0 154px;
-  min-height: 104px;
+  min-height: 132px;
   flex-direction: column;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   padding: 12px;
   border: 1px solid ${({ $isActive }) => ($isActive ? '#18c964' : '#28282d')};
   border-radius: 8px;
@@ -172,6 +225,13 @@ export const CompareStationName = styled.p`
   line-height: 1.25;
   text-overflow: ellipsis;
   white-space: nowrap;
+`;
+
+export const CompareBadgeList = styled.div`
+  display: flex;
+  min-height: 24px;
+  flex-wrap: wrap;
+  gap: 4px;
 `;
 
 export const CompareMetrics = styled.div`

@@ -67,7 +67,10 @@ import {
   RightWrapper,
   LikeButton,
   ConfirmButton,
+  ConditionBadge,
+  ConditionBadgeList,
   CompareCard,
+  CompareBadgeList,
   CompareHeader,
   CompareList,
   CompareMetric,
@@ -76,15 +79,40 @@ import {
   CompareMetrics,
   CompareStationName,
   CompareTitle,
+  PreferenceDescription,
+  PreferenceHeader,
+  PreferencePanel,
+  PreferenceTitle,
   SortButton,
   SortWrapper,
 } from '../style';
 import styled from 'styled-components';
 
+const PREFERENCE_OPTIONS: Record<
+  ResultSortOption,
+  { badgeLabel: string; description: string; label: string }
+> = {
+  averageTime: {
+    label: '평균 빠른순',
+    badgeLabel: '평균 최단',
+    description: '전체 인원이 평균적으로 가장 빨리 도착하는 후보를 우선해요.',
+  },
+  maxTime: {
+    label: '최장 짧은순',
+    badgeLabel: '최장 최단',
+    description: '가장 오래 이동하는 사람의 시간을 줄이는 후보를 우선해요.',
+  },
+  vote: {
+    label: '득표 많은순',
+    badgeLabel: '득표 1위',
+    description: '참가자 선호도가 높은 후보를 우선해요.',
+  },
+};
+
 const SORT_OPTIONS: { label: string; value: ResultSortOption }[] = [
-  { label: '평균 빠른순', value: 'averageTime' },
-  { label: '최장 짧은순', value: 'maxTime' },
-  { label: '득표 많은순', value: 'vote' },
+  { label: PREFERENCE_OPTIONS.averageTime.label, value: 'averageTime' },
+  { label: PREFERENCE_OPTIONS.maxTime.label, value: 'maxTime' },
+  { label: PREFERENCE_OPTIONS.vote.label, value: 'vote' },
 ];
 
 interface DistanceSummaryProps {
@@ -156,6 +184,7 @@ export default function DistanceSummary({
   const voteCount = Array(stationParticipants.length)
     .fill(true, 0, vote)
     .fill(false, vote);
+  const selectedPreference = PREFERENCE_OPTIONS[sortOption];
 
   return (
     <Container>
@@ -205,6 +234,22 @@ export default function DistanceSummary({
               </SortButton>
             ))}
           </SortWrapper>
+          <PreferencePanel>
+            <PreferenceHeader>
+              <PreferenceTitle>선호 조건</PreferenceTitle>
+              <ConditionBadge>{selectedPreference.label}</ConditionBadge>
+            </PreferenceHeader>
+            <PreferenceDescription>
+              {selectedPreference.description}
+            </PreferenceDescription>
+            <ConditionBadgeList>
+              {station.preferenceMatches.map(preference => (
+                <ConditionBadge key={preference}>
+                  {PREFERENCE_OPTIONS[preference].badgeLabel}
+                </ConditionBadge>
+              ))}
+            </ConditionBadgeList>
+          </PreferencePanel>
           {stations.length > 1 && (
             <>
               <CompareHeader>
@@ -222,6 +267,13 @@ export default function DistanceSummary({
                     <CompareStationName>
                       {index + 1}. {candidate.stationName}
                     </CompareStationName>
+                    <CompareBadgeList>
+                      {candidate.preferenceMatches.map(preference => (
+                        <ConditionBadge key={preference}>
+                          {PREFERENCE_OPTIONS[preference].badgeLabel}
+                        </ConditionBadge>
+                      ))}
+                    </CompareBadgeList>
                     <CompareMetrics>
                       <CompareMetric>
                         <CompareMetricLabel>평균</CompareMetricLabel>
