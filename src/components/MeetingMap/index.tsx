@@ -136,7 +136,7 @@ export default function MeetingMap({
     if (!map || !center) return;
 
     if (focusMode === 'destination') {
-      map.setLevel(3);
+      map.setLevel(5);
       map.setCenter(new kakao.maps.LatLng(center.lat, center.lng));
       return;
     }
