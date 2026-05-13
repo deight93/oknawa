@@ -83,8 +83,6 @@ import {
   CompareHeader,
   CompareList,
   CompareMetric,
-  CompareMetricBar,
-  CompareMetricBarFill,
   CompareMetricLabel,
   CompareMetricValue,
   CompareMetrics,
@@ -186,29 +184,6 @@ const getVisiblePreferences = (
   visibleCount: number,
 ) => preferences.slice(0, visibleCount);
 
-const getRange = (values: number[]) => ({
-  min: values.length ? Math.min(...values) : 0,
-  max: values.length ? Math.max(...values) : 0,
-});
-
-const getLowerBetterRatio = (
-  value: number,
-  range: { min: number; max: number },
-) => {
-  if (range.max === range.min) return 100;
-
-  return 28 + ((range.max - value) / (range.max - range.min)) * 72;
-};
-
-const getHigherBetterRatio = (
-  value: number,
-  range: { min: number; max: number },
-) => {
-  if (range.max <= 0) return 0;
-
-  return 28 + (value / range.max) * 72;
-};
-
 interface DistanceSummaryProps {
   station: DistanceSummaryItem;
   stations: DistanceSummaryItem[];
@@ -294,13 +269,6 @@ export default function DistanceSummary({
     station.preferenceMatches,
     2,
   );
-  const compareMetricRanges = {
-    averageTravelTime: getRange(
-      stations.map(candidate => candidate.averageTravelTime),
-    ),
-    maxTravelTime: getRange(stations.map(candidate => candidate.maxTravelTime)),
-    vote: getRange(stations.map(candidate => candidate.vote)),
-  };
 
   const toggleCompareDetail = (shareKey: string) => {
     setOpenedCompareShareKey(currentShareKey =>
@@ -513,42 +481,18 @@ export default function DistanceSummary({
                           <CompareMetricValue>
                             {convertToKoreanTime(candidate.averageTravelTime)}
                           </CompareMetricValue>
-                          <CompareMetricBar>
-                            <CompareMetricBarFill
-                              $ratio={getLowerBetterRatio(
-                                candidate.averageTravelTime,
-                                compareMetricRanges.averageTravelTime,
-                              )}
-                            />
-                          </CompareMetricBar>
                         </CompareMetric>
                         <CompareMetric>
                           <CompareMetricLabel>최장</CompareMetricLabel>
                           <CompareMetricValue>
                             {convertToKoreanTime(candidate.maxTravelTime)}
                           </CompareMetricValue>
-                          <CompareMetricBar>
-                            <CompareMetricBarFill
-                              $ratio={getLowerBetterRatio(
-                                candidate.maxTravelTime,
-                                compareMetricRanges.maxTravelTime,
-                              )}
-                            />
-                          </CompareMetricBar>
                         </CompareMetric>
                         <CompareMetric>
                           <CompareMetricLabel>득표</CompareMetricLabel>
                           <CompareMetricValue>
                             {candidate.vote}표
                           </CompareMetricValue>
-                          <CompareMetricBar>
-                            <CompareMetricBarFill
-                              $ratio={getHigherBetterRatio(
-                                candidate.vote,
-                                compareMetricRanges.vote,
-                              )}
-                            />
-                          </CompareMetricBar>
                         </CompareMetric>
                       </CompareMetrics>
                       <DetailToggleButton
