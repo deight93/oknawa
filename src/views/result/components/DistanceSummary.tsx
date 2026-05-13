@@ -101,6 +101,12 @@ const PREFERENCE_OPTIONS: Record<
   ResultSortOption,
   { badgeLabel: string; description: string; label: string }
 > = {
+  recommended: {
+    label: '추천순',
+    badgeLabel: '추천 1위',
+    description:
+      '이동시간, 환승, 도보 부담을 함께 보고 균형 좋은 후보를 우선해요.',
+  },
   averageTime: {
     label: '평균 빠른순',
     badgeLabel: '평균 최단',
@@ -111,6 +117,16 @@ const PREFERENCE_OPTIONS: Record<
     badgeLabel: '최장 최단',
     description: '가장 오래 이동하는 사람의 시간을 줄이는 후보를 우선해요.',
   },
+  transfer: {
+    label: '환승 적은순',
+    badgeLabel: '환승 적음',
+    description: '참가자들의 평균 환승 부담이 낮은 후보를 우선해요.',
+  },
+  walking: {
+    label: '도보 짧은순',
+    badgeLabel: '도보 짧음',
+    description: '참가자들의 평균 도보 시간이 짧은 후보를 우선해요.',
+  },
   vote: {
     label: '득표 많은순',
     badgeLabel: '득표 1위',
@@ -119,8 +135,11 @@ const PREFERENCE_OPTIONS: Record<
 };
 
 const SORT_OPTIONS: { label: string; value: ResultSortOption }[] = [
+  { label: PREFERENCE_OPTIONS.recommended.label, value: 'recommended' },
   { label: PREFERENCE_OPTIONS.averageTime.label, value: 'averageTime' },
   { label: PREFERENCE_OPTIONS.maxTime.label, value: 'maxTime' },
+  { label: PREFERENCE_OPTIONS.transfer.label, value: 'transfer' },
+  { label: PREFERENCE_OPTIONS.walking.label, value: 'walking' },
   { label: PREFERENCE_OPTIONS.vote.label, value: 'vote' },
 ];
 
@@ -291,6 +310,12 @@ export default function DistanceSummary({
             </ConditionBadgeList>
           </PreferencePanel>
           <QualityMetrics>
+            <QualityMetric>
+              <QualityMetricLabel>추천 점수</QualityMetricLabel>
+              <QualityMetricValue>
+                {Math.round(station.recommendScore)}
+              </QualityMetricValue>
+            </QualityMetric>
             <QualityMetric>
               <QualityMetricLabel>평균 환승</QualityMetricLabel>
               <QualityMetricValue>

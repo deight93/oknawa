@@ -45,7 +45,13 @@ export interface LocationResult {
   vote_round?: number;
 }
 
-export type ResultSortOption = 'averageTime' | 'maxTime' | 'vote';
+export type ResultSortOption =
+  | 'recommended'
+  | 'averageTime'
+  | 'maxTime'
+  | 'transfer'
+  | 'walking'
+  | 'vote';
 
 export type ResultPreferenceMatch = ResultSortOption;
 
@@ -63,6 +69,7 @@ export interface DistanceSummaryItem {
   averageWalkingDistance: number;
   averageWalkingTime: number;
   hasRouteQualityMetrics: boolean;
+  recommendScore: number;
   vote: number;
   preferenceMatches: ResultPreferenceMatch[];
 }

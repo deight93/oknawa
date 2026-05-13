@@ -6,8 +6,21 @@ import { DistanceSummaryItem, ResultSortOption } from '@/types/location';
 const compareBySortOption = (sortOption: ResultSortOption) => {
   return (a: DistanceSummaryItem, b: DistanceSummaryItem) => {
     switch (sortOption) {
+      case 'recommended':
+        return a.recommendScore - b.recommendScore;
       case 'maxTime':
         return a.maxTravelTime - b.maxTravelTime;
+      case 'transfer':
+        return (
+          a.averageTransferCount - b.averageTransferCount ||
+          a.averageTravelTime - b.averageTravelTime
+        );
+      case 'walking':
+        return (
+          a.averageWalkingTime - b.averageWalkingTime ||
+          a.averageWalkingDistance - b.averageWalkingDistance ||
+          a.averageTravelTime - b.averageTravelTime
+        );
       case 'vote':
         return b.vote - a.vote || a.averageTravelTime - b.averageTravelTime;
       case 'averageTime':
@@ -71,6 +84,11 @@ export default function useResultSummary(sortOption: ResultSortOption) {
     const averageWalkingTime = itinerary.length
       ? totalWalkingTime / itinerary.length
       : 0;
+    const recommendScore =
+      averageTravelTime +
+      maxTravelTime * 0.35 +
+      (hasRouteQualityMetrics ? averageTransferCount * 600 : 0) +
+      (hasRouteQualityMetrics ? averageWalkingTime * 0.45 : 0);
 
     return {
       station,
@@ -86,11 +104,15 @@ export default function useResultSummary(sortOption: ResultSortOption) {
       averageWalkingDistance,
       averageWalkingTime,
       hasRouteQualityMetrics,
+      recommendScore,
       vote,
       preferenceMatches: [],
     };
   });
 
+  const minRecommendScore = summaries.length
+    ? Math.min(...summaries.map(summary => summary.recommendScore))
+    : 0;
   const minAverageTravelTime = summaries.length
     ? Math.min(...summaries.map(summary => summary.averageTravelTime))
     : 0;
@@ -100,16 +122,33 @@ export default function useResultSummary(sortOption: ResultSortOption) {
   const maxVote = summaries.length
     ? Math.max(...summaries.map(summary => summary.vote))
     : 0;
+  const minAverageTransferCount = summaries.length
+    ? Math.min(...summaries.map(summary => summary.averageTransferCount))
+    : 0;
+  const minAverageWalkingTime = summaries.length
+    ? Math.min(...summaries.map(summary => summary.averageWalkingTime))
+    : 0;
 
   const distanceSummaries: DistanceSummaryItem[] = summaries
     .map(summary => ({
       ...summary,
       preferenceMatches: [
+        ...(summary.recommendScore === minRecommendScore
+          ? (['recommended'] as const)
+          : []),
         ...(summary.averageTravelTime === minAverageTravelTime
           ? (['averageTime'] as const)
           : []),
         ...(summary.maxTravelTime === minMaxTravelTime
           ? (['maxTime'] as const)
+          : []),
+        ...(summary.hasRouteQualityMetrics &&
+        summary.averageTransferCount === minAverageTransferCount
+          ? (['transfer'] as const)
+          : []),
+        ...(summary.hasRouteQualityMetrics &&
+        summary.averageWalkingTime === minAverageWalkingTime
+          ? (['walking'] as const)
           : []),
         ...(summary.vote === maxVote ? (['vote'] as const) : []),
       ],

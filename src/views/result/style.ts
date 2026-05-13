@@ -205,13 +205,14 @@ export const ConditionBadge = styled.span`
 
 export const QualityMetrics = styled.div`
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 8px;
+  overflow-x: auto;
 `;
 
 export const QualityMetric = styled.div`
   display: flex;
-  min-width: 0;
+  min-width: 74px;
   flex-direction: column;
   gap: 4px;
   padding: 10px 8px;

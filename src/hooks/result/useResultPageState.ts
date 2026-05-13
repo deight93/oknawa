@@ -13,7 +13,7 @@ export default function useResultPageState(queryMapId: string | null) {
   const mapIdInfo = useAtomValue(mapIdState);
   const setResult = useSetAtom(resultState);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [sortOption, setSortOption] = useState<ResultSortOption>('averageTime');
+  const [sortOption, setSortOption] = useState<ResultSortOption>('recommended');
 
   const { distanceSummaries, participants } = useResultSummary(sortOption);
   const activeMapId = (mapIdInfo.mapId || queryMapId) ?? '';
