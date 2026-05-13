@@ -35,7 +35,6 @@ export default function ResultConfirmBody({
 
   const { station_name, itinerary, request_info, end_x, end_y } = resultConfirm;
   const activeMapId = mapIdInfo.mapId || resultConfirm.map_id || '';
-  const activeVoteRound = resultConfirm.vote_round ?? 1;
   const canConfirmHotPlace = Boolean(activeMapId && mapIdInfo.mapHostId);
   const confirmedPlaceX = confirmedPlace?.x ?? null;
   const confirmedPlaceY = confirmedPlace?.y ?? null;
@@ -62,15 +61,6 @@ export default function ResultConfirmBody({
                   mapId: activeMapId,
                   mapHostId: mapIdInfo.mapHostId,
                   shareKey,
-                }
-              : undefined
-          }
-          voteConfig={
-            activeMapId
-              ? {
-                  mapId: activeMapId,
-                  shareKey,
-                  voteRound: activeVoteRound,
                 }
               : undefined
           }

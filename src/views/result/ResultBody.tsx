@@ -41,8 +41,6 @@ export default function ResultBody({ queryMapId }: ResultBodyProps) {
     const canConfirmHotPlace =
       Boolean(activeMapId && activeMapHostId) &&
       station.shareKey === confirmedShareKey;
-    const canVoteHotPlace =
-      Boolean(activeMapId) && station.shareKey === confirmedShareKey;
 
     setBottomSheet(prevState => ({
       ...prevState,
@@ -62,15 +60,6 @@ export default function ResultBody({ queryMapId }: ResultBodyProps) {
                   mapId: activeMapId,
                   mapHostId: activeMapHostId,
                   shareKey: station.shareKey,
-                }
-              : undefined
-          }
-          voteConfig={
-            canVoteHotPlace
-              ? {
-                  mapId: activeMapId,
-                  shareKey: station.shareKey,
-                  voteRound,
                 }
               : undefined
           }
