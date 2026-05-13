@@ -30,10 +30,10 @@ export default function BaseHead() {
       />
       <meta
         property="og:image"
-        content={`${APP_BASE_URL}/images/og-image.jpg`}
+        content={`${APP_BASE_URL}/images/kakao-share.jpg`}
       />
-      <meta property="og:image:width" content="256" />
-      <meta property="og:image:height" content="256" />
+      <meta property="og:image:width" content="1200" />
+      <meta property="og:image:height" content="1200" />
       <meta property="og:url" content={APP_BASE_URL} />
       <meta property="og:type" content="website" />
       <meta property="og:site_name" content="Ok, 나와!" />
@@ -47,7 +47,7 @@ export default function BaseHead() {
       />
       <meta
         name="twitter:image"
-        content="https://www.oknawa.com/images/og-image.jpg"
+        content="https://www.oknawa.com/images/kakao-share.jpg"
       />
       <meta charSet="UTF-8" />
       <meta

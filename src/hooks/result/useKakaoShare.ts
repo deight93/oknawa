@@ -1,8 +1,4 @@
-import {
-  APP_BASE_URL,
-  KAKAO_APP_KEY,
-  KAKAO_SHARE_IMAGE_URL,
-} from '@/config/env';
+import { APP_BASE_URL, KAKAO_APP_KEY } from '@/config/env';
 import toast from 'react-hot-toast';
 
 interface ShareConfirmedResultOptions {
@@ -14,7 +10,7 @@ interface ShareConfirmedResultOptions {
   travelTimeLabel?: string;
 }
 
-const DEFAULT_SHARE_IMAGE_PATH = '/images/og-image.jpg';
+const DEFAULT_SHARE_IMAGE_PATH = '/images/kakao-share.jpg';
 
 const getBaseUrl = () => APP_BASE_URL || window.location.origin;
 
@@ -28,8 +24,7 @@ const getConfirmUrl = (shareKey: string) => {
 };
 
 const getShareImageUrl = (imageUrl?: string | null) => {
-  const fallbackImageUrl = KAKAO_SHARE_IMAGE_URL || DEFAULT_SHARE_IMAGE_PATH;
-  const candidate = imageUrl || fallbackImageUrl;
+  const candidate = imageUrl || DEFAULT_SHARE_IMAGE_PATH;
 
   try {
     const url = new URL(candidate, getBaseUrl());
@@ -41,7 +36,7 @@ const getShareImageUrl = (imageUrl?: string | null) => {
     console.error('Kakao share image url error:', error);
   }
 
-  return toAbsoluteUrl(fallbackImageUrl);
+  return toAbsoluteUrl(DEFAULT_SHARE_IMAGE_PATH);
 };
 
 const getShareDescription = (
