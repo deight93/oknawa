@@ -64,15 +64,7 @@ export default function DistanceSummary({
   const averageTravelTimeLabel = convertToKoreanTime(averageTravelTime);
 
   const handleKakaoSharingBtnClick = () => {
-    shareConfirmedResult(stationName, shareKey, {
-      addressName:
-        confirmedPlace?.road_address_name || confirmedPlace?.address_name,
-      categoryName: confirmedPlace?.category_group_name,
-      imageUrl: confirmedPlace?.main_photo_url,
-      placeUrl: confirmedPlace?.place_url,
-      placeName: confirmedPlace?.place_name,
-      travelTimeLabel: averageTravelTimeLabel,
-    });
+    shareConfirmedResult(stationName, shareKey);
   };
 
   const clickHome = () => {

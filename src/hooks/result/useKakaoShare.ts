@@ -1,15 +1,6 @@
 import { APP_BASE_URL, KAKAO_APP_KEY } from '@/config/env';
 import toast from 'react-hot-toast';
 
-interface ShareConfirmedResultOptions {
-  addressName?: string | null;
-  categoryName?: string | null;
-  imageUrl?: string | null;
-  placeUrl?: string | null;
-  placeName?: string | null;
-  travelTimeLabel?: string;
-}
-
 const DEFAULT_SHARE_IMAGE_PATH = '/images/kakao-share.jpg';
 
 const getBaseUrl = () => APP_BASE_URL || window.location.origin;
@@ -23,11 +14,9 @@ const getConfirmUrl = (shareKey: string) => {
   return url.toString();
 };
 
-const getShareImageUrl = (imageUrl?: string | null) => {
-  const candidate = imageUrl || DEFAULT_SHARE_IMAGE_PATH;
-
+const getShareImageUrl = () => {
   try {
-    const url = new URL(candidate, getBaseUrl());
+    const url = new URL(DEFAULT_SHARE_IMAGE_PATH, getBaseUrl());
 
     if (url.protocol === 'http:' || url.protocol === 'https:') {
       return url.toString();
@@ -37,23 +26,6 @@ const getShareImageUrl = (imageUrl?: string | null) => {
   }
 
   return toAbsoluteUrl(DEFAULT_SHARE_IMAGE_PATH);
-};
-
-const getShareDescription = (
-  stationName: string,
-  options?: ShareConfirmedResultOptions,
-) => {
-  const detailList = [
-    options?.categoryName,
-    options?.addressName,
-    options?.travelTimeLabel ? `평균 ${options.travelTimeLabel}` : null,
-  ].filter(Boolean);
-
-  if (detailList.length > 0) {
-    return detailList.join(' · ');
-  }
-
-  return `${stationName} 근처 약속 장소와 이동 경로를 확인해보세요.`;
 };
 
 export default function useKakaoShare() {
@@ -84,11 +56,7 @@ export default function useKakaoShare() {
     return true;
   };
 
-  const shareConfirmedResult = (
-    stationName: string,
-    shareKey: string,
-    options?: ShareConfirmedResultOptions,
-  ) => {
+  const shareConfirmedResult = (stationName: string, shareKey: string) => {
     try {
       const confirmUrl = getConfirmUrl(shareKey);
       const isReady = initKakao();
@@ -98,44 +66,17 @@ export default function useKakaoShare() {
         return;
       }
 
-      const placeName = options?.placeName || stationName;
-      const placeUrl = options?.placeUrl
-        ? toAbsoluteUrl(options.placeUrl)
-        : null;
-      const description = getShareDescription(stationName, options);
-      const buttons = [
-        {
-          title: '약속 장소 보기',
-          link: {
-            webUrl: confirmUrl,
-            mobileWebUrl: confirmUrl,
-          },
-        },
-      ];
-
-      if (placeUrl) {
-        buttons.push({
-          title: '장소 정보 보기',
-          link: {
-            webUrl: placeUrl,
-            mobileWebUrl: placeUrl,
-          },
-        });
-      }
-
       window.Kakao.Share.sendDefault({
         objectType: 'feed',
         content: {
-          title: `${placeName}에서 만나요`,
-          description,
-          imageUrl: getShareImageUrl(options?.imageUrl),
+          title: `오늘은 ${stationName}에서 만나요!`,
+          description: '약속 장소를 확인해보세요!',
+          imageUrl: getShareImageUrl(),
           link: {
             webUrl: confirmUrl,
             mobileWebUrl: confirmUrl,
           },
         },
-        buttonTitle: '약속 장소 보기',
-        buttons,
       });
     } catch (error) {
       console.error('Kakao share error:', error);
