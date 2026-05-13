@@ -20,6 +20,7 @@ import {
 export default function useVoteFlow(
   shareKey: string,
   queryMapId: string | null,
+  voteRound = 1,
 ) {
   const router = useRouter();
   const mapIdInfo = useAtomValue(mapIdState);
@@ -33,8 +34,8 @@ export default function useVoteFlow(
   const [isVote, setIsVote] = useState(false);
 
   useEffect(() => {
-    setIsVote(hasVotedForMap(activeMapId));
-  }, [activeMapId]);
+    setIsVote(hasVotedForMap(activeMapId, voteRound));
+  }, [activeMapId, voteRound]);
 
   const vote = async () => {
     resetModal();
@@ -49,7 +50,7 @@ export default function useVoteFlow(
 
     try {
       await VoteService.setVote(activeMapId, shareKey);
-      setVotedForMap(activeMapId);
+      setVotedForMap(activeMapId, voteRound);
       setIsVote(true);
     } catch (error) {
       logApiError('vote', error);
@@ -69,7 +70,7 @@ export default function useVoteFlow(
         if (data) {
           setResultConfirm(data);
         }
-        clearVotedForMap(activeMapId);
+        clearVotedForMap(activeMapId, voteRound);
         router.replace(`/result/confirm?sharekey=${shareKey}`);
         resetModal();
       },

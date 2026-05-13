@@ -3,12 +3,14 @@
 import { useRouter } from 'next/navigation';
 
 import useModal from '@/hooks/common/useModal';
+import useHostControlFlow from '@/hooks/result/useHostControlFlow';
 import useKakaoShare from '@/hooks/result/useKakaoShare';
 
 import { convertToKoreanTime } from '@/utils/date';
 
 import { ShareIcon } from '@/assets/icons/Share';
 import { HomeIcon } from '@/assets/icons/Home';
+import Button from '@/components/Button';
 
 import { useResetAtom } from 'jotai/utils';
 import { modalState } from '@/jotai/global/store';
@@ -30,9 +32,13 @@ import {
   FinalPlaceMeta,
   FinalPlacePanel,
   FinalPlaceTitle,
+  HostControlButtonWrapper,
+  HostControlPanel,
+  HostControlTitle,
 } from '../style';
 
 interface DistanceSummaryProps {
+  activeMapId: string;
   confirmedPlace?: ConfirmedHotPlace | null;
   stationName: string;
   shareKey: string;
@@ -40,6 +46,7 @@ interface DistanceSummaryProps {
 }
 
 export default function DistanceSummary({
+  activeMapId,
   confirmedPlace,
   stationName,
   shareKey,
@@ -48,6 +55,8 @@ export default function DistanceSummary({
   const router = useRouter();
 
   const { shareConfirmedResult } = useKakaoShare();
+  const { canManage, requestCancelConfirm, requestResetVote } =
+    useHostControlFlow(activeMapId, shareKey);
 
   const reset = useResetAtom(modalState);
 
@@ -126,6 +135,25 @@ export default function DistanceSummary({
               </FinalPlaceLink>
             )}
           </FinalPlacePanel>
+        )}
+        {canManage && (
+          <HostControlPanel>
+            <HostControlTitle>방장 관리</HostControlTitle>
+            <HostControlButtonWrapper>
+              <Button
+                label="재투표 시작"
+                size="small"
+                onClick={requestResetVote}
+                $widthFull
+              />
+              <Button
+                label="확정 취소"
+                size="small"
+                onClick={requestCancelConfirm}
+                $widthFull
+              />
+            </HostControlButtonWrapper>
+          </HostControlPanel>
         )}
       </ExpandBody>
     </Container>

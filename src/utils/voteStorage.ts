@@ -3,8 +3,8 @@ const VOTE_STORAGE_PREFIX = 'isVote:';
 
 const canUseLocalStorage = () => typeof window !== 'undefined';
 
-export const getVoteStorageKey = (mapId: string) =>
-  `${VOTE_STORAGE_PREFIX}${mapId}`;
+export const getVoteStorageKey = (mapId: string, voteRound = 1) =>
+  `${VOTE_STORAGE_PREFIX}${mapId}:${voteRound}`;
 
 export const clearLegacyVoteState = () => {
   if (!canUseLocalStorage()) {
@@ -14,30 +14,38 @@ export const clearLegacyVoteState = () => {
   localStorage.removeItem(LEGACY_VOTE_STORAGE_KEY);
 };
 
-export const hasVotedForMap = (mapId?: string | null) => {
+export const hasVotedForMap = (
+  mapId?: string | null,
+  voteRound?: number | null,
+) => {
   if (!mapId || !canUseLocalStorage()) {
     return false;
   }
 
-  return localStorage.getItem(getVoteStorageKey(mapId)) === 'true';
+  return (
+    localStorage.getItem(getVoteStorageKey(mapId, voteRound ?? 1)) === 'true'
+  );
 };
 
-export const setVotedForMap = (mapId: string) => {
+export const setVotedForMap = (mapId: string, voteRound = 1) => {
   if (!canUseLocalStorage()) {
     return;
   }
 
-  localStorage.setItem(getVoteStorageKey(mapId), 'true');
+  localStorage.setItem(getVoteStorageKey(mapId, voteRound), 'true');
   clearLegacyVoteState();
 };
 
-export const clearVotedForMap = (mapId?: string | null) => {
+export const clearVotedForMap = (
+  mapId?: string | null,
+  voteRound?: number | null,
+) => {
   if (!canUseLocalStorage()) {
     return;
   }
 
   if (mapId) {
-    localStorage.removeItem(getVoteStorageKey(mapId));
+    localStorage.removeItem(getVoteStorageKey(mapId, voteRound ?? 1));
   }
 
   clearLegacyVoteState();

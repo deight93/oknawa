@@ -24,6 +24,7 @@ export default function ResultBody({ queryMapId }: ResultBodyProps) {
     activeMapId,
     activeMapHostId,
     confirmedShareKey,
+    voteRound,
     currentIndex,
     currentStation,
     distanceSummaries,
@@ -95,9 +96,11 @@ export default function ResultBody({ queryMapId }: ResultBodyProps) {
         <DistanceSummary
           station={currentStation}
           stations={distanceSummaries}
+          activeMapId={activeMapId}
           queryMapId={queryMapId}
           sortOption={sortOption}
           onSortChange={setSortOption}
+          voteRound={voteRound}
           currentIndex={currentIndex}
           stationIndex={`0${currentIndex + 1}`}
           stationLength={`0${distanceSummaries.length}`}

@@ -91,6 +91,7 @@ export default function ResultConfirmBody({
     <>
       <Container>
         <DistanceSummary
+          activeMapId={mapIdInfo.mapId}
           confirmedPlace={confirmedPlace}
           stationName={stationName}
           shareKey={shareKey}

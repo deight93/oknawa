@@ -39,6 +39,7 @@ export interface LocationResult {
   station_info: StationInfo[];
   request_info: RequestInfo;
   confirmed?: string | null;
+  vote_round?: number;
 }
 
 export type ResultSortOption = 'averageTime' | 'maxTime' | 'vote';

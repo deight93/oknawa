@@ -18,11 +18,11 @@ export default function useResultPageState(queryMapId: string | null) {
   const { distanceSummaries, participants } = useResultSummary(sortOption);
   const activeMapId = (mapIdInfo.mapId || queryMapId) ?? '';
   const activeMapHostId = mapIdInfo.mapHostId;
-  const currentStation = distanceSummaries[currentIndex];
-  const stationCount = distanceSummaries.length;
-
   const { data, isLoading, clearRefetchInterval } =
     usePlaceSearchMapIdQuery(activeMapId);
+  const voteRound = data?.vote_round ?? 1;
+  const currentStation = distanceSummaries[currentIndex];
+  const stationCount = distanceSummaries.length;
 
   useEffect(() => {
     if (data) {
@@ -80,6 +80,7 @@ export default function useResultPageState(queryMapId: string | null) {
     activeMapId,
     activeMapHostId,
     confirmedShareKey: data?.confirmed ?? null,
+    voteRound,
     currentIndex,
     currentStation,
     distanceSummaries,

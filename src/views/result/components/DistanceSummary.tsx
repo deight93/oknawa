@@ -9,6 +9,7 @@ import { modalState } from '@/jotai/global/store';
 import { useResetAtom } from 'jotai/utils';
 
 import useModal from '@/hooks/common/useModal';
+import useHostControlFlow from '@/hooks/result/useHostControlFlow';
 import useResultShare from '@/hooks/result/useResultShare';
 import useVoteFlow from '@/hooks/result/useVoteFlow';
 
@@ -61,6 +62,9 @@ import {
   FoldBody,
   FoldLabel,
   FoldLabelWrapper,
+  HostControlButtonWrapper,
+  HostControlPanel,
+  HostControlTitle,
   DividerVertical,
   ChevronWrapper,
   LeftWrapper,
@@ -118,9 +122,11 @@ const SORT_OPTIONS: { label: string; value: ResultSortOption }[] = [
 interface DistanceSummaryProps {
   station: DistanceSummaryItem;
   stations: DistanceSummaryItem[];
+  activeMapId: string;
   queryMapId: string | null;
   sortOption: ResultSortOption;
   onSortChange: (sortOption: ResultSortOption) => void;
+  voteRound: number;
   currentIndex: number;
   stationName: string;
   shareKey: string;
@@ -136,9 +142,11 @@ interface DistanceSummaryProps {
 export default function DistanceSummary({
   station,
   stations,
+  activeMapId,
   queryMapId,
   sortOption,
   onSortChange,
+  voteRound,
   currentIndex,
   stationName,
   shareKey,
@@ -161,7 +169,10 @@ export default function DistanceSummary({
   const { isVote, requestVote, requestConfirm, canConfirm } = useVoteFlow(
     shareKey,
     queryMapId,
+    voteRound,
   );
+  const { canManage, requestCancelConfirm, requestResetVote } =
+    useHostControlFlow(activeMapId, shareKey);
 
   const clickHome = () => {
     setModalContents({
@@ -326,6 +337,25 @@ export default function DistanceSummary({
               )}
             </ButtonWrapper>
           </PreffertWrapper>
+          {canManage && (
+            <HostControlPanel>
+              <HostControlTitle>방장 관리</HostControlTitle>
+              <HostControlButtonWrapper>
+                <Button
+                  label="재투표 시작"
+                  size="small"
+                  onClick={requestResetVote}
+                  $widthFull
+                />
+                <Button
+                  label="확정 취소"
+                  size="small"
+                  onClick={requestCancelConfirm}
+                  $widthFull
+                />
+              </HostControlButtonWrapper>
+            </HostControlPanel>
+          )}
         </ExpandBody>
       ) : (
         <FoldBody>

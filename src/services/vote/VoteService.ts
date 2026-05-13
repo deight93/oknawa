@@ -35,4 +35,22 @@ export default class VoteService {
 
     return response.data;
   }
+
+  static async cancelConfirm(mapIdInfo: MapIdType) {
+    const { data } = await api.post('/rest/v1/rpc/location_confirm_cancel', {
+      p_map_id: mapIdInfo.mapId,
+      p_map_host_id: mapIdInfo.mapHostId,
+    });
+
+    return data;
+  }
+
+  static async resetVote(mapIdInfo: MapIdType) {
+    const { data } = await api.post('/rest/v1/rpc/location_vote_reset', {
+      p_map_id: mapIdInfo.mapId,
+      p_map_host_id: mapIdInfo.mapHostId,
+    });
+
+    return data;
+  }
 }

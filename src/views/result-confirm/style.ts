@@ -119,6 +119,28 @@ export const FinalPlaceLink = styled.a`
   font-weight: 700;
 `;
 
+export const HostControlPanel = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #28282d;
+  border-radius: 8px;
+  background-color: #1c1c20;
+`;
+
+export const HostControlTitle = styled.p`
+  color: #f4f4f5;
+  font-size: 15px;
+  font-weight: 700;
+`;
+
+export const HostControlButtonWrapper = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+`;
+
 export const IndicatorWrapper = styled.div`
   display: flex;
   flex-direction: row;

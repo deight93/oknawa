@@ -9,6 +9,7 @@ const InitialRequestInfo: RequestInfo = {
 const initialState: LocationResult = {
   station_info: [],
   request_info: InitialRequestInfo,
+  vote_round: 1,
 };
 
 export const resultState = atomWithStorage<LocationResult>(
