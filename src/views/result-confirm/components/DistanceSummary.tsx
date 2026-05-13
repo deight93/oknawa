@@ -61,13 +61,17 @@ export default function DistanceSummary({
   const reset = useResetAtom(modalState);
 
   const { setModalContents } = useModal();
+  const averageTravelTimeLabel = convertToKoreanTime(averageTravelTime);
 
   const handleKakaoSharingBtnClick = () => {
     shareConfirmedResult(stationName, shareKey, {
       addressName:
         confirmedPlace?.road_address_name || confirmedPlace?.address_name,
+      categoryName: confirmedPlace?.category_group_name,
       imageUrl: confirmedPlace?.main_photo_url,
+      placeUrl: confirmedPlace?.place_url,
       placeName: confirmedPlace?.place_name,
+      travelTimeLabel: averageTravelTimeLabel,
     });
   };
 
@@ -109,10 +113,7 @@ export default function DistanceSummary({
               {confirmedPlace
                 ? `${stationName} 근처, 평균 `
                 : '도착하는데 평균 '}
-              <ArrivalTime>
-                {convertToKoreanTime(averageTravelTime)}
-              </ArrivalTime>{' '}
-              걸려요!
+              <ArrivalTime>{averageTravelTimeLabel}</ArrivalTime> 걸려요!
             </AverageArrivalTime>
           </TitleWrapper>
         </ContentWrapper>
