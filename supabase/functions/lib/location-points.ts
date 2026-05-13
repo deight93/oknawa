@@ -5,19 +5,21 @@ import {
 } from './distance.ts';
 import type {
   LocationPointsRequestBody,
+  MeetingPurpose,
   PopularLocationType,
   PopularMeetingLocation,
   RouteParticipant,
   StationInfoInsert,
   StationItineraryResult,
 } from './location-types.ts';
-import { isRouteParticipantList } from './location-types.ts';
+import { isMeetingPurpose, isRouteParticipantList } from './location-types.ts';
 import { callGoogleMapItineraries } from './mapapi.ts';
 import { responseJson } from './utils.ts';
 
 export interface LocationPointsRequest {
   participants: RouteParticipant[];
   priority: number;
+  meetingPurpose?: MeetingPurpose;
 }
 
 interface LocationResultRow {
@@ -28,6 +30,59 @@ interface LocationResultRow {
 const CANDIDATE_POOL_MULTIPLIER = 2;
 const MAX_CANDIDATE_POOL_SIZE = 12;
 const MISSING_PARTICIPANT_TIME_PENALTY_SECONDS = 7200;
+
+const RECOMMEND_SCORE_WEIGHTS: Record<
+  MeetingPurpose | 'default',
+  {
+    averageTravelTime: number;
+    maxTravelTime: number;
+    transferPenalty: number;
+    walkingTimePenalty: number;
+  }
+> = {
+  default: {
+    averageTravelTime: 1,
+    maxTravelTime: 0.35,
+    transferPenalty: 600,
+    walkingTimePenalty: 0.45,
+  },
+  meal: {
+    averageTravelTime: 1,
+    maxTravelTime: 0.35,
+    transferPenalty: 600,
+    walkingTimePenalty: 0.45,
+  },
+  cafe: {
+    averageTravelTime: 0.95,
+    maxTravelTime: 0.35,
+    transferPenalty: 600,
+    walkingTimePenalty: 0.6,
+  },
+  drink: {
+    averageTravelTime: 1,
+    maxTravelTime: 0.4,
+    transferPenalty: 750,
+    walkingTimePenalty: 0.65,
+  },
+  study: {
+    averageTravelTime: 0.9,
+    maxTravelTime: 0.55,
+    transferPenalty: 650,
+    walkingTimePenalty: 0.45,
+  },
+  date: {
+    averageTravelTime: 0.85,
+    maxTravelTime: 0.45,
+    transferPenalty: 650,
+    walkingTimePenalty: 0.7,
+  },
+  meeting: {
+    averageTravelTime: 1,
+    maxTravelTime: 0.55,
+    transferPenalty: 700,
+    walkingTimePenalty: 0.4,
+  },
+};
 
 export type StepResult<T> =
   | { ok: true; data: T }
@@ -56,10 +111,14 @@ export async function parseLocationPointsRequest(
   }
 
   const priority = parsePriority(req.url);
+  const meetingPurpose = isMeetingPurpose(body?.meetingPurpose)
+    ? body.meetingPurpose
+    : undefined;
 
   return ok({
     participants,
     priority,
+    meetingPurpose,
   });
 }
 
@@ -100,6 +159,7 @@ export async function buildStationItineraries(
   participants: RouteParticipant[],
   locations: PopularMeetingLocation[],
   priority: number,
+  meetingPurpose?: MeetingPurpose,
 ): Promise<StepResult<StationItineraryResult[]>> {
   const centerCoordinates = getCenterCoordinates(participants);
   const candidatePoolSize = getCandidatePoolSize(priority, locations.length);
@@ -118,6 +178,7 @@ export async function buildStationItineraries(
     stationInfoList,
     participants.length,
     priority,
+    meetingPurpose,
   );
 
   if (
@@ -133,6 +194,7 @@ export async function buildStationItineraries(
 export async function createLocationResult(
   supabase: SupabaseClient,
   participants: RouteParticipant[],
+  meetingPurpose?: MeetingPurpose,
 ): Promise<StepResult<LocationResultRow>> {
   const mapId = crypto.randomUUID();
   const mapHostId = toMapHostId(mapId);
@@ -142,7 +204,7 @@ export async function createLocationResult(
     .insert({
       map_id: mapId,
       map_host_id: mapHostId,
-      request_info: { participant: participants },
+      request_info: { participant: participants, meetingPurpose },
       confirmed: null,
     })
     .select('map_id, map_host_id')
@@ -164,6 +226,7 @@ export function buildStationInfoInserts(
   mapId: string,
   participants: RouteParticipant[],
   stationInfoList: StationItineraryResult[],
+  meetingPurpose?: MeetingPurpose,
 ): StationInfoInsert[] {
   return stationInfoList.map(station => ({
     map_id: mapId,
@@ -174,7 +237,7 @@ export function buildStationInfoInserts(
     address_name: station.address_name,
     station_name: station.station_name,
     itinerary: station.itinerary,
-    request_info: { participant: participants },
+    request_info: { participant: participants, meetingPurpose },
   }));
 }
 
@@ -209,12 +272,14 @@ export async function runLocationPointsFlow(
     request.participants,
     locations.data,
     request.priority,
+    request.meetingPurpose,
   );
   if (!stationInfoList.ok) return stationInfoList;
 
   const locationResult = await createLocationResult(
     supabase,
     request.participants,
+    request.meetingPurpose,
   );
   if (!locationResult.ok) return locationResult;
 
@@ -222,6 +287,7 @@ export async function runLocationPointsFlow(
     locationResult.data.map_id,
     request.participants,
     stationInfoList.data,
+    request.meetingPurpose,
   );
 
   const stationInsert = await insertStationInfo(
@@ -252,13 +318,14 @@ function selectBestStationItineraries(
   stationInfoList: StationItineraryResult[],
   participantCount: number,
   priority: number,
+  meetingPurpose?: MeetingPurpose,
 ): StationItineraryResult[] {
   return stationInfoList
     .filter(station => station.itinerary.length > 0)
     .sort(
       (a, b) =>
-        getStationItineraryScore(a, participantCount) -
-          getStationItineraryScore(b, participantCount) ||
+        getStationItineraryScore(a, participantCount, meetingPurpose) -
+          getStationItineraryScore(b, participantCount, meetingPurpose) ||
         a.station_name.localeCompare(b.station_name),
     )
     .slice(0, priority);
@@ -267,7 +334,9 @@ function selectBestStationItineraries(
 function getStationItineraryScore(
   station: StationItineraryResult,
   participantCount: number,
+  meetingPurpose?: MeetingPurpose,
 ): number {
+  const weights = RECOMMEND_SCORE_WEIGHTS[meetingPurpose ?? 'default'];
   const routeCount = station.itinerary.length;
   const travelTimes = station.itinerary.map(route => route.itinerary.totalTime);
   const totalTravelTime = travelTimes.reduce((sum, time) => sum + time, 0);
@@ -286,10 +355,10 @@ function getStationItineraryScore(
   const missingParticipantCount = Math.max(participantCount - routeCount, 0);
 
   return (
-    averageTravelTime +
-    maxTravelTime * 0.35 +
-    averageTransferCount * 600 +
-    averageWalkingTime * 0.45 +
+    averageTravelTime * weights.averageTravelTime +
+    maxTravelTime * weights.maxTravelTime +
+    averageTransferCount * weights.transferPenalty +
+    averageWalkingTime * weights.walkingTimePenalty +
     missingParticipantCount * MISSING_PARTICIPANT_TIME_PENALTY_SECONDS
   );
 }

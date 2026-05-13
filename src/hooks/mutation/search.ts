@@ -7,14 +7,20 @@ import { SubmitDeparturePointRequestBody } from '@/services/search/types';
 import { SearchState } from '@/jotai/global/store';
 
 import useModal from '@/hooks/common/useModal';
+import { MeetingPurpose } from '@/types/meetingPurpose';
+
+interface PlaceSearchVariables {
+  searchForm: SearchState[];
+  meetingPurpose?: MeetingPurpose;
+}
 
 export const usePlaceSearchMutation = () => {
   const { setModalContents } = useModal();
 
   return useMutation({
     mutationKey: ['placeSearch'],
-    mutationFn: (searchForm: SearchState[]) =>
-      SearchService.searchPlaces(searchForm),
+    mutationFn: ({ searchForm, meetingPurpose }: PlaceSearchVariables) =>
+      SearchService.searchPlaces(searchForm, meetingPurpose),
     onError: error => {
       logApiError('placeSearch', error);
       setModalContents({

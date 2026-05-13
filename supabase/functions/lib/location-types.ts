@@ -1,4 +1,11 @@
 export type PopularLocationType = 'station' | 'terminal';
+export type MeetingPurpose =
+  | 'meal'
+  | 'cafe'
+  | 'drink'
+  | 'study'
+  | 'date'
+  | 'meeting';
 
 export interface RouteParticipant {
   name: string;
@@ -10,6 +17,7 @@ export interface RouteParticipant {
 
 export interface LocationPointsRequestBody {
   participant?: unknown;
+  meetingPurpose?: unknown;
 }
 
 export interface PopularMeetingLocation {
@@ -60,6 +68,7 @@ export interface StationInfoInsert {
   itinerary: RouteItinerary[];
   request_info: {
     participant: RouteParticipant[];
+    meetingPurpose?: MeetingPurpose;
   };
 }
 
@@ -104,5 +113,16 @@ export function isRouteParticipantList(
         typeof participant.start_y === 'number' &&
         Number.isFinite(participant.start_y),
     )
+  );
+}
+
+export function isMeetingPurpose(value: unknown): value is MeetingPurpose {
+  return (
+    value === 'meal' ||
+    value === 'cafe' ||
+    value === 'drink' ||
+    value === 'study' ||
+    value === 'date' ||
+    value === 'meeting'
   );
 }

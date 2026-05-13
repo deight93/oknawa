@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import styled from 'styled-components';
 import { useAtom, useSetAtom } from 'jotai';
 import { Link, CirclePlus } from 'lucide-react';
@@ -14,15 +15,18 @@ import PeopleCard from './components/PeopleCard';
 import Button from '@/components/Button';
 import { APP_BASE_URL } from '@/config/env';
 import SearchLoading from './components/SearchLoading';
+import MeetingPurposeSelector from './components/MeetingPurposeSelector';
 import { roomState } from '@/jotai/global/room';
 import { Participant } from '@/types/location';
 import useCreateResultFlow from '@/hooks/search/useCreateResultFlow';
+import { MeetingPurpose } from '@/types/meetingPurpose';
 
 export default function SearchCompleteListWithTogetherView() {
   const router = useRouter();
 
   const setSearchList = useSetAtom(searchState);
   const [storageRoomData, setStorageRoomData] = useAtom(roomState);
+  const [meetingPurpose, setMeetingPurpose] = useState<MeetingPurpose>();
   const { requestResult, isLoading, loadingPhase } = useCreateResultFlow();
 
   const { participant: participants } = useInputStatusListQuery(
@@ -67,7 +71,7 @@ export default function SearchCompleteListWithTogetherView() {
     const transformedParticipants: SearchState[] =
       participantList.map(toSearchState);
 
-    requestResult(transformedParticipants);
+    requestResult(transformedParticipants, meetingPurpose);
   };
 
   const handleQuiteRoomBtnClick = () => {
@@ -117,6 +121,10 @@ export default function SearchCompleteListWithTogetherView() {
             <Link width={20} height={20} />
           </Button>
         </ButtonWrapper>
+        <MeetingPurposeSelector
+          value={meetingPurpose}
+          onChange={setMeetingPurpose}
+        />
       </Wrapper>
 
       <div>

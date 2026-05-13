@@ -2,13 +2,14 @@
 
 import { useRouter } from 'next/navigation';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 import styled from 'styled-components';
 
 import Button from '@/components/Button';
 import PeopleCard from './components/PeopleCard';
 import SearchLoading from './components/SearchLoading';
+import MeetingPurposeSelector from './components/MeetingPurposeSelector';
 import { ArrowBackIcon } from '@/assets/icons/ArrowBack';
 
 import { useAtom } from 'jotai';
@@ -17,15 +18,17 @@ import { searchState } from '@/jotai/global/store';
 import { Button as FloatingButton } from '@nextui-org/react';
 
 import useCreateResultFlow from '@/hooks/search/useCreateResultFlow';
+import { MeetingPurpose } from '@/types/meetingPurpose';
 
 export default function SearchCompleteList() {
   const router = useRouter();
 
   const [searchList, setSearchList] = useAtom(searchState);
+  const [meetingPurpose, setMeetingPurpose] = useState<MeetingPurpose>();
   const { requestResult, isLoading, loadingPhase } = useCreateResultFlow();
 
   const handleSearchBtnClick = () => {
-    requestResult(searchList);
+    requestResult(searchList, meetingPurpose);
   };
 
   const handleDeleteIconClick = (index: number) => {
@@ -64,6 +67,10 @@ export default function SearchCompleteList() {
           $widthFull
           size="large"
           onClick={() => router.push('/search/individual')}
+        />
+        <MeetingPurposeSelector
+          value={meetingPurpose}
+          onChange={setMeetingPurpose}
         />
       </Wrapper>
       <SubmitButton

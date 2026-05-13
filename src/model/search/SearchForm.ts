@@ -1,7 +1,11 @@
 import { SearchState } from '@/jotai/global/store';
+import { MeetingPurpose } from '@/types/meetingPurpose';
 
 export default class SearchForm {
-  static convertToRequestBody(searchForm: SearchState[]) {
+  static convertToRequestBody(
+    searchForm: SearchState[],
+    meetingPurpose?: MeetingPurpose,
+  ) {
     return {
       participant: searchForm?.map(
         ({
@@ -15,6 +19,7 @@ export default class SearchForm {
           region_name: regionName,
         }),
       ),
+      meetingPurpose,
     };
   }
 }

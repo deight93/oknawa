@@ -1,3 +1,5 @@
+import { MeetingPurpose } from './meetingPurpose';
+
 export interface PolylinePoint {
   lat: number;
   lng: number;
@@ -25,6 +27,7 @@ export interface Participant {
 
 export interface RequestInfo {
   participant: Participant[];
+  meetingPurpose?: MeetingPurpose;
 }
 
 export interface StationInfo {

@@ -2,6 +2,60 @@ import { useAtomValue } from 'jotai';
 
 import { resultState } from '@/jotai/result/store';
 import { DistanceSummaryItem, ResultSortOption } from '@/types/location';
+import { MeetingPurpose } from '@/types/meetingPurpose';
+
+const RECOMMEND_SCORE_WEIGHTS: Record<
+  MeetingPurpose | 'default',
+  {
+    averageTravelTime: number;
+    maxTravelTime: number;
+    transferPenalty: number;
+    walkingTimePenalty: number;
+  }
+> = {
+  default: {
+    averageTravelTime: 1,
+    maxTravelTime: 0.35,
+    transferPenalty: 600,
+    walkingTimePenalty: 0.45,
+  },
+  meal: {
+    averageTravelTime: 1,
+    maxTravelTime: 0.35,
+    transferPenalty: 600,
+    walkingTimePenalty: 0.45,
+  },
+  cafe: {
+    averageTravelTime: 0.95,
+    maxTravelTime: 0.35,
+    transferPenalty: 600,
+    walkingTimePenalty: 0.6,
+  },
+  drink: {
+    averageTravelTime: 1,
+    maxTravelTime: 0.4,
+    transferPenalty: 750,
+    walkingTimePenalty: 0.65,
+  },
+  study: {
+    averageTravelTime: 0.9,
+    maxTravelTime: 0.55,
+    transferPenalty: 650,
+    walkingTimePenalty: 0.45,
+  },
+  date: {
+    averageTravelTime: 0.85,
+    maxTravelTime: 0.45,
+    transferPenalty: 650,
+    walkingTimePenalty: 0.7,
+  },
+  meeting: {
+    averageTravelTime: 1,
+    maxTravelTime: 0.55,
+    transferPenalty: 700,
+    walkingTimePenalty: 0.4,
+  },
+};
 
 const compareBySortOption = (sortOption: ResultSortOption) => {
   return (a: DistanceSummaryItem, b: DistanceSummaryItem) => {
@@ -33,6 +87,8 @@ const compareBySortOption = (sortOption: ResultSortOption) => {
 export default function useResultSummary(sortOption: ResultSortOption) {
   const result = useAtomValue(resultState);
   const { station_info = [], request_info } = result;
+  const recommendScoreWeights =
+    RECOMMEND_SCORE_WEIGHTS[request_info?.meetingPurpose ?? 'default'];
 
   const summaries = station_info.map(station => {
     const stationName = station.station_name?.split(' ')[0] ?? '';
@@ -85,10 +141,14 @@ export default function useResultSummary(sortOption: ResultSortOption) {
       ? totalWalkingTime / itinerary.length
       : 0;
     const recommendScore =
-      averageTravelTime +
-      maxTravelTime * 0.35 +
-      (hasRouteQualityMetrics ? averageTransferCount * 600 : 0) +
-      (hasRouteQualityMetrics ? averageWalkingTime * 0.45 : 0);
+      averageTravelTime * recommendScoreWeights.averageTravelTime +
+      maxTravelTime * recommendScoreWeights.maxTravelTime +
+      (hasRouteQualityMetrics
+        ? averageTransferCount * recommendScoreWeights.transferPenalty
+        : 0) +
+      (hasRouteQualityMetrics
+        ? averageWalkingTime * recommendScoreWeights.walkingTimePenalty
+        : 0);
 
     return {
       station,
