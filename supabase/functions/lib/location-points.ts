@@ -96,6 +96,7 @@ export async function fetchPopularMeetingLocations(
 }
 
 export async function buildStationItineraries(
+  supabase: SupabaseClient,
   participants: RouteParticipant[],
   locations: PopularMeetingLocation[],
   priority: number,
@@ -109,6 +110,7 @@ export async function buildStationItineraries(
     candidatePoolSize,
   );
   const stationInfoList = await callGoogleMapItineraries(
+    supabase,
     participants,
     centerLocationDataList,
   );
@@ -203,6 +205,7 @@ export async function runLocationPointsFlow(
   if (!locations.ok) return locations;
 
   const stationInfoList = await buildStationItineraries(
+    supabase,
     request.participants,
     locations.data,
     request.priority,
