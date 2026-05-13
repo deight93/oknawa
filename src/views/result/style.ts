@@ -203,11 +203,85 @@ export const ConditionBadge = styled.span`
   white-space: nowrap;
 `;
 
+export const SummaryMetrics = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+`;
+
+export const SummaryMetric = styled.div`
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid #28282d;
+  border-radius: 8px;
+  background-color: #1c1c20;
+`;
+
+export const SummaryMetricLabel = styled.span`
+  color: #777780;
+  font-size: 12px;
+  font-weight: 600;
+`;
+
+export const SummaryMetricValue = styled.span`
+  overflow: hidden;
+  color: #f4f4f5;
+  font-size: 18px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+export const DetailToggleWrapper = styled.div`
+  display: flex;
+  justify-content: flex-end;
+`;
+
+export const DetailToggleButton = styled.button`
+  display: inline-flex;
+  width: fit-content;
+  min-height: 30px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  border: 1px solid #34343a;
+  border-radius: 999px;
+  background-color: #202024;
+  color: #d9d9d9;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+`;
+
+export const DetailPanel = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid #28282d;
+  border-radius: 8px;
+  background-color: #111113;
+`;
+
+export const DetailSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+export const DetailSectionTitle = styled.p`
+  color: #f4f4f5;
+  font-size: 13px;
+  font-weight: 800;
+`;
+
 export const QualityMetrics = styled.div`
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(74px, 1fr));
   gap: 8px;
-  overflow-x: auto;
 `;
 
 export const QualityMetric = styled.div`
@@ -236,15 +310,6 @@ export const QualityMetricValue = styled.span`
   white-space: nowrap;
 `;
 
-export const QualityText = styled.p`
-  overflow: hidden;
-  color: #bdbdbd;
-  font-size: 11px;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-`;
-
 export const CompareHeader = styled.div`
   display: flex;
   flex-direction: row;
@@ -266,12 +331,11 @@ export const CompareList = styled.div`
   padding-bottom: 2px;
 `;
 
-export const CompareCard = styled.button<{ $isActive: boolean }>`
+export const CompareCard = styled.div<{ $isActive: boolean }>`
   display: flex;
   flex: 0 0 154px;
-  min-height: 132px;
+  min-height: 126px;
   flex-direction: column;
-  justify-content: space-between;
   gap: 10px;
   padding: 12px;
   border: 1px solid ${({ $isActive }) => ($isActive ? '#18c964' : '#28282d')};
@@ -279,6 +343,7 @@ export const CompareCard = styled.button<{ $isActive: boolean }>`
   background-color: ${({ $isActive }) => ($isActive ? '#123925' : '#1c1c20')};
   color: #f4f4f5;
   text-align: left;
+  cursor: pointer;
 `;
 
 export const CompareStationName = styled.p`
@@ -302,6 +367,7 @@ export const CompareMetrics = styled.div`
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 6px;
+  margin-top: auto;
 `;
 
 export const CompareMetric = styled.div`
@@ -322,6 +388,45 @@ export const CompareMetricValue = styled.span`
   color: #d9d9d9;
   font-size: 12px;
   font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+export const ParticipantList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+`;
+
+export const ParticipantRow = styled.div`
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid #202024;
+
+  &:last-child {
+    border-bottom: 0;
+  }
+`;
+
+export const ParticipantName = styled.span`
+  overflow: hidden;
+  color: #f4f4f5;
+  font-size: 12px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+export const ParticipantStats = styled.span`
+  overflow: hidden;
+  color: #bdbdbd;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: right;
   text-overflow: ellipsis;
   white-space: nowrap;
 `;
