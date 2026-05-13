@@ -12,6 +12,7 @@ import { HomeIcon } from '@/assets/icons/Home';
 
 import { useResetAtom } from 'jotai/utils';
 import { modalState } from '@/jotai/global/store';
+import { ConfirmedHotPlace } from '@/services/hot-place/types';
 
 import {
   Container,
@@ -24,15 +25,22 @@ import {
   SharingButton,
   StationName,
   TitleWrapper,
+  FinalPlaceAddress,
+  FinalPlaceLink,
+  FinalPlaceMeta,
+  FinalPlacePanel,
+  FinalPlaceTitle,
 } from '../style';
 
 interface DistanceSummaryProps {
+  confirmedPlace?: ConfirmedHotPlace | null;
   stationName: string;
   shareKey: string;
   averageTravelTime: number;
 }
 
 export default function DistanceSummary({
+  confirmedPlace,
   stationName,
   shareKey,
   averageTravelTime,
@@ -46,7 +54,12 @@ export default function DistanceSummary({
   const { setModalContents } = useModal();
 
   const handleKakaoSharingBtnClick = () => {
-    shareConfirmedResult(stationName, shareKey);
+    shareConfirmedResult(stationName, shareKey, {
+      addressName:
+        confirmedPlace?.road_address_name || confirmedPlace?.address_name,
+      imageUrl: confirmedPlace?.main_photo_url,
+      placeName: confirmedPlace?.place_name,
+    });
   };
 
   const clickHome = () => {
@@ -62,6 +75,11 @@ export default function DistanceSummary({
     router.push('/');
     reset();
   };
+  const title = confirmedPlace
+    ? `${confirmedPlace.place_name}에서 만나요`
+    : `${stationName}을 추천해요`;
+  const finalPlaceAddress =
+    confirmedPlace?.road_address_name || confirmedPlace?.address_name;
 
   return (
     <Container>
@@ -77,9 +95,11 @@ export default function DistanceSummary({
       <ExpandBody>
         <ContentWrapper>
           <TitleWrapper>
-            <StationName>{stationName}을 추천해요</StationName>
+            <StationName>{title}</StationName>
             <AverageArrivalTime>
-              도착하는데 평균{' '}
+              {confirmedPlace
+                ? `${stationName} 근처, 평균 `
+                : '도착하는데 평균 '}
               <ArrivalTime>
                 {convertToKoreanTime(averageTravelTime)}
               </ArrivalTime>{' '}
@@ -87,6 +107,26 @@ export default function DistanceSummary({
             </AverageArrivalTime>
           </TitleWrapper>
         </ContentWrapper>
+        {confirmedPlace && (
+          <FinalPlacePanel>
+            <FinalPlaceMeta>
+              {confirmedPlace.category_group_name || '최종 장소'}
+            </FinalPlaceMeta>
+            <FinalPlaceTitle>{confirmedPlace.place_name}</FinalPlaceTitle>
+            {finalPlaceAddress && (
+              <FinalPlaceAddress>{finalPlaceAddress}</FinalPlaceAddress>
+            )}
+            {confirmedPlace.place_url && (
+              <FinalPlaceLink
+                href={confirmedPlace.place_url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                장소 자세히 보기
+              </FinalPlaceLink>
+            )}
+          </FinalPlacePanel>
+        )}
       </ExpandBody>
     </Container>
   );

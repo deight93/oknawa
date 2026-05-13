@@ -4,6 +4,12 @@ import {
   KAKAO_SHARE_IMAGE_URL,
 } from '@/config/env';
 
+interface ShareConfirmedResultOptions {
+  addressName?: string | null;
+  imageUrl?: string | null;
+  placeName?: string | null;
+}
+
 export default function useKakaoShare() {
   const initKakao = () => {
     if (!window.Kakao) {
@@ -22,7 +28,11 @@ export default function useKakaoShare() {
     return true;
   };
 
-  const shareConfirmedResult = (stationName: string, shareKey: string) => {
+  const shareConfirmedResult = (
+    stationName: string,
+    shareKey: string,
+    options?: ShareConfirmedResultOptions,
+  ) => {
     try {
       const isReady = initKakao();
 
@@ -31,13 +41,16 @@ export default function useKakaoShare() {
       }
 
       const confirmUrl = `${APP_BASE_URL}/result/confirm?sharekey=${shareKey}`;
+      const placeName = options?.placeName || stationName;
+      const description =
+        options?.addressName || `${stationName} 근처 약속 장소를 확인해보세요!`;
 
       window.Kakao.Share.sendDefault({
         objectType: 'feed',
         content: {
-          title: `오늘은 ${stationName}에서 만나요!`,
-          description: '약속 장소를 확인해보세요!',
-          imageUrl: KAKAO_SHARE_IMAGE_URL,
+          title: `오늘은 ${placeName}에서 만나요!`,
+          description,
+          imageUrl: options?.imageUrl || KAKAO_SHARE_IMAGE_URL,
           link: {
             webUrl: confirmUrl,
             mobileWebUrl: confirmUrl,

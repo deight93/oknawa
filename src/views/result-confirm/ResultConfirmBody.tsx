@@ -10,6 +10,7 @@ import ResultMap from './components/ResultMap';
 
 import { Button } from '@nextui-org/react';
 
+import { useConfirmedHotPlaceQuery } from '@/hooks/query/hot-place';
 import useConfirmedResult from '@/hooks/result/useConfirmedResult';
 import { mapIdState } from '@/jotai/mapId/store';
 
@@ -30,9 +31,15 @@ export default function ResultConfirmBody({
     hasResult,
     isLoading,
   } = useConfirmedResult(queryShareKey);
+  const { data: confirmedPlace } = useConfirmedHotPlaceQuery(shareKey);
 
   const { station_name, itinerary, request_info, end_x, end_y } = resultConfirm;
   const canConfirmHotPlace = Boolean(mapIdInfo.mapId && mapIdInfo.mapHostId);
+  const confirmedPlaceX = confirmedPlace?.x ?? null;
+  const confirmedPlaceY = confirmedPlace?.y ?? null;
+  const mapEndX = confirmedPlaceX ?? end_x;
+  const mapEndY = confirmedPlaceY ?? end_y;
+  const mapStationName = confirmedPlace?.place_name ?? station_name;
 
   const handleHotplaceBtnClick = () => {
     setBottomSheet(prevState => ({
@@ -84,6 +91,7 @@ export default function ResultConfirmBody({
     <>
       <Container>
         <DistanceSummary
+          confirmedPlace={confirmedPlace}
           stationName={stationName}
           shareKey={shareKey}
           averageTravelTime={averageTravelTime}
@@ -91,9 +99,9 @@ export default function ResultConfirmBody({
         <ResultMap
           participants={request_info?.participant}
           itinerary={itinerary}
-          stationName={station_name}
-          end_x={end_x}
-          end_y={end_y}
+          stationName={mapStationName}
+          end_x={mapEndX}
+          end_y={mapEndY}
         />
 
         <FloatingButton
@@ -103,7 +111,9 @@ export default function ResultConfirmBody({
           variant="shadow"
           onClick={handleHotplaceBtnClick}
         >
-          {stationName} 핫플레이스는 어디?
+          {confirmedPlace
+            ? '핫플레이스 다시 보기'
+            : `${stationName} 핫플레이스는 어디?`}
         </FloatingButton>
       </Container>
     </>
