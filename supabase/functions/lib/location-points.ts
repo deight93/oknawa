@@ -25,6 +25,10 @@ interface LocationResultRow {
   map_host_id: string;
 }
 
+const CANDIDATE_POOL_MULTIPLIER = 2;
+const MAX_CANDIDATE_POOL_SIZE = 12;
+const MISSING_PARTICIPANT_TIME_PENALTY_SECONDS = 7200;
+
 export type StepResult<T> =
   | { ok: true; data: T }
   | { ok: false; response: Response };
@@ -97,25 +101,31 @@ export async function buildStationItineraries(
   priority: number,
 ): Promise<StepResult<StationItineraryResult[]>> {
   const centerCoordinates = getCenterCoordinates(participants);
+  const candidatePoolSize = getCandidatePoolSize(priority, locations.length);
   const centerLocationDataList = getBalancedMeetingLocations(
     centerCoordinates,
     participants,
     locations,
-    priority,
+    candidatePoolSize,
   );
   const stationInfoList = await callGoogleMapItineraries(
     participants,
     centerLocationDataList,
   );
+  const bestStationInfoList = selectBestStationItineraries(
+    stationInfoList,
+    participants.length,
+    priority,
+  );
 
   if (
-    !stationInfoList.length ||
-    stationInfoList.every(station => station.itinerary.length === 0)
+    !bestStationInfoList.length ||
+    bestStationInfoList.every(station => station.itinerary.length === 0)
   ) {
     return fail(responseJson({ error: 'no route result' }, 500));
   }
 
-  return ok(stationInfoList);
+  return ok(bestStationInfoList);
 }
 
 export async function createLocationResult(
@@ -223,6 +233,62 @@ export async function runLocationPointsFlow(
 
 function isSeoulOrGyeonggi(fullAddress: string): boolean {
   return fullAddress.includes('서울') || fullAddress.includes('경기');
+}
+
+function getCandidatePoolSize(priority: number, locationCount: number): number {
+  return Math.min(
+    locationCount,
+    Math.max(
+      priority,
+      Math.min(priority * CANDIDATE_POOL_MULTIPLIER, MAX_CANDIDATE_POOL_SIZE),
+    ),
+  );
+}
+
+function selectBestStationItineraries(
+  stationInfoList: StationItineraryResult[],
+  participantCount: number,
+  priority: number,
+): StationItineraryResult[] {
+  return stationInfoList
+    .filter(station => station.itinerary.length > 0)
+    .sort(
+      (a, b) =>
+        getStationItineraryScore(a, participantCount) -
+          getStationItineraryScore(b, participantCount) ||
+        a.station_name.localeCompare(b.station_name),
+    )
+    .slice(0, priority);
+}
+
+function getStationItineraryScore(
+  station: StationItineraryResult,
+  participantCount: number,
+): number {
+  const routeCount = station.itinerary.length;
+  const travelTimes = station.itinerary.map(route => route.itinerary.totalTime);
+  const totalTravelTime = travelTimes.reduce((sum, time) => sum + time, 0);
+  const averageTravelTime = totalTravelTime / routeCount;
+  const maxTravelTime = Math.max(...travelTimes);
+  const averageTransferCount =
+    station.itinerary.reduce(
+      (sum, route) => sum + (route.itinerary.transferCount ?? 0),
+      0,
+    ) / routeCount;
+  const averageWalkingTime =
+    station.itinerary.reduce(
+      (sum, route) => sum + (route.itinerary.walkingTime ?? 0),
+      0,
+    ) / routeCount;
+  const missingParticipantCount = Math.max(participantCount - routeCount, 0);
+
+  return (
+    averageTravelTime +
+    maxTravelTime * 0.35 +
+    averageTransferCount * 600 +
+    averageWalkingTime * 0.45 +
+    missingParticipantCount * MISSING_PARTICIPANT_TIME_PENALTY_SECONDS
+  );
 }
 
 function parsePriority(url: string): number {
