@@ -1,6 +1,6 @@
 'use client';
 
-import { useSetAtom } from 'jotai';
+import { useAtomValue, useSetAtom } from 'jotai';
 import { bottomSheetState } from '@/jotai/global/store';
 
 import styled from 'styled-components';
@@ -11,6 +11,7 @@ import ResultMap from './components/ResultMap';
 import { Button } from '@nextui-org/react';
 
 import useConfirmedResult from '@/hooks/result/useConfirmedResult';
+import { mapIdState } from '@/jotai/mapId/store';
 
 interface ResultConfirmBodyProps {
   queryShareKey: string | null;
@@ -20,6 +21,7 @@ export default function ResultConfirmBody({
   queryShareKey,
 }: ResultConfirmBodyProps) {
   const setBottomSheet = useSetAtom(bottomSheetState);
+  const mapIdInfo = useAtomValue(mapIdState);
   const {
     resultConfirm,
     stationName,
@@ -30,6 +32,7 @@ export default function ResultConfirmBody({
   } = useConfirmedResult(queryShareKey);
 
   const { station_name, itinerary, request_info, end_x, end_y } = resultConfirm;
+  const canConfirmHotPlace = Boolean(mapIdInfo.mapId && mapIdInfo.mapHostId);
 
   const handleHotplaceBtnClick = () => {
     setBottomSheet(prevState => ({
@@ -41,7 +44,20 @@ export default function ResultConfirmBody({
           <div>핫플레이스를 추천해요!</div>
         </>
       ),
-      contents: <HotPlaceModal station={resultConfirm} />,
+      contents: (
+        <HotPlaceModal
+          station={resultConfirm}
+          confirmConfig={
+            canConfirmHotPlace
+              ? {
+                  mapId: mapIdInfo.mapId,
+                  mapHostId: mapIdInfo.mapHostId,
+                  shareKey,
+                }
+              : undefined
+          }
+        />
+      ),
       height: 60,
     }));
   };

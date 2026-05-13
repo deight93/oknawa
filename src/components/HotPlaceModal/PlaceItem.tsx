@@ -1,4 +1,4 @@
-import { Card, CardBody, CardHeader } from '@nextui-org/react';
+import { Button, Card, CardBody, CardHeader } from '@nextui-org/react';
 import Link from 'next/link';
 import styled from 'styled-components';
 
@@ -8,6 +8,8 @@ import { HotPlace } from '@/services/hot-place/types';
 
 interface PlaceItemProps {
   place: HotPlace;
+  isConfirming?: boolean;
+  onConfirmPlace?: () => void;
 }
 
 const categoryIcons: Record<string, JSX.Element> = {
@@ -15,7 +17,11 @@ const categoryIcons: Record<string, JSX.Element> = {
   카페: <CafeIcon color="gray" width="16" height="16" />,
 };
 
-export default function PlaceItem({ place }: PlaceItemProps) {
+export default function PlaceItem({
+  place,
+  isConfirming,
+  onConfirmPlace,
+}: PlaceItemProps) {
   const {
     place_name,
     category_group_name,
@@ -30,50 +36,67 @@ export default function PlaceItem({ place }: PlaceItemProps) {
   const timeSE = today?.day_time?.start_end_time ?? '';
 
   return (
-    <Link href={place_url} passHref legacyBehavior>
-      <a target="_blank" rel="noreferrer">
-        <StyledCard>
-          <CardContent>
-            <StyledCardHeader>
-              <PlaceName>{place_name}</PlaceName>
-              <Category>{category_group_name}</Category>
-            </StyledCardHeader>
-            <CardBody className="p-0">
-              <CardBodyText>{road_address_name}</CardBodyText>
-              <CardBodyText>
-                {dayOfWeek} {timeSE}
-              </CardBodyText>
-            </CardBody>
-          </CardContent>
-          <ImageBox>
-            {main_photo_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={main_photo_url}
-                alt="핫플레이스 사진"
-                width={80}
-                height={64}
-                style={{
-                  borderRadius: '8px',
-                  minHeight: '70px',
-                }}
-              />
-            ) : (
-              <DefaultImage>{categoryIcons[category_group_name]}</DefaultImage>
-            )}
-          </ImageBox>
-        </StyledCard>
-      </a>
-    </Link>
+    <StyledCard>
+      <PlaceLink href={place_url} target="_blank" rel="noreferrer">
+        <CardContent>
+          <StyledCardHeader>
+            <PlaceName>{place_name}</PlaceName>
+            <Category>{category_group_name}</Category>
+          </StyledCardHeader>
+          <CardBody className="p-0">
+            <CardBodyText>{road_address_name}</CardBodyText>
+            <CardBodyText>
+              {dayOfWeek} {timeSE}
+            </CardBodyText>
+          </CardBody>
+        </CardContent>
+        <ImageBox>
+          {main_photo_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={main_photo_url}
+              alt="핫플레이스 사진"
+              width={80}
+              height={64}
+              style={{
+                borderRadius: '8px',
+                minHeight: '70px',
+              }}
+            />
+          ) : (
+            <DefaultImage>{categoryIcons[category_group_name]}</DefaultImage>
+          )}
+        </ImageBox>
+      </PlaceLink>
+      {onConfirmPlace && (
+        <ConfirmButton
+          color="success"
+          size="sm"
+          radius="full"
+          isLoading={isConfirming}
+          onClick={onConfirmPlace}
+        >
+          최종 확정
+        </ConfirmButton>
+      )}
+    </StyledCard>
   );
 }
 
 const StyledCard = styled(Card)`
   display: flex;
-  flex-direction: row;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 12px;
   padding: 16px;
   background-color: #313131;
+`;
+
+const PlaceLink = styled(Link)`
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  gap: 12px;
+  color: inherit;
 `;
 
 const CardContent = styled.div`
@@ -124,4 +147,9 @@ const DefaultImage = styled.div`
   height: 64px;
   background-color: #9e9e9e;
   border-radius: 8px;
+`;
+
+const ConfirmButton = styled(Button)`
+  width: 100%;
+  font-weight: 700;
 `;

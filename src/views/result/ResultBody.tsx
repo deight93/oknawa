@@ -22,6 +22,8 @@ export default function ResultBody({ queryMapId }: ResultBodyProps) {
   const setBottomSheet = useSetAtom(bottomSheetState);
   const {
     activeMapId,
+    activeMapHostId,
+    confirmedShareKey,
     currentIndex,
     currentStation,
     distanceSummaries,
@@ -35,6 +37,10 @@ export default function ResultBody({ queryMapId }: ResultBodyProps) {
   } = useResultPageState(queryMapId);
 
   const handleHotplaceBtnClick = (station: DistanceSummaryItem) => {
+    const canConfirmHotPlace =
+      Boolean(activeMapId && activeMapHostId) &&
+      station.shareKey === confirmedShareKey;
+
     setBottomSheet(prevState => ({
       ...prevState,
       isOpen: true,
@@ -44,7 +50,20 @@ export default function ResultBody({ queryMapId }: ResultBodyProps) {
           <div>핫플레이스를 추천해요!</div>
         </>
       ),
-      contents: <HotPlaceModal station={station} />,
+      contents: (
+        <HotPlaceModal
+          station={station}
+          confirmConfig={
+            canConfirmHotPlace
+              ? {
+                  mapId: activeMapId,
+                  mapHostId: activeMapHostId,
+                  shareKey: station.shareKey,
+                }
+              : undefined
+          }
+        />
+      ),
       height: 60,
     }));
   };

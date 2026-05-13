@@ -17,6 +17,7 @@ export default function useResultPageState(queryMapId: string | null) {
 
   const { distanceSummaries, participants } = useResultSummary(sortOption);
   const activeMapId = (mapIdInfo.mapId || queryMapId) ?? '';
+  const activeMapHostId = mapIdInfo.mapHostId;
   const currentStation = distanceSummaries[currentIndex];
   const stationCount = distanceSummaries.length;
 
@@ -77,6 +78,8 @@ export default function useResultPageState(queryMapId: string | null) {
 
   return {
     activeMapId,
+    activeMapHostId,
+    confirmedShareKey: data?.confirmed ?? null,
     currentIndex,
     currentStation,
     distanceSummaries,
