@@ -1,4 +1,8 @@
-import { keepPreviousData, useInfiniteQuery } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useQuery,
+} from '@tanstack/react-query';
 
 import HotPlaceService from '@/services/hot-place/HotPlaceService';
 
@@ -23,5 +27,13 @@ export const useHotPlaceQuery = (
 
       return currentPage.length + 1;
     },
+  });
+};
+
+export const useConfirmedHotPlaceQuery = (shareKey?: string | null) => {
+  return useQuery({
+    queryKey: ['confirmedHotPlace', shareKey],
+    queryFn: () => HotPlaceService.fetchConfirmedHotPlace(shareKey ?? ''),
+    enabled: Boolean(shareKey),
   });
 };
