@@ -670,7 +670,7 @@ export default function DistanceSummary({
 
       <TailWrapper>
         <Tail onClick={clickTail}>
-          {isExpandTail ? <ChevronTop /> : <ChevronBottom />}
+          {isExpandTail ? <ChevronBottom /> : <ChevronTop />}
         </Tail>
       </TailWrapper>
     </Container>

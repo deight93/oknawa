@@ -140,7 +140,7 @@ const Container = styled.main`
 
 const FloatingButton = styled(Button)`
   position: fixed;
-  bottom: 24px;
+  bottom: 116px;
   left: 50%;
   transform: translateX(-50%);
   font-weight: 600;

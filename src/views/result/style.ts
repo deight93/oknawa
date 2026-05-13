@@ -9,11 +9,20 @@ interface disabledProps {
 
 export const Container = styled.div`
   position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
   background-color: #151518;
   width: 100%;
+  max-height: 88dvh;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  border: 1px solid #28282d;
+  border-bottom: 0;
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.32);
   z-index: 8888;
 `;
 
@@ -21,7 +30,7 @@ export const Header = styled.div`
   display: flex;
   flex-direction: row;
   justify-content: space-between;
-  padding: 42px 20px 0 8px;
+  padding: 16px 20px 0 8px;
 `;
 
 export const HomeButton = styled.button`
@@ -42,9 +51,11 @@ export const SharingButton = styled.button`
 
 export const ExpandBody = styled.div`
   display: flex;
+  max-height: calc(88dvh - 64px);
   flex-direction: column;
   padding: 0 20px 20px;
   gap: 20px;
+  overflow-y: auto;
 `;
 
 export const ContentWrapper = styled.div<ExpandProps>`
@@ -478,7 +489,7 @@ export const FoldBody = styled.div`
   display: flex;
   flex-direction: row;
   justify-content: space-between;
-  padding: 0 8px 20px;
+  padding: 0 8px 18px;
 `;
 
 export const FoldLabel = styled.div`
@@ -547,7 +558,7 @@ export const ConfirmButton = styled.div<disabledProps>`
 
 export const TailWrapper = styled.div`
   position: absolute;
-  bottom: -16px;
+  top: -16px;
   display: flex;
   justify-content: center;
   width: 100%;
@@ -559,14 +570,14 @@ export const Tail = styled.div`
   justify-content: center;
   width: 64px;
   background-color: #151518;
-  border-bottom-left-radius: 16px;
-  border-bottom-right-radius: 16px;
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
   cursor: pointer;
   position: relative;
 
   svg {
     position: absolute;
-    bottom: 0px;
+    top: 0px;
   }
 `;
 
