@@ -15,9 +15,13 @@ export default function useResultPageState(queryMapId: string | null) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [sortOption, setSortOption] = useState<ResultSortOption>('recommended');
 
-  const { distanceSummaries, participants } = useResultSummary(sortOption);
-  const activeMapId = (mapIdInfo.mapId || queryMapId) ?? '';
-  const activeMapHostId = mapIdInfo.mapHostId;
+  const activeMapId = (queryMapId || mapIdInfo.mapId) ?? '';
+  const activeMapHostId =
+    mapIdInfo.mapId === activeMapId ? mapIdInfo.mapHostId : '';
+  const { distanceSummaries, participants } = useResultSummary(
+    sortOption,
+    activeMapId,
+  );
   const { data, isLoading, clearRefetchInterval } =
     usePlaceSearchMapIdQuery(activeMapId);
   const voteRound = data?.vote_round ?? 1;

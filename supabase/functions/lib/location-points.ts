@@ -211,7 +211,7 @@ export async function createLocationResult(
   meetingPurpose?: MeetingPurpose,
 ): Promise<StepResult<LocationResultRow>> {
   const mapId = crypto.randomUUID();
-  const mapHostId = toMapHostId(mapId);
+  const mapHostId = crypto.randomUUID();
 
   const { data, error } = await supabase
     .from('location_result')
@@ -248,6 +248,7 @@ export function buildStationInfoInserts(
     vote: 0,
     end_x: station.end_x,
     end_y: station.end_y,
+    recommend_score: station.recommend_score,
     address_name: station.address_name,
     station_name: station.station_name,
     itinerary: station.itinerary,
@@ -340,10 +341,18 @@ function selectBestStationItineraries(
 ): StationItineraryResult[] {
   return stationInfoList
     .filter(station => station.itinerary.length > 0)
+    .map(station => ({
+      ...station,
+      recommend_score: getStationItineraryScore(
+        station,
+        participantCount,
+        meetingPurpose,
+      ),
+    }))
     .sort(
       (a, b) =>
-        getStationItineraryScore(a, participantCount, meetingPurpose) -
-          getStationItineraryScore(b, participantCount, meetingPurpose) ||
+        (a.recommend_score ?? Number.POSITIVE_INFINITY) -
+          (b.recommend_score ?? Number.POSITIVE_INFINITY) ||
         a.station_name.localeCompare(b.station_name),
     )
     .slice(0, priority);
@@ -392,8 +401,4 @@ function parsePriority(url: string): number {
   }
 
   return Math.min(Math.max(Math.floor(parsedPriority), 1), 10);
-}
-
-function toMapHostId(mapId: string): string {
-  return mapId.replace(/-/g, '').slice(0, 8).split('').reverse().join('');
 }

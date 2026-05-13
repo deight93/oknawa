@@ -18,8 +18,8 @@ export default function useHostControlFlow(activeMapId?: string | null) {
   const resetModal = useResetAtom(modalState);
   const { setModalContents } = useModal();
 
-  const mapId = mapIdInfo.mapId || activeMapId || '';
-  const mapHostId = mapIdInfo.mapHostId;
+  const mapId = activeMapId || mapIdInfo.mapId || '';
+  const mapHostId = mapIdInfo.mapId === mapId ? mapIdInfo.mapHostId : '';
   const canManage = Boolean(mapId && mapHostId);
   const hostMapIdInfo = { mapId, mapHostId };
 

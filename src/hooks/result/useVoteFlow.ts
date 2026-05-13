@@ -16,6 +16,7 @@ import {
   hasVotedForMap,
   setVotedForMap,
 } from '@/utils/voteStorage';
+import { getVoterToken } from '@/utils/voterToken';
 
 export default function useVoteFlow(
   shareKey: string,
@@ -30,7 +31,9 @@ export default function useVoteFlow(
   const { mutate: placeSearchWithShareKey } =
     usePlaceSearchWithShareKeyMutation();
 
-  const activeMapId = (mapIdInfo.mapId || queryMapId) ?? '';
+  const activeMapId = (queryMapId || mapIdInfo.mapId) ?? '';
+  const activeMapHostId =
+    mapIdInfo.mapId === activeMapId ? mapIdInfo.mapHostId : '';
   const [isVote, setIsVote] = useState(false);
 
   useEffect(() => {
@@ -49,7 +52,12 @@ export default function useVoteFlow(
     }
 
     try {
-      await VoteService.setVote(activeMapId, shareKey);
+      await VoteService.setVote(
+        activeMapId,
+        shareKey,
+        voteRound,
+        getVoterToken(),
+      );
       setVotedForMap(activeMapId, voteRound);
       setIsVote(true);
     } catch (error) {
@@ -89,7 +97,13 @@ export default function useVoteFlow(
 
   const confirmVote = async () => {
     try {
-      await VoteService.setVoteConfirm(mapIdInfo, shareKey);
+      await VoteService.setVoteConfirm(
+        {
+          mapId: activeMapId,
+          mapHostId: activeMapHostId,
+        },
+        shareKey,
+      );
 
       setModalContents({
         buttonLabel: '확인',
@@ -140,6 +154,6 @@ export default function useVoteFlow(
     isVote,
     requestVote,
     requestConfirm,
-    canConfirm: Boolean(mapIdInfo.mapHostId),
+    canConfirm: Boolean(activeMapHostId),
   };
 }

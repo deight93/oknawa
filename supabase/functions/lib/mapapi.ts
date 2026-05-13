@@ -96,7 +96,7 @@ export async function callGoogleMapItineraries(
         return toRouteResult(request, cachedItinerary);
       }
 
-      const itinerary = await fetchGoogleRouteItinerary(
+      const itinerary = await fetchGoogleRouteItinerarySafely(
         request.participant,
         request.station,
         headers,
@@ -108,13 +108,21 @@ export async function callGoogleMapItineraries(
       return toRouteResult(request, itinerary);
     },
   );
+  const resultList = routeResults.some(Boolean)
+    ? routeResults
+    : routeRequests.map(request =>
+        toRouteResult(
+          request,
+          createEstimatedRouteItinerary(request.participant, request.station),
+        ),
+      );
 
   if (cacheUpserts.length > 0) {
     await upsertRouteCache(supabase, cacheUpserts);
   }
 
   return stations.map((station, stationIndex) => {
-    const itineraryList = routeResults
+    const itineraryList = resultList
       .filter(
         (result): result is RouteResult =>
           Boolean(result) && result.stationIndex === stationIndex,
@@ -277,6 +285,52 @@ async function fetchGoogleRouteItinerary(
   };
 }
 
+async function fetchGoogleRouteItinerarySafely(
+  participant: RouteParticipant,
+  station: PopularMeetingLocation,
+  headers: Record<string, string>,
+  googleApiUrl: string,
+): Promise<RouteItinerary['itinerary'] | null> {
+  try {
+    return await fetchGoogleRouteItinerary(
+      participant,
+      station,
+      headers,
+      googleApiUrl,
+    );
+  } catch (error) {
+    console.error('Google route request failed:', error);
+    return null;
+  }
+}
+
+function createEstimatedRouteItinerary(
+  participant: RouteParticipant,
+  station: PopularMeetingLocation,
+): RouteItinerary['itinerary'] {
+  const destinationLat = Number(station.location_y);
+  const destinationLng = Number(station.location_x);
+  const distanceMeters = getDistanceMeters(
+    [participant.start_x, participant.start_y],
+    [destinationLng, destinationLat],
+  );
+  const estimatedSeconds = Math.max(
+    600,
+    Math.round((distanceMeters / 1000 / 25) * 3600),
+  );
+
+  return {
+    totalTime: estimatedSeconds,
+    transferCount: 0,
+    walkingDistance: 0,
+    walkingTime: 0,
+    total_polyline: [
+      { lat: participant.start_y, lng: participant.start_x },
+      { lat: destinationLat, lng: destinationLng },
+    ],
+  };
+}
+
 function toRouteResult(
   request: RouteRequest,
   itinerary: RouteItinerary['itinerary'],
@@ -354,4 +408,31 @@ function buildRouteCacheKey(
 
 function normalizeCoordinate(value: number | string): string {
   return Number(value).toFixed(5);
+}
+
+const EARTH_RADIUS_METERS = 6371000;
+
+function getDistanceMeters(
+  fromCoordinates: [number, number],
+  toCoordinates: [number, number],
+): number {
+  const [fromLng, fromLat] = fromCoordinates;
+  const [toLng, toLat] = toCoordinates;
+  const fromLatRad = toRadians(fromLat);
+  const toLatRad = toRadians(toLat);
+  const deltaLatRad = toRadians(toLat - fromLat);
+  const deltaLngRad = toRadians(toLng - fromLng);
+  const a =
+    Math.sin(deltaLatRad / 2) * Math.sin(deltaLatRad / 2) +
+    Math.cos(fromLatRad) *
+      Math.cos(toLatRad) *
+      Math.sin(deltaLngRad / 2) *
+      Math.sin(deltaLngRad / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return EARTH_RADIUS_METERS * c;
+}
+
+function toRadians(degrees: number): number {
+  return (degrees * Math.PI) / 180;
 }

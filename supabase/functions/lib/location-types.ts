@@ -65,6 +65,7 @@ export interface StationItineraryResult {
   end_y: number;
   itinerary: RouteItinerary[];
   place_quality?: StationPlaceQuality;
+  recommend_score?: number;
 }
 
 export interface StationInfoInsert {
@@ -73,6 +74,7 @@ export interface StationInfoInsert {
   vote: number;
   end_x: number;
   end_y: number;
+  recommend_score?: number;
   address_name: string;
   station_name: string;
   itinerary: RouteItinerary[];

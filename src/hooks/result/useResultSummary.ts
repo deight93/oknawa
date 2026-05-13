@@ -2,68 +2,6 @@ import { useAtomValue } from 'jotai';
 
 import { resultState } from '@/jotai/result/store';
 import { DistanceSummaryItem, ResultSortOption } from '@/types/location';
-import { MeetingPurpose } from '@/types/meetingPurpose';
-
-const RECOMMEND_SCORE_WEIGHTS: Record<
-  MeetingPurpose | 'default',
-  {
-    averageTravelTime: number;
-    maxTravelTime: number;
-    placeQualityBenefit: number;
-    transferPenalty: number;
-    walkingTimePenalty: number;
-  }
-> = {
-  default: {
-    averageTravelTime: 1,
-    maxTravelTime: 0.35,
-    placeQualityBenefit: 420,
-    transferPenalty: 600,
-    walkingTimePenalty: 0.45,
-  },
-  meal: {
-    averageTravelTime: 1,
-    maxTravelTime: 0.35,
-    placeQualityBenefit: 600,
-    transferPenalty: 600,
-    walkingTimePenalty: 0.45,
-  },
-  cafe: {
-    averageTravelTime: 0.95,
-    maxTravelTime: 0.35,
-    placeQualityBenefit: 600,
-    transferPenalty: 600,
-    walkingTimePenalty: 0.6,
-  },
-  drink: {
-    averageTravelTime: 1,
-    maxTravelTime: 0.4,
-    placeQualityBenefit: 600,
-    transferPenalty: 750,
-    walkingTimePenalty: 0.65,
-  },
-  study: {
-    averageTravelTime: 0.9,
-    maxTravelTime: 0.55,
-    placeQualityBenefit: 480,
-    transferPenalty: 650,
-    walkingTimePenalty: 0.45,
-  },
-  date: {
-    averageTravelTime: 0.85,
-    maxTravelTime: 0.45,
-    placeQualityBenefit: 540,
-    transferPenalty: 650,
-    walkingTimePenalty: 0.7,
-  },
-  meeting: {
-    averageTravelTime: 1,
-    maxTravelTime: 0.55,
-    placeQualityBenefit: 420,
-    transferPenalty: 700,
-    walkingTimePenalty: 0.4,
-  },
-};
 
 const compareBySortOption = (sortOption: ResultSortOption) => {
   return (a: DistanceSummaryItem, b: DistanceSummaryItem) => {
@@ -92,11 +30,37 @@ const compareBySortOption = (sortOption: ResultSortOption) => {
   };
 };
 
-export default function useResultSummary(sortOption: ResultSortOption) {
+const getFallbackRecommendScore = ({
+  averageTravelTime,
+  maxTravelTime,
+  averageTransferCount,
+  averageWalkingTime,
+  hasRouteQualityMetrics,
+}: {
+  averageTravelTime: number;
+  maxTravelTime: number;
+  averageTransferCount: number;
+  averageWalkingTime: number;
+  hasRouteQualityMetrics: boolean;
+}) =>
+  averageTravelTime +
+  maxTravelTime * 0.35 +
+  (hasRouteQualityMetrics ? averageTransferCount * 600 : 0) +
+  (hasRouteQualityMetrics ? averageWalkingTime * 0.45 : 0);
+
+export default function useResultSummary(
+  sortOption: ResultSortOption,
+  expectedMapId?: string,
+) {
   const result = useAtomValue(resultState);
   const { station_info = [], request_info } = result;
-  const recommendScoreWeights =
-    RECOMMEND_SCORE_WEIGHTS[request_info?.meetingPurpose ?? 'default'];
+
+  if (expectedMapId && result.map_id && result.map_id !== expectedMapId) {
+    return {
+      distanceSummaries: [],
+      participants: [],
+    };
+  }
 
   const summaries = station_info.map(station => {
     const stationName = station.station_name?.split(' ')[0] ?? '';
@@ -149,18 +113,15 @@ export default function useResultSummary(sortOption: ResultSortOption) {
     const averageWalkingTime = itinerary.length
       ? totalWalkingTime / itinerary.length
       : 0;
-    const placeQualityBenefit =
-      (placeQuality?.score ?? 0) * recommendScoreWeights.placeQualityBenefit;
     const recommendScore =
-      averageTravelTime * recommendScoreWeights.averageTravelTime +
-      maxTravelTime * recommendScoreWeights.maxTravelTime +
-      (hasRouteQualityMetrics
-        ? averageTransferCount * recommendScoreWeights.transferPenalty
-        : 0) +
-      (hasRouteQualityMetrics
-        ? averageWalkingTime * recommendScoreWeights.walkingTimePenalty
-        : 0) -
-      placeQualityBenefit;
+      station.recommend_score ??
+      getFallbackRecommendScore({
+        averageTravelTime,
+        maxTravelTime,
+        averageTransferCount,
+        averageWalkingTime,
+        hasRouteQualityMetrics,
+      });
 
     return {
       station,

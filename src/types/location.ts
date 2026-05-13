@@ -45,6 +45,7 @@ export interface StationInfo {
   address_name: string;
   end_x: number;
   end_y: number;
+  recommend_score?: number;
   share_key: string;
   itinerary: ItineraryItem[];
   request_info: RequestInfo;
@@ -53,6 +54,7 @@ export interface StationInfo {
 }
 
 export interface LocationResult {
+  map_id?: string;
   station_info: StationInfo[];
   request_info: RequestInfo;
   confirmed?: string | null;
