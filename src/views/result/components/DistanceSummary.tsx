@@ -486,13 +486,13 @@ export default function DistanceSummary({
                     setOpenedCompareShareKey(null);
                   }}
                 >
-                  {isCompareExpanded ? '간단히 보기' : '더보기'}
+                  {isCompareExpanded ? '지표 접기' : '비교 지표 보기'}
                 </DetailToggleButton>
               </CompareHeader>
               <Label>
                 {isCompareExpanded
-                  ? '카드를 누르면 해당 후보로 이동하고, 자세히로 근거를 확인해요.'
-                  : '이름과 대표 조건만 먼저 보여줘요.'}
+                  ? '평균, 최장, 득표를 비교하고 후보별 근거를 확인해요.'
+                  : '후보 이름과 대표 조건을 먼저 보여줘요.'}
               </Label>
               <CompareList>
                 {stations.map((candidate, index) => {
