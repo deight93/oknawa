@@ -182,10 +182,7 @@ const formatQualityValue = (
 const getVisiblePreferences = (
   preferences: ResultSortOption[],
   visibleCount: number,
-) => ({
-  visiblePreferences: preferences.slice(0, visibleCount),
-  hiddenCount: Math.max(preferences.length - visibleCount, 0),
-});
+) => preferences.slice(0, visibleCount);
 
 interface DistanceSummaryProps {
   station: DistanceSummaryItem;
@@ -230,7 +227,7 @@ export default function DistanceSummary({
 
   const reset = useResetAtom(modalState);
 
-  const [isExpandTail, setExpandTail] = useState(true);
+  const [isExpandTail, setExpandTail] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isCompareExpanded, setIsCompareExpanded] = useState(false);
   const [openedCompareShareKey, setOpenedCompareShareKey] = useState<
@@ -269,7 +266,7 @@ export default function DistanceSummary({
     .fill(true, 0, vote)
     .fill(false, vote);
   const selectedPreference = PREFERENCE_OPTIONS[sortOption];
-  const { visiblePreferences, hiddenCount } = getVisiblePreferences(
+  const visiblePreferences = getVisiblePreferences(
     station.preferenceMatches,
     2,
   );
@@ -342,9 +339,6 @@ export default function DistanceSummary({
                   {PREFERENCE_OPTIONS[preference].badgeLabel}
                 </ConditionBadge>
               ))}
-              {hiddenCount > 0 && (
-                <ConditionBadge>+{hiddenCount}</ConditionBadge>
-              )}
             </ConditionBadgeList>
           </PreferencePanel>
           <SummaryMetrics>
@@ -470,10 +464,10 @@ export default function DistanceSummary({
               </Label>
               <CompareList>
                 {stations.map((candidate, index) => {
-                  const {
-                    visiblePreferences: candidateVisiblePreferences,
-                    hiddenCount: candidateHiddenCount,
-                  } = getVisiblePreferences(candidate.preferenceMatches, 2);
+                  const candidateVisiblePreferences = getVisiblePreferences(
+                    candidate.preferenceMatches,
+                    2,
+                  );
                   const isCompareDetailOpen =
                     openedCompareShareKey === candidate.shareKey;
 
@@ -501,11 +495,6 @@ export default function DistanceSummary({
                             {PREFERENCE_OPTIONS[preference].badgeLabel}
                           </ConditionBadge>
                         ))}
-                        {candidateHiddenCount > 0 && (
-                          <ConditionBadge>
-                            +{candidateHiddenCount}
-                          </ConditionBadge>
-                        )}
                       </CompareBadgeList>
                       {isCompareExpanded && (
                         <>

@@ -136,7 +136,7 @@ export default function MeetingMap({
     if (!map || !center) return;
 
     if (focusMode === 'destination') {
-      map.setLevel(5);
+      map.setLevel(6);
       map.setCenter(new kakao.maps.LatLng(center.lat, center.lng));
       return;
     }
@@ -173,7 +173,7 @@ export default function MeetingMap({
   }
 
   return (
-    <Map center={center} level={3} isPanto onCreate={setMap}>
+    <Map center={center} level={6} isPanto onCreate={setMap}>
       {validParticipants.map((user, index) => (
         <MapMarker
           key={`${user.name}-${index}`}
