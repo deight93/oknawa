@@ -67,6 +67,15 @@ import {
   RightWrapper,
   LikeButton,
   ConfirmButton,
+  CompareCard,
+  CompareHeader,
+  CompareList,
+  CompareMetric,
+  CompareMetricLabel,
+  CompareMetricValue,
+  CompareMetrics,
+  CompareStationName,
+  CompareTitle,
   SortButton,
   SortWrapper,
 } from '../style';
@@ -80,9 +89,11 @@ const SORT_OPTIONS: { label: string; value: ResultSortOption }[] = [
 
 interface DistanceSummaryProps {
   station: DistanceSummaryItem;
+  stations: DistanceSummaryItem[];
   queryMapId: string | null;
   sortOption: ResultSortOption;
   onSortChange: (sortOption: ResultSortOption) => void;
+  currentIndex: number;
   stationName: string;
   shareKey: string;
   stationIndex: string;
@@ -91,13 +102,16 @@ interface DistanceSummaryProps {
   vote: number;
   onNext: () => void;
   onPrev: () => void;
+  onSelectStation: (stationIndex: number) => void;
 }
 
 export default function DistanceSummary({
   station,
+  stations,
   queryMapId,
   sortOption,
   onSortChange,
+  currentIndex,
   stationName,
   shareKey,
   stationIndex,
@@ -106,6 +120,7 @@ export default function DistanceSummary({
   vote,
   onNext,
   onPrev,
+  onSelectStation,
 }: DistanceSummaryProps) {
   const router = useRouter();
 
@@ -190,6 +205,48 @@ export default function DistanceSummary({
               </SortButton>
             ))}
           </SortWrapper>
+          {stations.length > 1 && (
+            <>
+              <CompareHeader>
+                <CompareTitle>후보 비교</CompareTitle>
+                <Label>카드를 누르면 해당 후보로 이동해요.</Label>
+              </CompareHeader>
+              <CompareList>
+                {stations.map((candidate, index) => (
+                  <CompareCard
+                    key={candidate.shareKey}
+                    type="button"
+                    $isActive={index === currentIndex}
+                    onClick={() => onSelectStation(index)}
+                  >
+                    <CompareStationName>
+                      {index + 1}. {candidate.stationName}
+                    </CompareStationName>
+                    <CompareMetrics>
+                      <CompareMetric>
+                        <CompareMetricLabel>평균</CompareMetricLabel>
+                        <CompareMetricValue>
+                          {convertToKoreanTime(candidate.averageTravelTime)}
+                        </CompareMetricValue>
+                      </CompareMetric>
+                      <CompareMetric>
+                        <CompareMetricLabel>최장</CompareMetricLabel>
+                        <CompareMetricValue>
+                          {convertToKoreanTime(candidate.maxTravelTime)}
+                        </CompareMetricValue>
+                      </CompareMetric>
+                      <CompareMetric>
+                        <CompareMetricLabel>득표</CompareMetricLabel>
+                        <CompareMetricValue>
+                          {candidate.vote}표
+                        </CompareMetricValue>
+                      </CompareMetric>
+                    </CompareMetrics>
+                  </CompareCard>
+                ))}
+              </CompareList>
+            </>
+          )}
           <PreffertWrapper>
             <VoteWrapper>
               <VoteTitle>

@@ -31,6 +31,7 @@ export default function ResultBody({ queryMapId }: ResultBodyProps) {
     setSortOption,
     handleNext,
     handlePrev,
+    handleSelectStation,
   } = useResultPageState(queryMapId);
 
   const handleHotplaceBtnClick = (station: DistanceSummaryItem) => {
@@ -74,9 +75,11 @@ export default function ResultBody({ queryMapId }: ResultBodyProps) {
       <Container>
         <DistanceSummary
           station={currentStation}
+          stations={distanceSummaries}
           queryMapId={queryMapId}
           sortOption={sortOption}
           onSortChange={setSortOption}
+          currentIndex={currentIndex}
           stationIndex={`0${currentIndex + 1}`}
           stationLength={`0${distanceSummaries.length}`}
           stationName={currentStation.stationName}
@@ -85,6 +88,7 @@ export default function ResultBody({ queryMapId }: ResultBodyProps) {
           vote={currentStation.vote}
           onNext={handleNext}
           onPrev={handlePrev}
+          onSelectStation={handleSelectStation}
         />
         <ResultMap
           station={currentStation}

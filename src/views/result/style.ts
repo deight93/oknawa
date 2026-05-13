@@ -128,6 +128,80 @@ export const SortButton = styled.button<{ $isActive: boolean }>`
   white-space: nowrap;
 `;
 
+export const CompareHeader = styled.div`
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+`;
+
+export const CompareTitle = styled.p`
+  color: #f4f4f5;
+  font-size: 15px;
+  font-weight: 700;
+`;
+
+export const CompareList = styled.div`
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+`;
+
+export const CompareCard = styled.button<{ $isActive: boolean }>`
+  display: flex;
+  flex: 0 0 154px;
+  min-height: 104px;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid ${({ $isActive }) => ($isActive ? '#18c964' : '#28282d')};
+  border-radius: 8px;
+  background-color: ${({ $isActive }) => ($isActive ? '#123925' : '#1c1c20')};
+  color: #f4f4f5;
+  text-align: left;
+`;
+
+export const CompareStationName = styled.p`
+  overflow: hidden;
+  color: #f4f4f5;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+export const CompareMetrics = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+`;
+
+export const CompareMetric = styled.div`
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+`;
+
+export const CompareMetricLabel = styled.span`
+  color: #777780;
+  font-size: 11px;
+  font-weight: 500;
+`;
+
+export const CompareMetricValue = styled.span`
+  overflow: hidden;
+  color: #d9d9d9;
+  font-size: 12px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
 export const VoteWrapper = styled.div`
   display: flex;
   flex-direction: column;

@@ -67,6 +67,14 @@ export default function useResultPageState(queryMapId: string | null) {
     setCurrentIndex(prevIndex => (prevIndex - 1 + stationCount) % stationCount);
   };
 
+  const handleSelectStation = (stationIndex: number) => {
+    if (stationIndex < 0 || stationIndex >= stationCount) {
+      return;
+    }
+
+    setCurrentIndex(stationIndex);
+  };
+
   return {
     activeMapId,
     currentIndex,
@@ -78,5 +86,6 @@ export default function useResultPageState(queryMapId: string | null) {
     setSortOption,
     handleNext,
     handlePrev,
+    handleSelectStation,
   };
 }
