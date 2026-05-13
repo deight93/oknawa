@@ -19,6 +19,7 @@ interface MeetingMapProps {
   stationName: string;
   endX: unknown;
   endY: unknown;
+  focusMode?: 'destination' | 'overview';
   participants?: Participant[];
   itinerary?: ItineraryItem[];
 }
@@ -72,6 +73,7 @@ export default function MeetingMap({
   stationName,
   endX,
   endY,
+  focusMode = 'destination',
   participants = [],
   itinerary = [],
 }: MeetingMapProps) {
@@ -131,13 +133,19 @@ export default function MeetingMap({
   };
 
   useEffect(() => {
-    if (!map) return;
+    if (!map || !center) return;
+
+    if (focusMode === 'destination') {
+      map.setLevel(3);
+      map.setCenter(new kakao.maps.LatLng(center.lat, center.lng));
+      return;
+    }
 
     const bounds = getMapBounds();
     if (!bounds) return;
 
     map.setBounds(bounds);
-  }, [map, getMapBounds]);
+  }, [center, focusMode, getMapBounds, map]);
 
   useEffect(() => {
     if (window.kakao?.maps) {
