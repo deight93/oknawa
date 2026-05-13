@@ -14,7 +14,7 @@ export default function useConfirmedResult(queryShareKey: string | null) {
 
   const { station_name, share_key, itinerary, request_info } = resultConfirm;
   const shouldFetchShareResult = Boolean(
-    queryShareKey && share_key !== queryShareKey,
+    queryShareKey && (share_key !== queryShareKey || !resultConfirm.map_id),
   );
 
   useEffect(() => {

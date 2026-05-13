@@ -37,3 +37,22 @@ export const useConfirmedHotPlaceQuery = (shareKey?: string | null) => {
     enabled: Boolean(shareKey),
   });
 };
+
+export const useHotPlaceVotesQuery = (
+  mapId: string | undefined,
+  shareKey: string | undefined,
+  voteRound: number | undefined,
+  category: HotPlaceCategory,
+) => {
+  return useQuery({
+    queryKey: ['hotPlaceVotes', mapId, shareKey, voteRound, category],
+    queryFn: () =>
+      HotPlaceService.fetchHotPlaceVotes(
+        mapId ?? '',
+        shareKey ?? '',
+        voteRound ?? 1,
+        category,
+      ),
+    enabled: Boolean(mapId && shareKey && voteRound),
+  });
+};

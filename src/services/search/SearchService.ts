@@ -37,11 +37,23 @@ export default class SearchService {
       return null;
     }
 
-    const { data } = await api.get(
+    const { data: stationData } = await api.get(
       `/rest/v1/station_info?share_key=eq.${shareKey}&select=*&limit=1`,
     );
+    const station = stationData?.[0] ?? null;
 
-    return data?.[0] ?? null;
+    if (!station?.map_id) {
+      return station;
+    }
+
+    const { data: resultData } = await api.get(
+      `/rest/v1/location_result?map_id=eq.${station.map_id}&select=vote_round&limit=1`,
+    );
+
+    return {
+      ...station,
+      vote_round: resultData?.[0]?.vote_round ?? 1,
+    };
   }
 
   static async makeRoom(searchForm: SearchState) {

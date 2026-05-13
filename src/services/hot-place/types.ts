@@ -52,3 +52,22 @@ export interface ConfirmHotPlaceRequest {
   category: HotPlaceCategory;
   place: HotPlace;
 }
+
+export interface HotPlaceVote {
+  id: number;
+  map_id: string;
+  share_key: string;
+  vote_round: number;
+  category: HotPlaceCategory;
+  kakao_place_id: string;
+  place_name: string;
+  vote: number;
+}
+
+export interface VoteHotPlaceRequest {
+  mapId: string;
+  shareKey: string;
+  voteRound: number;
+  category: HotPlaceCategory;
+  place: HotPlace;
+}

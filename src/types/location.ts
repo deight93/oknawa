@@ -31,6 +31,7 @@ export interface RequestInfo {
 }
 
 export interface StationInfo {
+  map_id?: string;
   station_name: string;
   address_name: string;
   end_x: number;
@@ -39,6 +40,7 @@ export interface StationInfo {
   itinerary: ItineraryItem[];
   request_info: RequestInfo;
   vote: number;
+  vote_round?: number;
 }
 
 export interface LocationResult {

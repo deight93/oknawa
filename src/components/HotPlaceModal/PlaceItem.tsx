@@ -8,7 +8,12 @@ import { HotPlace } from '@/services/hot-place/types';
 
 interface PlaceItemProps {
   place: HotPlace;
+  voteCount?: number;
+  isVoted?: boolean;
+  isVoting?: boolean;
+  isVoteDisabled?: boolean;
   isConfirming?: boolean;
+  onVotePlace?: () => void;
   onConfirmPlace?: () => void;
 }
 
@@ -19,7 +24,12 @@ const categoryIcons: Record<string, JSX.Element> = {
 
 export default function PlaceItem({
   place,
+  voteCount = 0,
+  isVoted = false,
+  isVoting = false,
+  isVoteDisabled = false,
   isConfirming,
+  onVotePlace,
   onConfirmPlace,
 }: PlaceItemProps) {
   const {
@@ -68,16 +78,33 @@ export default function PlaceItem({
           )}
         </ImageBox>
       </PlaceLink>
-      {onConfirmPlace && (
-        <ConfirmButton
-          color="success"
-          size="sm"
-          radius="full"
-          isLoading={isConfirming}
-          onClick={onConfirmPlace}
-        >
-          최종 확정
-        </ConfirmButton>
+      {(onVotePlace || onConfirmPlace) && (
+        <ActionRow>
+          {onVotePlace && (
+            <VoteButton
+              color={isVoted ? 'success' : 'default'}
+              size="sm"
+              radius="full"
+              variant={isVoted ? 'solid' : 'bordered'}
+              isLoading={isVoting}
+              isDisabled={isVoteDisabled}
+              onClick={onVotePlace}
+            >
+              {isVoted ? '투표 완료' : '투표'} · {voteCount}표
+            </VoteButton>
+          )}
+          {onConfirmPlace && (
+            <ConfirmButton
+              color="success"
+              size="sm"
+              radius="full"
+              isLoading={isConfirming}
+              onClick={onConfirmPlace}
+            >
+              최종 확정
+            </ConfirmButton>
+          )}
+        </ActionRow>
       )}
     </StyledCard>
   );
@@ -147,6 +174,17 @@ const DefaultImage = styled.div`
   height: 64px;
   background-color: #9e9e9e;
   border-radius: 8px;
+`;
+
+const ActionRow = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+`;
+
+const VoteButton = styled(Button)`
+  width: 100%;
+  font-weight: 700;
 `;
 
 const ConfirmButton = styled(Button)`
