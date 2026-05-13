@@ -128,6 +128,7 @@ export async function callGoogleMapItineraries(
       end_x: Number(station.location_x),
       end_y: Number(station.location_y),
       itinerary: itineraryList,
+      place_quality: station.place_quality,
     };
   });
 }

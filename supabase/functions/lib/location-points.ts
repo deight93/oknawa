@@ -14,6 +14,7 @@ import type {
 } from './location-types.ts';
 import { isMeetingPurpose, isRouteParticipantList } from './location-types.ts';
 import { callGoogleMapItineraries } from './mapapi.ts';
+import { attachPlaceQualities } from './place-quality.ts';
 import { responseJson } from './utils.ts';
 
 export interface LocationPointsRequest {
@@ -36,6 +37,7 @@ const RECOMMEND_SCORE_WEIGHTS: Record<
   {
     averageTravelTime: number;
     maxTravelTime: number;
+    placeQualityBenefit: number;
     transferPenalty: number;
     walkingTimePenalty: number;
   }
@@ -43,42 +45,49 @@ const RECOMMEND_SCORE_WEIGHTS: Record<
   default: {
     averageTravelTime: 1,
     maxTravelTime: 0.35,
+    placeQualityBenefit: 420,
     transferPenalty: 600,
     walkingTimePenalty: 0.45,
   },
   meal: {
     averageTravelTime: 1,
     maxTravelTime: 0.35,
+    placeQualityBenefit: 600,
     transferPenalty: 600,
     walkingTimePenalty: 0.45,
   },
   cafe: {
     averageTravelTime: 0.95,
     maxTravelTime: 0.35,
+    placeQualityBenefit: 600,
     transferPenalty: 600,
     walkingTimePenalty: 0.6,
   },
   drink: {
     averageTravelTime: 1,
     maxTravelTime: 0.4,
+    placeQualityBenefit: 600,
     transferPenalty: 750,
     walkingTimePenalty: 0.65,
   },
   study: {
     averageTravelTime: 0.9,
     maxTravelTime: 0.55,
+    placeQualityBenefit: 480,
     transferPenalty: 650,
     walkingTimePenalty: 0.45,
   },
   date: {
     averageTravelTime: 0.85,
     maxTravelTime: 0.45,
+    placeQualityBenefit: 540,
     transferPenalty: 650,
     walkingTimePenalty: 0.7,
   },
   meeting: {
     averageTravelTime: 1,
     maxTravelTime: 0.55,
+    placeQualityBenefit: 420,
     transferPenalty: 700,
     walkingTimePenalty: 0.4,
   },
@@ -169,10 +178,15 @@ export async function buildStationItineraries(
     locations,
     candidatePoolSize,
   );
+  const qualityAdjustedLocationDataList = await attachPlaceQualities(
+    supabase,
+    centerLocationDataList,
+    meetingPurpose,
+  );
   const stationInfoList = await callGoogleMapItineraries(
     supabase,
     participants,
-    centerLocationDataList,
+    qualityAdjustedLocationDataList,
   );
   const bestStationInfoList = selectBestStationItineraries(
     stationInfoList,
@@ -237,7 +251,11 @@ export function buildStationInfoInserts(
     address_name: station.address_name,
     station_name: station.station_name,
     itinerary: station.itinerary,
-    request_info: { participant: participants, meetingPurpose },
+    request_info: {
+      participant: participants,
+      meetingPurpose,
+      placeQuality: station.place_quality,
+    },
   }));
 }
 
@@ -352,6 +370,8 @@ function getStationItineraryScore(
       (sum, route) => sum + (route.itinerary.walkingTime ?? 0),
       0,
     ) / routeCount;
+  const placeQualityBenefit =
+    (station.place_quality?.score ?? 0) * weights.placeQualityBenefit;
   const missingParticipantCount = Math.max(participantCount - routeCount, 0);
 
   return (
@@ -359,7 +379,8 @@ function getStationItineraryScore(
     maxTravelTime * weights.maxTravelTime +
     averageTransferCount * weights.transferPenalty +
     averageWalkingTime * weights.walkingTimePenalty +
-    missingParticipantCount * MISSING_PARTICIPANT_TIME_PENALTY_SECONDS
+    missingParticipantCount * MISSING_PARTICIPANT_TIME_PENALTY_SECONDS -
+    placeQualityBenefit
   );
 }
 

@@ -27,9 +27,18 @@ export interface PopularMeetingLocation {
   address: string;
   location_x: number | string;
   location_y: number | string;
+  place_quality?: StationPlaceQuality;
   created_at?: string;
   updated_at?: string;
   deleted_at?: string | null;
+}
+
+export interface StationPlaceQuality {
+  radius: number;
+  foodCount: number;
+  cafeCount: number;
+  drinkCount: number;
+  score: number;
 }
 
 export interface PolylinePoint {
@@ -55,6 +64,7 @@ export interface StationItineraryResult {
   end_x: number;
   end_y: number;
   itinerary: RouteItinerary[];
+  place_quality?: StationPlaceQuality;
 }
 
 export interface StationInfoInsert {
@@ -69,6 +79,7 @@ export interface StationInfoInsert {
   request_info: {
     participant: RouteParticipant[];
     meetingPurpose?: MeetingPurpose;
+    placeQuality?: StationPlaceQuality;
   };
 }
 

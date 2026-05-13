@@ -9,6 +9,7 @@ const RECOMMEND_SCORE_WEIGHTS: Record<
   {
     averageTravelTime: number;
     maxTravelTime: number;
+    placeQualityBenefit: number;
     transferPenalty: number;
     walkingTimePenalty: number;
   }
@@ -16,42 +17,49 @@ const RECOMMEND_SCORE_WEIGHTS: Record<
   default: {
     averageTravelTime: 1,
     maxTravelTime: 0.35,
+    placeQualityBenefit: 420,
     transferPenalty: 600,
     walkingTimePenalty: 0.45,
   },
   meal: {
     averageTravelTime: 1,
     maxTravelTime: 0.35,
+    placeQualityBenefit: 600,
     transferPenalty: 600,
     walkingTimePenalty: 0.45,
   },
   cafe: {
     averageTravelTime: 0.95,
     maxTravelTime: 0.35,
+    placeQualityBenefit: 600,
     transferPenalty: 600,
     walkingTimePenalty: 0.6,
   },
   drink: {
     averageTravelTime: 1,
     maxTravelTime: 0.4,
+    placeQualityBenefit: 600,
     transferPenalty: 750,
     walkingTimePenalty: 0.65,
   },
   study: {
     averageTravelTime: 0.9,
     maxTravelTime: 0.55,
+    placeQualityBenefit: 480,
     transferPenalty: 650,
     walkingTimePenalty: 0.45,
   },
   date: {
     averageTravelTime: 0.85,
     maxTravelTime: 0.45,
+    placeQualityBenefit: 540,
     transferPenalty: 650,
     walkingTimePenalty: 0.7,
   },
   meeting: {
     averageTravelTime: 1,
     maxTravelTime: 0.55,
+    placeQualityBenefit: 420,
     transferPenalty: 700,
     walkingTimePenalty: 0.4,
   },
@@ -95,6 +103,7 @@ export default function useResultSummary(sortOption: ResultSortOption) {
     const itinerary = station.itinerary ?? [];
     const shareKey = station.share_key;
     const stationParticipants = station.request_info?.participant ?? [];
+    const placeQuality = station.request_info?.placeQuality;
     const travelTimes = itinerary.map(
       itinerary => itinerary.itinerary.totalTime,
     );
@@ -140,6 +149,8 @@ export default function useResultSummary(sortOption: ResultSortOption) {
     const averageWalkingTime = itinerary.length
       ? totalWalkingTime / itinerary.length
       : 0;
+    const placeQualityBenefit =
+      (placeQuality?.score ?? 0) * recommendScoreWeights.placeQualityBenefit;
     const recommendScore =
       averageTravelTime * recommendScoreWeights.averageTravelTime +
       maxTravelTime * recommendScoreWeights.maxTravelTime +
@@ -148,7 +159,8 @@ export default function useResultSummary(sortOption: ResultSortOption) {
         : 0) +
       (hasRouteQualityMetrics
         ? averageWalkingTime * recommendScoreWeights.walkingTimePenalty
-        : 0);
+        : 0) -
+      placeQualityBenefit;
 
     return {
       station,
@@ -164,6 +176,7 @@ export default function useResultSummary(sortOption: ResultSortOption) {
       averageWalkingDistance,
       averageWalkingTime,
       hasRouteQualityMetrics,
+      placeQuality,
       recommendScore,
       vote,
       preferenceMatches: [],

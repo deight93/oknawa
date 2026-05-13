@@ -25,9 +25,18 @@ export interface Participant {
   start_y: number;
 }
 
+export interface StationPlaceQuality {
+  radius: number;
+  foodCount: number;
+  cafeCount: number;
+  drinkCount: number;
+  score: number;
+}
+
 export interface RequestInfo {
   participant: Participant[];
   meetingPurpose?: MeetingPurpose;
+  placeQuality?: StationPlaceQuality;
 }
 
 export interface StationInfo {
@@ -74,6 +83,7 @@ export interface DistanceSummaryItem {
   averageWalkingDistance: number;
   averageWalkingTime: number;
   hasRouteQualityMetrics: boolean;
+  placeQuality?: StationPlaceQuality;
   recommendScore: number;
   vote: number;
   preferenceMatches: ResultPreferenceMatch[];
