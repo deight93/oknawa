@@ -404,12 +404,6 @@ export default function DistanceSummary({
                 <DetailSectionTitle>추천 기준</DetailSectionTitle>
                 <QualityMetrics>
                   <QualityMetric>
-                    <QualityMetricLabel>추천 점수</QualityMetricLabel>
-                    <QualityMetricValue>
-                      {Math.round(station.recommendScore)}
-                    </QualityMetricValue>
-                  </QualityMetric>
-                  <QualityMetric>
                     <QualityMetricLabel>평균 환승</QualityMetricLabel>
                     <QualityMetricValue>
                       {formatQualityValue(station, () =>
@@ -474,7 +468,7 @@ export default function DistanceSummary({
               </DetailSection>
             </DetailPanel>
           )}
-          {stations.length > 1 && (
+          {isDetailOpen && stations.length > 1 && (
             <>
               <CompareHeader>
                 <CompareTitle>후보 비교</CompareTitle>
@@ -571,12 +565,6 @@ export default function DistanceSummary({
                       </DetailToggleButton>
                       {isCompareDetailOpen && (
                         <QualityMetrics>
-                          <QualityMetric>
-                            <QualityMetricLabel>추천 점수</QualityMetricLabel>
-                            <QualityMetricValue>
-                              {Math.round(candidate.recommendScore)}
-                            </QualityMetricValue>
-                          </QualityMetric>
                           <QualityMetric>
                             <QualityMetricLabel>평균 환승</QualityMetricLabel>
                             <QualityMetricValue>
