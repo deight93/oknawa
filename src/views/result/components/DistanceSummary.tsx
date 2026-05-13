@@ -344,18 +344,6 @@ export default function DistanceSummary({
               </ChevronButton>
             </IndicatorWrapper>
           </ContentWrapper>
-          <SortWrapper>
-            {SORT_OPTIONS.map(option => (
-              <SortButton
-                key={option.value}
-                type="button"
-                $isActive={sortOption === option.value}
-                onClick={() => onSortChange(option.value)}
-              >
-                {option.label}
-              </SortButton>
-            ))}
-          </SortWrapper>
           <PreferencePanel>
             <PreferenceHeader>
               <PreferenceTitle>{selectedPreference.label}</PreferenceTitle>
@@ -400,6 +388,21 @@ export default function DistanceSummary({
           </DetailToggleWrapper>
           {isDetailOpen && (
             <DetailPanel>
+              <DetailSection>
+                <DetailSectionTitle>정렬 기준</DetailSectionTitle>
+                <SortWrapper>
+                  {SORT_OPTIONS.map(option => (
+                    <SortButton
+                      key={option.value}
+                      type="button"
+                      $isActive={sortOption === option.value}
+                      onClick={() => onSortChange(option.value)}
+                    >
+                      {option.label}
+                    </SortButton>
+                  ))}
+                </SortWrapper>
+              </DetailSection>
               <DetailSection>
                 <DetailSectionTitle>추천 기준</DetailSectionTitle>
                 <QualityMetrics>

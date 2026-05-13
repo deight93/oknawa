@@ -140,9 +140,8 @@ export const HostControlButtonWrapper = styled.div`
 
 export const SortWrapper = styled.div`
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
-  overflow-x: auto;
-  padding-bottom: 2px;
 `;
 
 export const SortButton = styled.button<{ $isActive: boolean }>`
