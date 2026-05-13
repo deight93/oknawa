@@ -336,19 +336,17 @@ export const CompareTitle = styled.p`
 `;
 
 export const CompareList = styled.div`
-  display: flex;
+  display: grid;
   gap: 8px;
-  overflow-x: auto;
-  padding-bottom: 2px;
+  overflow: visible;
 `;
 
 export const CompareCard = styled.div<{
   $isActive: boolean;
-  $isExpanded?: boolean;
 }>`
   display: flex;
-  flex: 0 0 154px;
-  min-height: ${({ $isExpanded }) => ($isExpanded ? '126px' : '92px')};
+  width: 100%;
+  min-height: 126px;
   flex-direction: column;
   gap: 10px;
   padding: 12px;

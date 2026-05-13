@@ -254,7 +254,6 @@ export default function DistanceSummary({
 
   const [isExpandTail, setExpandTail] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [isCompareExpanded, setIsCompareExpanded] = useState(false);
   const [openedCompareShareKey, setOpenedCompareShareKey] = useState<
     string | null
   >(null);
@@ -479,21 +478,8 @@ export default function DistanceSummary({
             <>
               <CompareHeader>
                 <CompareTitle>후보 비교</CompareTitle>
-                <DetailToggleButton
-                  type="button"
-                  onClick={() => {
-                    setIsCompareExpanded(isExpanded => !isExpanded);
-                    setOpenedCompareShareKey(null);
-                  }}
-                >
-                  {isCompareExpanded ? '지표 접기' : '비교 지표 보기'}
-                </DetailToggleButton>
               </CompareHeader>
-              <Label>
-                {isCompareExpanded
-                  ? '평균, 최장, 득표를 비교하고 후보별 근거를 확인해요.'
-                  : '후보 이름과 대표 조건을 먼저 보여줘요.'}
-              </Label>
+              <Label>후보별 평균, 최장, 득표를 바로 비교해요.</Label>
               <CompareList>
                 {stations.map((candidate, index) => {
                   const candidateVisiblePreferences = getVisiblePreferences(
@@ -509,7 +495,6 @@ export default function DistanceSummary({
                       role="button"
                       tabIndex={0}
                       $isActive={index === currentIndex}
-                      $isExpanded={isCompareExpanded}
                       onClick={() => onSelectStation(index)}
                       onKeyDown={event => {
                         if (event.key === 'Enter' || event.key === ' ') {
@@ -528,103 +513,91 @@ export default function DistanceSummary({
                           </ConditionBadge>
                         ))}
                       </CompareBadgeList>
-                      {isCompareExpanded && (
-                        <>
-                          <CompareMetrics>
-                            <CompareMetric>
-                              <CompareMetricLabel>평균</CompareMetricLabel>
-                              <CompareMetricValue>
-                                {convertToKoreanTime(
-                                  candidate.averageTravelTime,
-                                )}
-                              </CompareMetricValue>
-                              <CompareMetricBar>
-                                <CompareMetricBarFill
-                                  $ratio={getLowerBetterRatio(
-                                    candidate.averageTravelTime,
-                                    compareMetricRanges.averageTravelTime,
-                                  )}
-                                />
-                              </CompareMetricBar>
-                            </CompareMetric>
-                            <CompareMetric>
-                              <CompareMetricLabel>최장</CompareMetricLabel>
-                              <CompareMetricValue>
-                                {convertToKoreanTime(candidate.maxTravelTime)}
-                              </CompareMetricValue>
-                              <CompareMetricBar>
-                                <CompareMetricBarFill
-                                  $ratio={getLowerBetterRatio(
-                                    candidate.maxTravelTime,
-                                    compareMetricRanges.maxTravelTime,
-                                  )}
-                                />
-                              </CompareMetricBar>
-                            </CompareMetric>
-                            <CompareMetric>
-                              <CompareMetricLabel>득표</CompareMetricLabel>
-                              <CompareMetricValue>
-                                {candidate.vote}표
-                              </CompareMetricValue>
-                              <CompareMetricBar>
-                                <CompareMetricBarFill
-                                  $ratio={getHigherBetterRatio(
-                                    candidate.vote,
-                                    compareMetricRanges.vote,
-                                  )}
-                                />
-                              </CompareMetricBar>
-                            </CompareMetric>
-                          </CompareMetrics>
-                          <DetailToggleButton
-                            type="button"
-                            onClick={event => {
-                              event.stopPropagation();
-                              toggleCompareDetail(candidate.shareKey);
-                            }}
-                            onKeyDown={event => {
-                              event.stopPropagation();
-                            }}
-                          >
-                            {isCompareDetailOpen ? '접기' : '자세히'}
-                          </DetailToggleButton>
-                          {isCompareDetailOpen && (
-                            <QualityMetrics>
-                              <QualityMetric>
-                                <QualityMetricLabel>
-                                  추천 점수
-                                </QualityMetricLabel>
-                                <QualityMetricValue>
-                                  {Math.round(candidate.recommendScore)}
-                                </QualityMetricValue>
-                              </QualityMetric>
-                              <QualityMetric>
-                                <QualityMetricLabel>
-                                  평균 환승
-                                </QualityMetricLabel>
-                                <QualityMetricValue>
-                                  {formatQualityValue(candidate, () =>
-                                    formatTransferCount(
-                                      candidate.averageTransferCount,
-                                    ),
-                                  )}
-                                </QualityMetricValue>
-                              </QualityMetric>
-                              <QualityMetric>
-                                <QualityMetricLabel>
-                                  평균 도보
-                                </QualityMetricLabel>
-                                <QualityMetricValue>
-                                  {formatQualityValue(candidate, () =>
-                                    convertToKoreanTime(
-                                      candidate.averageWalkingTime,
-                                    ),
-                                  )}
-                                </QualityMetricValue>
-                              </QualityMetric>
-                            </QualityMetrics>
-                          )}
-                        </>
+                      <CompareMetrics>
+                        <CompareMetric>
+                          <CompareMetricLabel>평균</CompareMetricLabel>
+                          <CompareMetricValue>
+                            {convertToKoreanTime(candidate.averageTravelTime)}
+                          </CompareMetricValue>
+                          <CompareMetricBar>
+                            <CompareMetricBarFill
+                              $ratio={getLowerBetterRatio(
+                                candidate.averageTravelTime,
+                                compareMetricRanges.averageTravelTime,
+                              )}
+                            />
+                          </CompareMetricBar>
+                        </CompareMetric>
+                        <CompareMetric>
+                          <CompareMetricLabel>최장</CompareMetricLabel>
+                          <CompareMetricValue>
+                            {convertToKoreanTime(candidate.maxTravelTime)}
+                          </CompareMetricValue>
+                          <CompareMetricBar>
+                            <CompareMetricBarFill
+                              $ratio={getLowerBetterRatio(
+                                candidate.maxTravelTime,
+                                compareMetricRanges.maxTravelTime,
+                              )}
+                            />
+                          </CompareMetricBar>
+                        </CompareMetric>
+                        <CompareMetric>
+                          <CompareMetricLabel>득표</CompareMetricLabel>
+                          <CompareMetricValue>
+                            {candidate.vote}표
+                          </CompareMetricValue>
+                          <CompareMetricBar>
+                            <CompareMetricBarFill
+                              $ratio={getHigherBetterRatio(
+                                candidate.vote,
+                                compareMetricRanges.vote,
+                              )}
+                            />
+                          </CompareMetricBar>
+                        </CompareMetric>
+                      </CompareMetrics>
+                      <DetailToggleButton
+                        type="button"
+                        onClick={event => {
+                          event.stopPropagation();
+                          toggleCompareDetail(candidate.shareKey);
+                        }}
+                        onKeyDown={event => {
+                          event.stopPropagation();
+                        }}
+                      >
+                        {isCompareDetailOpen ? '근거 접기' : '근거 보기'}
+                      </DetailToggleButton>
+                      {isCompareDetailOpen && (
+                        <QualityMetrics>
+                          <QualityMetric>
+                            <QualityMetricLabel>추천 점수</QualityMetricLabel>
+                            <QualityMetricValue>
+                              {Math.round(candidate.recommendScore)}
+                            </QualityMetricValue>
+                          </QualityMetric>
+                          <QualityMetric>
+                            <QualityMetricLabel>평균 환승</QualityMetricLabel>
+                            <QualityMetricValue>
+                              {formatQualityValue(candidate, () =>
+                                formatTransferCount(
+                                  candidate.averageTransferCount,
+                                ),
+                              )}
+                            </QualityMetricValue>
+                          </QualityMetric>
+                          <QualityMetric>
+                            <QualityMetricLabel>평균 도보</QualityMetricLabel>
+                            <QualityMetricValue>
+                              {formatQualityValue(candidate, () =>
+                                convertToKoreanTime(
+                                  candidate.averageWalkingTime,
+                                ),
+                              )}
+                            </QualityMetricValue>
+                          </QualityMetric>
+                        </QualityMetrics>
                       )}
                     </CompareCard>
                   );
