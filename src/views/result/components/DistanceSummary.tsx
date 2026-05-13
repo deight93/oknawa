@@ -241,7 +241,7 @@ export default function DistanceSummary({
     voteRound,
   );
   const { canManage, requestCancelConfirm, requestResetVote } =
-    useHostControlFlow(activeMapId, shareKey);
+    useHostControlFlow(activeMapId);
 
   const clickHome = () => {
     setModalContents({

@@ -14,7 +14,6 @@ import Button from '@/components/Button';
 
 import { useResetAtom } from 'jotai/utils';
 import { modalState } from '@/jotai/global/store';
-import { ConfirmedHotPlace } from '@/services/hot-place/types';
 
 import {
   Container,
@@ -27,11 +26,6 @@ import {
   SharingButton,
   StationName,
   TitleWrapper,
-  FinalPlaceAddress,
-  FinalPlaceLink,
-  FinalPlaceMeta,
-  FinalPlacePanel,
-  FinalPlaceTitle,
   HostControlButtonWrapper,
   HostControlPanel,
   HostControlTitle,
@@ -39,7 +33,6 @@ import {
 
 interface DistanceSummaryProps {
   activeMapId: string;
-  confirmedPlace?: ConfirmedHotPlace | null;
   stationName: string;
   shareKey: string;
   averageTravelTime: number;
@@ -47,7 +40,6 @@ interface DistanceSummaryProps {
 
 export default function DistanceSummary({
   activeMapId,
-  confirmedPlace,
   stationName,
   shareKey,
   averageTravelTime,
@@ -56,7 +48,7 @@ export default function DistanceSummary({
 
   const { shareConfirmedResult } = useKakaoShare();
   const { canManage, requestCancelConfirm, requestResetVote } =
-    useHostControlFlow(activeMapId, shareKey);
+    useHostControlFlow(activeMapId);
 
   const reset = useResetAtom(modalState);
 
@@ -80,11 +72,6 @@ export default function DistanceSummary({
     router.push('/');
     reset();
   };
-  const title = confirmedPlace
-    ? `${confirmedPlace.place_name}에서 만나요`
-    : `${stationName}을 추천해요`;
-  const finalPlaceAddress =
-    confirmedPlace?.road_address_name || confirmedPlace?.address_name;
 
   return (
     <Container>
@@ -100,35 +87,13 @@ export default function DistanceSummary({
       <ExpandBody>
         <ContentWrapper>
           <TitleWrapper>
-            <StationName>{title}</StationName>
+            <StationName>{stationName}을 추천해요</StationName>
             <AverageArrivalTime>
-              {confirmedPlace
-                ? `${stationName} 근처, 평균 `
-                : '도착하는데 평균 '}
+              도착하는데 평균{' '}
               <ArrivalTime>{averageTravelTimeLabel}</ArrivalTime> 걸려요!
             </AverageArrivalTime>
           </TitleWrapper>
         </ContentWrapper>
-        {confirmedPlace && (
-          <FinalPlacePanel>
-            <FinalPlaceMeta>
-              {confirmedPlace.category_group_name || '최종 장소'}
-            </FinalPlaceMeta>
-            <FinalPlaceTitle>{confirmedPlace.place_name}</FinalPlaceTitle>
-            {finalPlaceAddress && (
-              <FinalPlaceAddress>{finalPlaceAddress}</FinalPlaceAddress>
-            )}
-            {confirmedPlace.place_url && (
-              <FinalPlaceLink
-                href={confirmedPlace.place_url}
-                target="_blank"
-                rel="noreferrer"
-              >
-                장소 자세히 보기
-              </FinalPlaceLink>
-            )}
-          </FinalPlacePanel>
-        )}
         {canManage && (
           <HostControlPanel>
             <HostControlTitle>방장 관리</HostControlTitle>

@@ -1,4 +1,4 @@
-import { Button, Card, CardBody, CardHeader } from '@nextui-org/react';
+import { Card, CardBody, CardHeader } from '@nextui-org/react';
 import Link from 'next/link';
 import styled from 'styled-components';
 
@@ -8,8 +8,6 @@ import { HotPlace } from '@/services/hot-place/types';
 
 interface PlaceItemProps {
   place: HotPlace;
-  isConfirming?: boolean;
-  onConfirmPlace?: () => void;
 }
 
 const categoryIcons: Record<string, JSX.Element> = {
@@ -17,11 +15,7 @@ const categoryIcons: Record<string, JSX.Element> = {
   카페: <CafeIcon color="gray" width="16" height="16" />,
 };
 
-export default function PlaceItem({
-  place,
-  isConfirming,
-  onConfirmPlace,
-}: PlaceItemProps) {
+export default function PlaceItem({ place }: PlaceItemProps) {
   const {
     place_name,
     category_group_name,
@@ -68,19 +62,6 @@ export default function PlaceItem({
           )}
         </ImageBox>
       </PlaceLink>
-      {onConfirmPlace && (
-        <ActionRow>
-          <ConfirmButton
-            color="success"
-            size="sm"
-            radius="full"
-            isLoading={isConfirming}
-            onClick={onConfirmPlace}
-          >
-            최종 확정
-          </ConfirmButton>
-        </ActionRow>
-      )}
     </StyledCard>
   );
 }
@@ -149,15 +130,4 @@ const DefaultImage = styled.div`
   height: 64px;
   background-color: #9e9e9e;
   border-radius: 8px;
-`;
-
-const ActionRow = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 8px;
-`;
-
-const ConfirmButton = styled(Button)`
-  width: 100%;
-  font-weight: 700;
 `;

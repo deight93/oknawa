@@ -11,10 +11,7 @@ import { modalState } from '@/jotai/global/store';
 import { mapIdState } from '@/jotai/mapId/store';
 import VoteService from '@/services/vote/VoteService';
 
-export default function useHostControlFlow(
-  activeMapId?: string | null,
-  shareKey?: string | null,
-) {
+export default function useHostControlFlow(activeMapId?: string | null) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const mapIdInfo = useAtomValue(mapIdState);
@@ -28,12 +25,6 @@ export default function useHostControlFlow(
 
   const refreshResult = () => {
     queryClient.invalidateQueries({ queryKey: ['placeSearchMapId', mapId] });
-
-    if (shareKey) {
-      queryClient.invalidateQueries({
-        queryKey: ['confirmedHotPlace', shareKey],
-      });
-    }
   };
 
   const moveToResult = () => {
@@ -74,7 +65,7 @@ export default function useHostControlFlow(
     setModalContents({
       buttonLabel: '취소',
       buttonLabel02: '확정 취소',
-      contents: '확정된 약속 지역과 최종 핫플을 취소할까요?',
+      contents: '확정된 약속 지역을 취소할까요?',
       onConfirm: cancelConfirm,
     });
   };

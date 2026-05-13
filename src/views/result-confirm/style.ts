@@ -77,48 +77,6 @@ export const ArrivalTime = styled.span<ExpandProps>`
   font-size: ${({ $isExpand }) => ($isExpand ? '18px' : ' 14px')};
 `;
 
-export const FinalPlacePanel = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-  padding: 12px;
-  border: 1px solid #28282d;
-  border-radius: 8px;
-  background-color: #1c1c20;
-`;
-
-export const FinalPlaceMeta = styled.p`
-  width: fit-content;
-  padding: 3px 8px;
-  border: 1px solid #18c964;
-  border-radius: 999px;
-  background-color: #123925;
-  color: #18c964;
-  font-size: 11px;
-  font-weight: 700;
-`;
-
-export const FinalPlaceTitle = styled.p`
-  color: #f4f4f5;
-  font-size: 18px;
-  font-weight: 800;
-  line-height: 1.3;
-`;
-
-export const FinalPlaceAddress = styled.p`
-  color: #bdbdbd;
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 1.45;
-`;
-
-export const FinalPlaceLink = styled.a`
-  width: fit-content;
-  color: #18c964;
-  font-size: 13px;
-  font-weight: 700;
-`;
-
 export const HostControlPanel = styled.div`
   display: flex;
   flex-direction: column;
