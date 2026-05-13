@@ -87,6 +87,11 @@ import {
   PreferenceHeader,
   PreferencePanel,
   PreferenceTitle,
+  QualityMetric,
+  QualityMetricLabel,
+  QualityMetricValue,
+  QualityMetrics,
+  QualityText,
   SortButton,
   SortWrapper,
 } from '../style';
@@ -118,6 +123,30 @@ const SORT_OPTIONS: { label: string; value: ResultSortOption }[] = [
   { label: PREFERENCE_OPTIONS.maxTime.label, value: 'maxTime' },
   { label: PREFERENCE_OPTIONS.vote.label, value: 'vote' },
 ];
+
+const formatTransferCount = (count: number) => {
+  const roundedCount = Math.round(count * 10) / 10;
+  return `${Number.isInteger(roundedCount) ? roundedCount : roundedCount.toFixed(1)}회`;
+};
+
+const formatWalkingDistance = (distance: number) => {
+  if (distance >= 1000) {
+    return `${(distance / 1000).toFixed(1)}km`;
+  }
+
+  return `${Math.round(distance)}m`;
+};
+
+const formatQualityValue = (
+  station: DistanceSummaryItem,
+  formatter: () => string,
+) => {
+  if (!station.hasRouteQualityMetrics) {
+    return '정보 없음';
+  }
+
+  return formatter();
+};
 
 interface DistanceSummaryProps {
   station: DistanceSummaryItem;
@@ -261,6 +290,40 @@ export default function DistanceSummary({
               ))}
             </ConditionBadgeList>
           </PreferencePanel>
+          <QualityMetrics>
+            <QualityMetric>
+              <QualityMetricLabel>평균 환승</QualityMetricLabel>
+              <QualityMetricValue>
+                {formatQualityValue(station, () =>
+                  formatTransferCount(station.averageTransferCount),
+                )}
+              </QualityMetricValue>
+            </QualityMetric>
+            <QualityMetric>
+              <QualityMetricLabel>최대 환승</QualityMetricLabel>
+              <QualityMetricValue>
+                {formatQualityValue(station, () =>
+                  formatTransferCount(station.maxTransferCount),
+                )}
+              </QualityMetricValue>
+            </QualityMetric>
+            <QualityMetric>
+              <QualityMetricLabel>평균 도보</QualityMetricLabel>
+              <QualityMetricValue>
+                {formatQualityValue(station, () =>
+                  convertToKoreanTime(station.averageWalkingTime),
+                )}
+              </QualityMetricValue>
+            </QualityMetric>
+            <QualityMetric>
+              <QualityMetricLabel>도보 거리</QualityMetricLabel>
+              <QualityMetricValue>
+                {formatQualityValue(station, () =>
+                  formatWalkingDistance(station.averageWalkingDistance),
+                )}
+              </QualityMetricValue>
+            </QualityMetric>
+          </QualityMetrics>
           {stations.length > 1 && (
             <>
               <CompareHeader>
@@ -285,6 +348,14 @@ export default function DistanceSummary({
                         </ConditionBadge>
                       ))}
                     </CompareBadgeList>
+                    {candidate.hasRouteQualityMetrics && (
+                      <QualityText>
+                        평균 환승{' '}
+                        {formatTransferCount(candidate.averageTransferCount)}
+                        {' · '}도보{' '}
+                        {convertToKoreanTime(candidate.averageWalkingTime)}
+                      </QualityText>
+                    )}
                     <CompareMetrics>
                       <CompareMetric>
                         <CompareMetricLabel>평균</CompareMetricLabel>

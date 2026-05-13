@@ -7,6 +7,9 @@ export interface ItineraryItem {
   name: string;
   itinerary: {
     totalTime: number;
+    transferCount?: number;
+    walkingDistance?: number;
+    walkingTime?: number;
     total_polyline: PolylinePoint[];
   };
   region_name: string;
@@ -55,6 +58,11 @@ export interface DistanceSummaryItem {
   totalTravelTime: number;
   averageTravelTime: number;
   maxTravelTime: number;
+  averageTransferCount: number;
+  maxTransferCount: number;
+  averageWalkingDistance: number;
+  averageWalkingTime: number;
+  hasRouteQualityMetrics: boolean;
   vote: number;
   preferenceMatches: ResultPreferenceMatch[];
 }

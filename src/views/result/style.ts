@@ -203,6 +203,47 @@ export const ConditionBadge = styled.span`
   white-space: nowrap;
 `;
 
+export const QualityMetrics = styled.div`
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+`;
+
+export const QualityMetric = styled.div`
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 8px;
+  border: 1px solid #28282d;
+  border-radius: 8px;
+  background-color: #1c1c20;
+`;
+
+export const QualityMetricLabel = styled.span`
+  color: #777780;
+  font-size: 11px;
+  font-weight: 600;
+`;
+
+export const QualityMetricValue = styled.span`
+  overflow: hidden;
+  color: #f4f4f5;
+  font-size: 13px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+export const QualityText = styled.p`
+  overflow: hidden;
+  color: #bdbdbd;
+  font-size: 11px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
 export const CompareHeader = styled.div`
   display: flex;
   flex-direction: row;

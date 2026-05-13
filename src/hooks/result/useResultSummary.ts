@@ -29,12 +29,48 @@ export default function useResultSummary(sortOption: ResultSortOption) {
     const travelTimes = itinerary.map(
       itinerary => itinerary.itinerary.totalTime,
     );
+    const transferCounts = itinerary.map(
+      itinerary => itinerary.itinerary.transferCount ?? 0,
+    );
+    const walkingDistances = itinerary.map(
+      itinerary => itinerary.itinerary.walkingDistance ?? 0,
+    );
+    const walkingTimes = itinerary.map(
+      itinerary => itinerary.itinerary.walkingTime ?? 0,
+    );
+    const hasRouteQualityMetrics = itinerary.some(
+      itinerary =>
+        itinerary.itinerary.transferCount !== undefined ||
+        itinerary.itinerary.walkingDistance !== undefined ||
+        itinerary.itinerary.walkingTime !== undefined,
+    );
     const totalTravelTime = travelTimes.reduce((sum, time) => sum + time, 0);
+    const totalTransferCount = transferCounts.reduce(
+      (sum, count) => sum + count,
+      0,
+    );
+    const totalWalkingDistance = walkingDistances.reduce(
+      (sum, distance) => sum + distance,
+      0,
+    );
+    const totalWalkingTime = walkingTimes.reduce((sum, time) => sum + time, 0);
     const vote = station.vote;
     const averageTravelTime = itinerary.length
       ? totalTravelTime / itinerary.length
       : 0;
     const maxTravelTime = travelTimes.length ? Math.max(...travelTimes) : 0;
+    const averageTransferCount = itinerary.length
+      ? totalTransferCount / itinerary.length
+      : 0;
+    const maxTransferCount = transferCounts.length
+      ? Math.max(...transferCounts)
+      : 0;
+    const averageWalkingDistance = itinerary.length
+      ? totalWalkingDistance / itinerary.length
+      : 0;
+    const averageWalkingTime = itinerary.length
+      ? totalWalkingTime / itinerary.length
+      : 0;
 
     return {
       station,
@@ -45,6 +81,11 @@ export default function useResultSummary(sortOption: ResultSortOption) {
       totalTravelTime,
       averageTravelTime,
       maxTravelTime,
+      averageTransferCount,
+      maxTransferCount,
+      averageWalkingDistance,
+      averageWalkingTime,
+      hasRouteQualityMetrics,
       vote,
       preferenceMatches: [],
     };

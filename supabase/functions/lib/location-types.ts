@@ -34,6 +34,9 @@ export interface RouteItinerary {
   region_name: string;
   itinerary: {
     totalTime: number;
+    transferCount?: number;
+    walkingDistance?: number;
+    walkingTime?: number;
     total_polyline: PolylinePoint[];
   };
 }

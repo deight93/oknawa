@@ -10,9 +10,20 @@ import { fetchJson } from './utils.ts';
 
 interface GoogleRoute {
   duration?: string;
+  legs?: GoogleRouteLeg[];
   polyline?: {
     encodedPolyline?: string;
   };
+}
+
+interface GoogleRouteLeg {
+  steps?: GoogleRouteLegStep[];
+}
+
+interface GoogleRouteLegStep {
+  distanceMeters?: number;
+  staticDuration?: string;
+  travelMode?: string;
 }
 
 interface GoogleRoutesResponse {
@@ -29,7 +40,8 @@ export async function callGoogleMapItineraries(
   const headers = {
     'Content-Type': 'application/json',
     'X-Goog-Api-Key': GOOGLE_API_KEY,
-    'X-Goog-FieldMask': 'routes.duration,routes.polyline.encodedPolyline',
+    'X-Goog-FieldMask':
+      'routes.duration,routes.legs.steps.distanceMeters,routes.legs.steps.staticDuration,routes.legs.steps.travelMode,routes.polyline.encodedPolyline',
   };
 
   const stationInfoList: StationItineraryResult[] = [];
@@ -81,6 +93,7 @@ export async function callGoogleMapItineraries(
       if (!route?.duration || !polylineEncoded) continue;
 
       const durationSeconds = parseDuration(route.duration);
+      const routeMetrics = summarizeRouteMetrics(route);
       const decodedPolyline = polyline.decode(polylineEncoded);
       const totalPolyline = decodedPolyline.map(([lat, lng]) => ({ lat, lng }));
 
@@ -89,6 +102,9 @@ export async function callGoogleMapItineraries(
         region_name: participant.region_name,
         itinerary: {
           totalTime: durationSeconds,
+          transferCount: routeMetrics.transferCount,
+          walkingDistance: routeMetrics.walkingDistance,
+          walkingTime: routeMetrics.walkingTime,
           total_polyline: totalPolyline,
         },
       });
@@ -108,4 +124,26 @@ export async function callGoogleMapItineraries(
 
 function parseDuration(durationStr: string): number {
   return parseInt(durationStr.replace('s', ''));
+}
+
+function summarizeRouteMetrics(route: GoogleRoute) {
+  const steps = route.legs?.flatMap(leg => leg.steps ?? []) ?? [];
+  const transitStepCount = steps.filter(
+    step => step.travelMode === 'TRANSIT',
+  ).length;
+  const walkingSteps = steps.filter(step => step.travelMode === 'WALK');
+  const walkingTime = walkingSteps.reduce(
+    (sum, step) => sum + parseDuration(step.staticDuration ?? '0s'),
+    0,
+  );
+  const walkingDistance = walkingSteps.reduce(
+    (sum, step) => sum + (step.distanceMeters ?? 0),
+    0,
+  );
+
+  return {
+    transferCount: Math.max(transitStepCount - 1, 0),
+    walkingDistance,
+    walkingTime,
+  };
 }
