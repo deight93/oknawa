@@ -232,6 +232,7 @@ export default function DistanceSummary({
 
   const [isExpandTail, setExpandTail] = useState(true);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isCompareExpanded, setIsCompareExpanded] = useState(false);
   const [openedCompareShareKey, setOpenedCompareShareKey] = useState<
     string | null
   >(null);
@@ -452,8 +453,21 @@ export default function DistanceSummary({
             <>
               <CompareHeader>
                 <CompareTitle>후보 비교</CompareTitle>
-                <Label>카드를 누르면 해당 후보로 이동해요.</Label>
+                <DetailToggleButton
+                  type="button"
+                  onClick={() => {
+                    setIsCompareExpanded(isExpanded => !isExpanded);
+                    setOpenedCompareShareKey(null);
+                  }}
+                >
+                  {isCompareExpanded ? '간단히 보기' : '더보기'}
+                </DetailToggleButton>
               </CompareHeader>
+              <Label>
+                {isCompareExpanded
+                  ? '카드를 누르면 해당 후보로 이동하고, 자세히로 근거를 확인해요.'
+                  : '이름과 대표 조건만 먼저 보여줘요.'}
+              </Label>
               <CompareList>
                 {stations.map((candidate, index) => {
                   const {
@@ -469,6 +483,7 @@ export default function DistanceSummary({
                       role="button"
                       tabIndex={0}
                       $isActive={index === currentIndex}
+                      $isExpanded={isCompareExpanded}
                       onClick={() => onSelectStation(index)}
                       onKeyDown={event => {
                         if (event.key === 'Enter' || event.key === ' ') {
@@ -492,67 +507,79 @@ export default function DistanceSummary({
                           </ConditionBadge>
                         )}
                       </CompareBadgeList>
-                      <CompareMetrics>
-                        <CompareMetric>
-                          <CompareMetricLabel>평균</CompareMetricLabel>
-                          <CompareMetricValue>
-                            {convertToKoreanTime(candidate.averageTravelTime)}
-                          </CompareMetricValue>
-                        </CompareMetric>
-                        <CompareMetric>
-                          <CompareMetricLabel>최장</CompareMetricLabel>
-                          <CompareMetricValue>
-                            {convertToKoreanTime(candidate.maxTravelTime)}
-                          </CompareMetricValue>
-                        </CompareMetric>
-                        <CompareMetric>
-                          <CompareMetricLabel>득표</CompareMetricLabel>
-                          <CompareMetricValue>
-                            {candidate.vote}표
-                          </CompareMetricValue>
-                        </CompareMetric>
-                      </CompareMetrics>
-                      <DetailToggleButton
-                        type="button"
-                        onClick={event => {
-                          event.stopPropagation();
-                          toggleCompareDetail(candidate.shareKey);
-                        }}
-                        onKeyDown={event => {
-                          event.stopPropagation();
-                        }}
-                      >
-                        {isCompareDetailOpen ? '접기' : '자세히'}
-                      </DetailToggleButton>
-                      {isCompareDetailOpen && (
-                        <QualityMetrics>
-                          <QualityMetric>
-                            <QualityMetricLabel>추천 점수</QualityMetricLabel>
-                            <QualityMetricValue>
-                              {Math.round(candidate.recommendScore)}
-                            </QualityMetricValue>
-                          </QualityMetric>
-                          <QualityMetric>
-                            <QualityMetricLabel>평균 환승</QualityMetricLabel>
-                            <QualityMetricValue>
-                              {formatQualityValue(candidate, () =>
-                                formatTransferCount(
-                                  candidate.averageTransferCount,
-                                ),
-                              )}
-                            </QualityMetricValue>
-                          </QualityMetric>
-                          <QualityMetric>
-                            <QualityMetricLabel>평균 도보</QualityMetricLabel>
-                            <QualityMetricValue>
-                              {formatQualityValue(candidate, () =>
-                                convertToKoreanTime(
-                                  candidate.averageWalkingTime,
-                                ),
-                              )}
-                            </QualityMetricValue>
-                          </QualityMetric>
-                        </QualityMetrics>
+                      {isCompareExpanded && (
+                        <>
+                          <CompareMetrics>
+                            <CompareMetric>
+                              <CompareMetricLabel>평균</CompareMetricLabel>
+                              <CompareMetricValue>
+                                {convertToKoreanTime(
+                                  candidate.averageTravelTime,
+                                )}
+                              </CompareMetricValue>
+                            </CompareMetric>
+                            <CompareMetric>
+                              <CompareMetricLabel>최장</CompareMetricLabel>
+                              <CompareMetricValue>
+                                {convertToKoreanTime(candidate.maxTravelTime)}
+                              </CompareMetricValue>
+                            </CompareMetric>
+                            <CompareMetric>
+                              <CompareMetricLabel>득표</CompareMetricLabel>
+                              <CompareMetricValue>
+                                {candidate.vote}표
+                              </CompareMetricValue>
+                            </CompareMetric>
+                          </CompareMetrics>
+                          <DetailToggleButton
+                            type="button"
+                            onClick={event => {
+                              event.stopPropagation();
+                              toggleCompareDetail(candidate.shareKey);
+                            }}
+                            onKeyDown={event => {
+                              event.stopPropagation();
+                            }}
+                          >
+                            {isCompareDetailOpen ? '접기' : '자세히'}
+                          </DetailToggleButton>
+                          {isCompareDetailOpen && (
+                            <QualityMetrics>
+                              <QualityMetric>
+                                <QualityMetricLabel>
+                                  추천 점수
+                                </QualityMetricLabel>
+                                <QualityMetricValue>
+                                  {Math.round(candidate.recommendScore)}
+                                </QualityMetricValue>
+                              </QualityMetric>
+                              <QualityMetric>
+                                <QualityMetricLabel>
+                                  평균 환승
+                                </QualityMetricLabel>
+                                <QualityMetricValue>
+                                  {formatQualityValue(candidate, () =>
+                                    formatTransferCount(
+                                      candidate.averageTransferCount,
+                                    ),
+                                  )}
+                                </QualityMetricValue>
+                              </QualityMetric>
+                              <QualityMetric>
+                                <QualityMetricLabel>
+                                  평균 도보
+                                </QualityMetricLabel>
+                                <QualityMetricValue>
+                                  {formatQualityValue(candidate, () =>
+                                    convertToKoreanTime(
+                                      candidate.averageWalkingTime,
+                                    ),
+                                  )}
+                                </QualityMetricValue>
+                              </QualityMetric>
+                            </QualityMetrics>
+                          )}
+                        </>
                       )}
                     </CompareCard>
                   );

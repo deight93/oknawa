@@ -150,7 +150,7 @@ export default function useResultSummary(sortOption: ResultSortOption) {
         summary.averageWalkingTime === minAverageWalkingTime
           ? (['walking'] as const)
           : []),
-        ...(summary.vote === maxVote ? (['vote'] as const) : []),
+        ...(maxVote > 0 && summary.vote === maxVote ? (['vote'] as const) : []),
       ],
     }))
     .sort(compareBySortOption(sortOption));

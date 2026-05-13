@@ -331,10 +331,13 @@ export const CompareList = styled.div`
   padding-bottom: 2px;
 `;
 
-export const CompareCard = styled.div<{ $isActive: boolean }>`
+export const CompareCard = styled.div<{
+  $isActive: boolean;
+  $isExpanded?: boolean;
+}>`
   display: flex;
   flex: 0 0 154px;
-  min-height: 126px;
+  min-height: ${({ $isExpanded }) => ($isExpanded ? '126px' : '92px')};
   flex-direction: column;
   gap: 10px;
   padding: 12px;
