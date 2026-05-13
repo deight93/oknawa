@@ -23,7 +23,7 @@ export default function SearchCompleteListWithTogetherView() {
 
   const setSearchList = useSetAtom(searchState);
   const [storageRoomData, setStorageRoomData] = useAtom(roomState);
-  const { requestResult, isLoading } = useCreateResultFlow();
+  const { requestResult, isLoading, loadingPhase } = useCreateResultFlow();
 
   const { participant: participants } = useInputStatusListQuery(
     storageRoomData.roomId || '',
@@ -125,13 +125,13 @@ export default function SearchCompleteListWithTogetherView() {
           size="lg"
           color="success"
           onClick={handleSearchBtnClick}
-          isDisabled={participantList.length < 2}
+          isDisabled={participantList.length < 2 || isLoading}
           className="w-full"
         >
           만나기 편한 장소 추천받기
         </SubmitButton>
       </div>
-      {isLoading && <SearchLoading />}
+      {isLoading && <SearchLoading phase={loadingPhase} />}
     </Container>
   );
 }

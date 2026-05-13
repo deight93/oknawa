@@ -13,6 +13,8 @@ import { mapIdState } from '@/jotai/mapId/store';
 import { resultState } from '@/jotai/result/store';
 import { clearLegacyVoteState } from '@/utils/voteStorage';
 
+export type CreateResultLoadingPhase = 'generating' | 'fetching';
+
 export default function useCreateResultFlow() {
   const router = useRouter();
   const setResult = useSetAtom(resultState);
@@ -55,8 +57,13 @@ export default function useCreateResultFlow() {
     });
   };
 
+  const loadingPhase: CreateResultLoadingPhase = isFetchingResult
+    ? 'fetching'
+    : 'generating';
+
   return {
     requestResult,
     isLoading: isCreatingResult || isFetchingResult,
+    loadingPhase,
   };
 }

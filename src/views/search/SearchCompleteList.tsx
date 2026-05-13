@@ -22,7 +22,7 @@ export default function SearchCompleteList() {
   const router = useRouter();
 
   const [searchList, setSearchList] = useAtom(searchState);
-  const { requestResult, isLoading } = useCreateResultFlow();
+  const { requestResult, isLoading, loadingPhase } = useCreateResultFlow();
 
   const handleSearchBtnClick = () => {
     requestResult(searchList);
@@ -70,11 +70,11 @@ export default function SearchCompleteList() {
         size="lg"
         color="success"
         onClick={handleSearchBtnClick}
-        isDisabled={searchList.length < 2}
+        isDisabled={searchList.length < 2 || isLoading}
       >
         이대로 추천 받기
       </SubmitButton>
-      {isLoading && <SearchLoading />}
+      {isLoading && <SearchLoading phase={loadingPhase} />}
     </Container>
   );
 }
