@@ -1,5 +1,8 @@
 import type { SupabaseClient } from 'jsr:@supabase/supabase-js';
-import { getCenterCoordinates, getCenterLocations } from './distance.ts';
+import {
+  getBalancedMeetingLocations,
+  getCenterCoordinates,
+} from './distance.ts';
 import type {
   LocationPointsRequestBody,
   PopularLocationType,
@@ -48,7 +51,7 @@ export async function parseLocationPointsRequest(
     return fail(responseJson({ error: 'invalid participant' }, 400));
   }
 
-  const priority = Number(new URL(req.url).searchParams.get('priority') ?? '4');
+  const priority = parsePriority(req.url);
 
   return ok({
     participants,
@@ -94,8 +97,9 @@ export async function buildStationItineraries(
   priority: number,
 ): Promise<StepResult<StationItineraryResult[]>> {
   const centerCoordinates = getCenterCoordinates(participants);
-  const centerLocationDataList = getCenterLocations(
+  const centerLocationDataList = getBalancedMeetingLocations(
     centerCoordinates,
+    participants,
     locations,
     priority,
   );
@@ -219,6 +223,16 @@ export async function runLocationPointsFlow(
 
 function isSeoulOrGyeonggi(fullAddress: string): boolean {
   return fullAddress.includes('서울') || fullAddress.includes('경기');
+}
+
+function parsePriority(url: string): number {
+  const parsedPriority = Number(new URL(url).searchParams.get('priority') ?? 4);
+
+  if (!Number.isFinite(parsedPriority)) {
+    return 4;
+  }
+
+  return Math.min(Math.max(Math.floor(parsedPriority), 1), 10);
 }
 
 function toMapHostId(mapId: string): string {
