@@ -108,14 +108,15 @@ export async function callGoogleMapItineraries(
       return toRouteResult(request, itinerary);
     },
   );
-  const resultList = routeResults.some(Boolean)
-    ? routeResults
-    : routeRequests.map(request =>
-        toRouteResult(
-          request,
-          createEstimatedRouteItinerary(request.participant, request.station),
-        ),
-      );
+  const resultList = routeResults.map((result, index) => {
+    if (result) return result;
+
+    const request = routeRequests[index];
+    return toRouteResult(
+      request,
+      createEstimatedRouteItinerary(request.participant, request.station),
+    );
+  });
 
   if (cacheUpserts.length > 0) {
     await upsertRouteCache(supabase, cacheUpserts);
@@ -123,10 +124,7 @@ export async function callGoogleMapItineraries(
 
   return stations.map((station, stationIndex) => {
     const itineraryList = resultList
-      .filter(
-        (result): result is RouteResult =>
-          isRouteResult(result) && result.stationIndex === stationIndex,
-      )
+      .filter(result => result.stationIndex === stationIndex)
       .sort((a, b) => a.participantIndex - b.participantIndex)
       .map(result => result.route);
 
@@ -139,10 +137,6 @@ export async function callGoogleMapItineraries(
       place_quality: station.place_quality,
     };
   });
-}
-
-function isRouteResult(result: RouteResult | null): result is RouteResult {
-  return result !== null;
 }
 
 function parseDuration(durationStr: string): number {

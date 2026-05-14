@@ -15,7 +15,7 @@ import type {
 import { isMeetingPurpose, isRouteParticipantList } from './location-types.ts';
 import { callGoogleMapItineraries } from './mapapi.ts';
 import { attachPlaceQualities } from './place-quality.ts';
-import { responseJson } from './utils.ts';
+import { responseApiError, responseJson } from './utils.ts';
 
 export interface LocationPointsRequest {
   participants: RouteParticipant[];
@@ -111,12 +111,16 @@ export async function parseLocationPointsRequest(
   try {
     body = (await req.json()) as LocationPointsRequestBody;
   } catch {
-    return fail(responseJson({ error: 'invalid JSON body' }, 400));
+    return fail(
+      responseApiError('invalid_json_body', 'invalid JSON body', 400),
+    );
   }
 
   const participants = body?.participant;
   if (!isRouteParticipantList(participants)) {
-    return fail(responseJson({ error: 'invalid participant' }, 400));
+    return fail(
+      responseApiError('invalid_participant', 'invalid participant', 400),
+    );
   }
 
   const priority = parsePriority(req.url);
@@ -156,11 +160,45 @@ export async function fetchPopularMeetingLocations(
   const locations = (data ?? []) as PopularMeetingLocation[];
   if (!locations.length) {
     return fail(
-      responseJson({ error: 'popular_meeting_location is empty' }, 500),
+      responseApiError(
+        'candidate_location_empty',
+        'popular_meeting_location is empty',
+        503,
+        { type },
+      ),
     );
   }
 
   return ok(locations);
+}
+
+export async function fetchCandidateMeetingLocations(
+  supabase: SupabaseClient,
+  preferredType: PopularLocationType,
+): Promise<StepResult<PopularMeetingLocation[]>> {
+  const preferredLocations = await fetchPopularMeetingLocations(
+    supabase,
+    preferredType,
+  );
+
+  if (preferredLocations.ok) {
+    return preferredLocations;
+  }
+
+  const fallbackType = preferredType === 'station' ? 'terminal' : 'station';
+  const fallbackLocations = await fetchPopularMeetingLocations(
+    supabase,
+    fallbackType,
+  );
+
+  if (fallbackLocations.ok) {
+    console.error(
+      `candidate fallback used: ${preferredType} -> ${fallbackType}`,
+    );
+    return fallbackLocations;
+  }
+
+  return preferredLocations;
 }
 
 export async function buildStationItineraries(
@@ -199,7 +237,7 @@ export async function buildStationItineraries(
     !bestStationInfoList.length ||
     bestStationInfoList.every(station => station.itinerary.length === 0)
   ) {
-    return fail(responseJson({ error: 'no route result' }, 500));
+    return fail(responseApiError('no_route_result', 'no route result', 503));
   }
 
   return ok(bestStationInfoList);
@@ -226,9 +264,11 @@ export async function createLocationResult(
 
   if (error || !data) {
     return fail(
-      responseJson(
-        { msg: 'location_result insert error', detail: error?.message },
+      responseApiError(
+        'location_result_insert_failed',
+        'location_result insert error',
         500,
+        error?.message,
       ),
     );
   }
@@ -271,9 +311,11 @@ export async function insertStationInfo(
 
   await supabase.from('location_result').delete().eq('map_id', mapId);
   return fail(
-    responseJson(
-      { msg: 'station_info insert error', detail: error.message },
+    responseApiError(
+      'station_info_insert_failed',
+      'station_info insert error',
       500,
+      error.message,
     ),
   );
 }
@@ -283,7 +325,10 @@ export async function runLocationPointsFlow(
   request: LocationPointsRequest,
 ): Promise<StepResult<LocationResultRow>> {
   const recommendType = resolveRecommendType(request.participants);
-  const locations = await fetchPopularMeetingLocations(supabase, recommendType);
+  const locations = await fetchCandidateMeetingLocations(
+    supabase,
+    recommendType,
+  );
   if (!locations.ok) return locations;
 
   const stationInfoList = await buildStationItineraries(

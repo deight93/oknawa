@@ -4,7 +4,12 @@ import type {
   KakaoPlaceDocument,
   KakaoPlaceSearchResponse,
 } from '../lib/location-types.ts';
-import { fetchJson, responseError, responseJson } from '../lib/utils.ts';
+import {
+  fetchJson,
+  responseApiError,
+  responseError,
+  responseJson,
+} from '../lib/utils.ts';
 
 const KAKAO_REST_API_KEY = getEnv('KAKAO_REST_API_KEY');
 
@@ -30,7 +35,7 @@ Deno.serve(async req => {
   }
 
   if (req.method !== 'GET') {
-    return responseJson({ error: 'Method Not Allowed' }, 405);
+    return responseApiError('method_not_allowed', 'Method Not Allowed', 405);
   }
 
   try {
@@ -41,7 +46,7 @@ Deno.serve(async req => {
     if (category === 'location-point-place') {
       category = 'food';
     } else if (!['food', 'cafe', 'drink'].includes(category)) {
-      return responseJson({ error: 'Invalid category' }, 400);
+      return responseApiError('invalid_category', 'Invalid category', 400);
     }
 
     const x = url.searchParams.get('x');
@@ -52,7 +57,7 @@ Deno.serve(async req => {
     const sort = url.searchParams.get('sort') ?? 'accuracy';
 
     if (!x || !y) {
-      return responseJson({ error: 'x, y 필수' }, 400);
+      return responseApiError('missing_coordinates', 'x, y 필수', 400);
     }
 
     let category_group_code = '';

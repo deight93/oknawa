@@ -4,6 +4,17 @@ interface FetchJsonOptions extends RequestInit {
   errorMessage?: string;
 }
 
+interface ApiErrorDetail {
+  [key: string]: unknown;
+}
+
+interface ApiErrorPayload {
+  error: string;
+  errorCode: string;
+  message: string;
+  detail?: ApiErrorDetail | string;
+}
+
 export class ExternalApiError extends Error {
   public readonly status: number;
   public readonly url: string;
@@ -28,6 +39,25 @@ export function responseJson(data: unknown, status = 200): Response {
   });
 }
 
+export function responseApiError(
+  errorCode: string,
+  message: string,
+  status = 500,
+  detail?: ApiErrorDetail | string,
+): Response {
+  const payload: ApiErrorPayload = {
+    error: message,
+    errorCode,
+    message,
+  };
+
+  if (detail !== undefined) {
+    payload.detail = detail;
+  }
+
+  return responseJson(payload, status);
+}
+
 export function toErrorMessage(
   error: unknown,
   fallback = 'Unexpected error',
@@ -37,9 +67,23 @@ export function toErrorMessage(
   return fallback;
 }
 
-export function responseError(error: unknown, status = 500): Response {
+export function responseError(
+  error: unknown,
+  status = 500,
+  errorCode = 'internal_error',
+): Response {
   const responseStatus = error instanceof ExternalApiError ? 502 : status;
-  return responseJson({ error: toErrorMessage(error) }, responseStatus);
+  const responseErrorCode =
+    error instanceof ExternalApiError ? 'external_api_error' : errorCode;
+  const detail =
+    error instanceof ExternalApiError ? { status: error.status } : undefined;
+
+  return responseApiError(
+    responseErrorCode,
+    toErrorMessage(error),
+    responseStatus,
+    detail,
+  );
 }
 
 export async function fetchJson<T>(

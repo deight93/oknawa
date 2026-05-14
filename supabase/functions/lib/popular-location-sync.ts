@@ -4,7 +4,7 @@ import type {
   PopularLocationType,
 } from './location-types.ts';
 import { normalizeStationName } from './normalize.ts';
-import { responseJson } from './utils.ts';
+import { responseApiError, responseJson } from './utils.ts';
 
 interface SyncPopularLocationsOptions {
   supabase: SupabaseClient;
@@ -47,7 +47,11 @@ export async function syncPopularMeetingLocations({
   const now = new Date().toISOString();
 
   if (sourceNames.length === 0) {
-    return responseJson({ error: '동기화할 원본 장소 목록이 없습니다' }, 502);
+    return responseApiError(
+      'source_location_empty',
+      '동기화할 원본 장소 목록이 없습니다',
+      502,
+    );
   }
 
   const { data: existingList, error: existingListError } = await supabase
@@ -58,7 +62,12 @@ export async function syncPopularMeetingLocations({
 
   if (existingListError) {
     console.error('DB 조회 실패:', existingListError);
-    return responseJson({ msg: 'DB 조회 실패' }, 500);
+    return responseApiError(
+      'popular_location_select_failed',
+      'DB 조회 실패',
+      500,
+      existingListError.message,
+    );
   }
 
   const upsertItems: PopularLocationUpsertItem[] = [];
@@ -79,9 +88,11 @@ export async function syncPopularMeetingLocations({
 
     if (upsertError) {
       console.error('Upsert Error:', upsertError);
-      return responseJson(
-        { msg: 'DB upsert 실패', detail: upsertError.message },
+      return responseApiError(
+        'popular_location_upsert_failed',
+        'DB upsert 실패',
         500,
+        upsertError.message,
       );
     }
   }

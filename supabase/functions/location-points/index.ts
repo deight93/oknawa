@@ -5,7 +5,7 @@ import {
   parseLocationPointsRequest,
   runLocationPointsFlow,
 } from '../lib/location-points.ts';
-import { responseError, responseJson } from '../lib/utils.ts';
+import { responseApiError, responseError, responseJson } from '../lib/utils.ts';
 
 const SUPABASE_URL = getEnv('SUPABASE_URL');
 const SUPABASE_SERVICE_ROLE_KEY = getEnv('SUPABASE_SERVICE_ROLE_KEY');
@@ -16,7 +16,7 @@ Deno.serve(async req => {
   }
 
   if (req.method !== 'POST') {
-    return responseJson({ error: 'Method Not Allowed' }, 405);
+    return responseApiError('method_not_allowed', 'Method Not Allowed', 405);
   }
 
   try {
