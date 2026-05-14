@@ -52,6 +52,8 @@ export const ContentWrapper = styled.div<ExpandProps>`
   width: 100%;
   flex-direction: row;
   justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
 `;
 
 export const TitleWrapper = styled.div`
@@ -69,6 +71,26 @@ export const StationName = styled.p<ExpandProps>`
 
 export const AverageArrivalTime = styled.p`
   font-size: 18px;
+`;
+
+export const RetrySelectButton = styled.button`
+  flex: 0 0 auto;
+  min-width: 88px;
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid #3f3f46;
+  border-radius: 999px;
+  color: #d9d9d9;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  background-color: transparent;
+
+  &:hover {
+    border-color: #18c964;
+    color: #18c964;
+    background-color: rgba(24, 201, 100, 0.08);
+  }
 `;
 
 export const ArrivalTime = styled.span<ExpandProps>`

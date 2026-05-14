@@ -10,7 +10,6 @@ import { convertToKoreanTime } from '@/utils/date';
 
 import { ShareIcon } from '@/assets/icons/Share';
 import { HomeIcon } from '@/assets/icons/Home';
-import Button from '@/components/Button';
 
 import { useResetAtom } from 'jotai/utils';
 import { modalState } from '@/jotai/global/store';
@@ -26,12 +25,8 @@ import {
   SharingButton,
   StationName,
   TitleWrapper,
-  HostControlButtonWrapper,
-  HostControlDescription,
-  HostControlPanel,
-  HostControlTitle,
+  RetrySelectButton,
 } from '../style';
-import styled from 'styled-components';
 
 interface DistanceSummaryProps {
   activeMapId: string;
@@ -94,38 +89,13 @@ export default function DistanceSummary({
               <ArrivalTime>{averageTravelTimeLabel}</ArrivalTime> 걸려요!
             </AverageArrivalTime>
           </TitleWrapper>
+          {canManage && (
+            <RetrySelectButton type="button" onClick={requestCancelConfirm}>
+              다시 고르기
+            </RetrySelectButton>
+          )}
         </ContentWrapper>
-        {canManage && (
-          <HostControlPanel>
-            <HostControlTitle>약속 지역 관리</HostControlTitle>
-            <HostControlDescription>
-              확정을 취소하고 후보 화면으로 돌아가 다시 고를 수 있어요.
-            </HostControlDescription>
-            <HostControlButtonWrapper>
-              <CancelConfirmButton
-                label="확정 취소하고 다시 고르기"
-                size="large"
-                onClick={requestCancelConfirm}
-                $widthFull
-              />
-            </HostControlButtonWrapper>
-          </HostControlPanel>
-        )}
       </ExpandBody>
     </Container>
   );
 }
-
-const CancelConfirmButton = styled(Button)`
-  height: 48px;
-  border: 1px solid #52525b;
-  background-color: transparent;
-  color: #f4f4f5;
-  font-weight: 800;
-
-  &:hover {
-    border-color: #18c964;
-    background-color: rgba(24, 201, 100, 0.1);
-    color: #18c964;
-  }
-`;
