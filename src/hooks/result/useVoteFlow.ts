@@ -18,6 +18,11 @@ import {
 } from '@/utils/voteStorage';
 import { getVoterToken } from '@/utils/voterToken';
 
+const CONFIRM_LOADING_MIN_DURATION_MS = 1200;
+
+const delay = (duration: number) =>
+  new Promise(resolve => window.setTimeout(resolve, duration));
+
 export default function useVoteFlow(
   shareKey: string,
   queryMapId: string | null,
@@ -89,15 +94,21 @@ export default function useVoteFlow(
     setIsConfirming(true);
 
     try {
-      await VoteService.setVoteConfirm(
-        {
-          mapId: activeMapId,
-          mapHostId: activeMapHostId,
-        },
-        shareKey,
-      );
+      await Promise.all([
+        VoteService.setVoteConfirm(
+          {
+            mapId: activeMapId,
+            mapHostId: activeMapHostId,
+          },
+          shareKey,
+        ),
+        delay(CONFIRM_LOADING_MIN_DURATION_MS),
+      ]);
 
-      await moveToFinal();
+      await Promise.all([
+        moveToFinal(),
+        delay(CONFIRM_LOADING_MIN_DURATION_MS),
+      ]);
     } catch (error) {
       logApiError('voteConfirm', error);
       setModalContents({
