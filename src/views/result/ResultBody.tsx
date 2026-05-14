@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useSetAtom } from 'jotai';
 import { bottomSheetState } from '@/jotai/global/store';
 
@@ -23,6 +24,7 @@ export default function ResultBody({ queryMapId }: ResultBodyProps) {
   const {
     activeMapId,
     voteRound,
+    confirmedShareKey,
     currentIndex,
     currentStation,
     distanceSummaries,
@@ -34,6 +36,12 @@ export default function ResultBody({ queryMapId }: ResultBodyProps) {
     handlePrev,
     handleSelectStation,
   } = useResultPageState(queryMapId);
+
+  useEffect(() => {
+    if (!confirmedShareKey) return;
+
+    router.replace(`/result/confirm?sharekey=${confirmedShareKey}`);
+  }, [confirmedShareKey, router]);
 
   const handleHotplaceBtnClick = (station: DistanceSummaryItem) => {
     setBottomSheet(prevState => ({

@@ -3,6 +3,7 @@ import { atomWithStorage, createJSONStorage } from 'jotai/utils';
 interface InitialState {
   roomId: string;
   hostId: string;
+  resultMapId?: string;
 }
 
 const initialState: InitialState = {

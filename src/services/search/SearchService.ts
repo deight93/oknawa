@@ -2,7 +2,10 @@ import { api, edgeApi } from '@/api/client';
 
 import SearchForm from '@/model/search/SearchForm';
 
-import { SubmitDeparturePointRequestBody } from './types';
+import {
+  RoomStatusResponse,
+  SubmitDeparturePointRequestBody,
+} from './types';
 import { SearchState } from '@/jotai/global/store';
 import SearchFormWithTogether from '@/model/search-together/SearchFormWithTogether';
 import { MeetingPurpose } from '@/types/meetingPurpose';
@@ -62,7 +65,7 @@ export default class SearchService {
       p_room_id: roomId,
     });
 
-    return data ?? null;
+    return (data ?? null) as RoomStatusResponse | null;
   }
 
   static async submitDeparturePoint(
@@ -76,6 +79,52 @@ export default class SearchService {
       p_start_x: requestBody.start_x,
       p_start_y: requestBody.start_y,
     });
+
+    return data;
+  }
+
+  static async startRoomRecommendation(
+    roomId: string,
+    roomHostId: string,
+    meetingPurpose?: MeetingPurpose,
+  ) {
+    const { data } = await api.post(
+      '/rest/v1/rpc/location_room_recommend_start',
+      {
+        p_room_id: roomId,
+        p_room_host_id: roomHostId,
+        p_meeting_purpose: meetingPurpose ?? null,
+      },
+    );
+
+    return data;
+  }
+
+  static async completeRoomRecommendation(
+    roomId: string,
+    roomHostId: string,
+    mapId: string,
+  ) {
+    const { data } = await api.post(
+      '/rest/v1/rpc/location_room_recommend_complete',
+      {
+        p_room_id: roomId,
+        p_room_host_id: roomHostId,
+        p_map_id: mapId,
+      },
+    );
+
+    return data;
+  }
+
+  static async failRoomRecommendation(roomId: string, roomHostId: string) {
+    const { data } = await api.post(
+      '/rest/v1/rpc/location_room_recommend_fail',
+      {
+        p_room_id: roomId,
+        p_room_host_id: roomHostId,
+      },
+    );
 
     return data;
   }
