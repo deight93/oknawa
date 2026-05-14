@@ -1,18 +1,13 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useSetAtom } from 'jotai';
-import { bottomSheetState } from '@/jotai/global/store';
-
 import styled from 'styled-components';
 import DistanceSummary from './components/DistanceSummary';
-import HotPlaceModal from '@/components/HotPlaceModal';
 import MeetingMap from '@/components/MeetingMap';
 
 import { useRouter } from 'next/navigation';
 import { Button } from '@nextui-org/react';
 import useResultPageState from '@/hooks/result/useResultPageState';
-import { DistanceSummaryItem } from '@/types/location';
 
 interface ResultBodyProps {
   queryMapId: string | null;
@@ -20,7 +15,6 @@ interface ResultBodyProps {
 
 export default function ResultBody({ queryMapId }: ResultBodyProps) {
   const router = useRouter();
-  const setBottomSheet = useSetAtom(bottomSheetState);
   const {
     activeMapId,
     voteRound,
@@ -42,23 +36,6 @@ export default function ResultBody({ queryMapId }: ResultBodyProps) {
 
     router.replace(`/result/confirm?sharekey=${confirmedShareKey}`);
   }, [confirmedShareKey, router]);
-
-  const handleHotplaceBtnClick = (station: DistanceSummaryItem) => {
-    setBottomSheet(prevState => ({
-      ...prevState,
-      isOpen: true,
-      title: (
-        <>
-          <span style={{ fontWeight: '800' }}>{station.stationName}</span>의
-          <div>핫플레이스를 추천해요!</div>
-        </>
-      ),
-      contents: (
-        <HotPlaceModal x={station.station.end_x} y={station.station.end_y} />
-      ),
-      height: 60,
-    }));
-  };
 
   if (!currentStation) {
     return (
@@ -110,15 +87,6 @@ export default function ResultBody({ queryMapId }: ResultBodyProps) {
           participants={participants}
           itinerary={currentStation.itinerary}
         />
-        <FloatingButton
-          radius="full"
-          size="lg"
-          color="success"
-          variant="shadow"
-          onClick={() => handleHotplaceBtnClick(currentStation)}
-        >
-          {currentStation.stationName} 핫플레이스는 어디?
-        </FloatingButton>
       </Container>
     </>
   );
@@ -128,15 +96,6 @@ const Container = styled.main`
   position: relative;
   width: 100%;
   height: 100vh;
-`;
-
-const FloatingButton = styled(Button)`
-  position: fixed;
-  bottom: 116px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-weight: 600;
-  z-index: 2;
 `;
 
 const EmptyContainer = styled.main`
