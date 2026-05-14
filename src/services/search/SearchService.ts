@@ -25,11 +25,11 @@ export default class SearchService {
   }
 
   static async searchPolling(mapId: string) {
-    const { data } = await api.get(
-      `/rest/v1/location_result?map_id=eq.${mapId}&select=*,station_info!station_info_map_id_fkey(*)&limit=1`,
-    );
+    const { data } = await api.post('/rest/v1/rpc/location_result_by_map_id', {
+      p_map_id: mapId,
+    });
 
-    return data?.[0] ?? null;
+    return data ?? null;
   }
 
   static async searchPlacesWithShareKey(shareKey?: string | null) {
@@ -37,23 +37,14 @@ export default class SearchService {
       return null;
     }
 
-    const { data: stationData } = await api.get(
-      `/rest/v1/station_info?share_key=eq.${shareKey}&select=*&limit=1`,
-    );
-    const station = stationData?.[0] ?? null;
-
-    if (!station?.map_id) {
-      return station;
-    }
-
-    const { data: resultData } = await api.get(
-      `/rest/v1/location_result?map_id=eq.${station.map_id}&select=vote_round&limit=1`,
+    const { data } = await api.post(
+      '/rest/v1/rpc/location_station_by_share_key',
+      {
+        p_share_key: shareKey,
+      },
     );
 
-    return {
-      ...station,
-      vote_round: resultData?.[0]?.vote_round ?? 1,
-    };
+    return data ?? null;
   }
 
   static async makeRoom(searchForm: SearchState) {
@@ -67,17 +58,23 @@ export default class SearchService {
   }
 
   static async getInputStatusList(roomId: string) {
-    const { data } = await api.get(
-      `/rest/v1/location_room?room_id=eq.${roomId}&select=*,participant!participant_room_id_fkey(*)&limit=1`,
-    );
-    return data?.[0] ?? null;
+    const { data } = await api.post('/rest/v1/rpc/location_room_status', {
+      p_room_id: roomId,
+    });
+
+    return data ?? null;
   }
 
   static async submitDeparturePoint(
     requestBody: SubmitDeparturePointRequestBody,
   ) {
-    const { data } = await api.post(`/rest/v1/participant`, {
-      ...requestBody,
+    const { data } = await api.post(`/rest/v1/rpc/location_join_room`, {
+      p_room_id: requestBody.room_id,
+      p_name: requestBody.name,
+      p_region_name: requestBody.region_name,
+      p_full_address: requestBody.full_address,
+      p_start_x: requestBody.start_x,
+      p_start_y: requestBody.start_y,
     });
 
     return data;
