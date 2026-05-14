@@ -50,3 +50,17 @@ export const clearVotedForMap = (
 
   clearLegacyVoteState();
 };
+
+export const clearVoteStateForMap = (mapId?: string | null) => {
+  if (!mapId || !canUseLocalStorage()) {
+    return;
+  }
+
+  const mapVoteStoragePrefix = `${VOTE_STORAGE_PREFIX}${mapId}:`;
+
+  Object.keys(localStorage)
+    .filter(key => key.startsWith(mapVoteStoragePrefix))
+    .forEach(key => localStorage.removeItem(key));
+
+  clearLegacyVoteState();
+};

@@ -6,6 +6,9 @@ const rlsMigration = await Deno.readTextFile(
 const togetherRoomSyncMigration = await Deno.readTextFile(
   'supabase/migrations/20260514123000_sync_together_room_result_flow.sql',
 );
+const confirmCancelResetMigration = await Deno.readTextFile(
+  'supabase/migrations/20260514144500_make_confirm_cancel_reset_votes.sql',
+);
 const publicGrantSql = `${rlsMigration}\n${togetherRoomSyncMigration}`;
 
 const requiredPublicTables = [
@@ -92,5 +95,22 @@ Deno.test('together rooms store recommendation status and result map id', () => 
   assert(
     togetherRoomSyncMigration.includes("SET recommendation_status = 'completed'"),
     'room recommendation complete must publish result state',
+  );
+});
+
+Deno.test('confirm cancel restarts station voting', () => {
+  assert(
+    confirmCancelResetMigration.includes(
+      'vote_round = location_result.vote_round + 1',
+    ),
+    'confirm cancel must advance the vote round',
+  );
+  assert(
+    confirmCancelResetMigration.includes('SET vote = 0'),
+    'confirm cancel must reset station vote counts',
+  );
+  assert(
+    confirmCancelResetMigration.includes('SET confirmed_share_key = null'),
+    'confirm cancel must clear together room confirmed state',
   );
 });

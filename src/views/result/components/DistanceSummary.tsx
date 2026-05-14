@@ -238,8 +238,7 @@ export default function DistanceSummary({
   const { copyInvitationLink } = useResultShare(queryMapId);
   const { isVote, isConfirming, requestVote, requestConfirm, canConfirm } =
     useVoteFlow(shareKey, queryMapId, voteRound);
-  const { canManage, requestCancelConfirm, requestResetVote } =
-    useHostControlFlow(activeMapId);
+  const { canManage, requestResetVote } = useHostControlFlow(activeMapId);
 
   const clickHome = () => {
     setModalContents({
@@ -570,12 +569,6 @@ export default function DistanceSummary({
                   label="재투표 시작"
                   size="small"
                   onClick={requestResetVote}
-                  $widthFull
-                />
-                <Button
-                  label="확정 취소"
-                  size="small"
-                  onClick={requestCancelConfirm}
                   $widthFull
                 />
               </HostControlButtonWrapper>

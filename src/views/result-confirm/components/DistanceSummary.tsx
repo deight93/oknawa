@@ -44,7 +44,7 @@ export default function DistanceSummary({
   const router = useRouter();
 
   const { shareConfirmedResult } = useKakaoShare();
-  const { canManage, requestCancelConfirm } = useHostControlFlow(activeMapId);
+  const { canManage, requestResetVote } = useHostControlFlow(activeMapId);
 
   const reset = useResetAtom(modalState);
 
@@ -90,7 +90,7 @@ export default function DistanceSummary({
             </AverageArrivalTime>
           </TitleWrapper>
           {canManage && (
-            <RetrySelectButton type="button" onClick={requestCancelConfirm}>
+            <RetrySelectButton type="button" onClick={requestResetVote}>
               다시 고르기
             </RetrySelectButton>
           )}
