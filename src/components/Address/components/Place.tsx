@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { MouseEventHandler, ReactNode } from 'react';
 import styled from 'styled-components';
 
 export default function Place({
@@ -6,7 +6,7 @@ export default function Place({
   onClick,
 }: {
   children: ReactNode;
-  onClick: any;
+  onClick: MouseEventHandler<HTMLLIElement>;
 }) {
   return <PlaceContainer onClick={onClick}>{children}</PlaceContainer>;
 }

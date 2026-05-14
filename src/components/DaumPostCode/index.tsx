@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import DaumPostcodeEmbed from 'react-daum-postcode';
+import DaumPostcodeEmbed, { Address } from 'react-daum-postcode';
 import { useResetAtom } from 'jotai/utils';
 
 import {
@@ -10,20 +10,30 @@ import {
 
 import { bottomSheetState } from '@/jotai/global/store';
 
-declare let kakao: any;
+type SetAddressValue = (
+  fieldName: string,
+  value: {
+    fullAddress: string;
+    latitude: number;
+    longitude: number;
+    regionName: string;
+  },
+) => void;
+
+type TriggerField = (fieldName: string) => Promise<boolean>;
 
 export default function DaumPostCode({
   setValue,
   currentIndex,
   trigger,
 }: {
-  setValue: any;
+  setValue: SetAddressValue;
   currentIndex: number;
-  trigger: any;
+  trigger: TriggerField;
 }) {
   const resetBottomSheet = useResetAtom(bottomSheetState);
 
-  const handleComplete = async (data: any) => {
+  const handleComplete = async (data: Address) => {
     const 동이름 = data.bname || '';
     const 동이름_건물명 = 동이름에_건물명_추가(data.buildingName, 동이름);
     const 전체주소 = 전체주소_생성(data.address, `${동이름_건물명}`);
@@ -41,8 +51,8 @@ export default function DaumPostCode({
   };
 
   useEffect(() => {
-    if (kakao) {
-      kakao.maps.load(() => {});
+    if (window.kakao) {
+      window.kakao.maps.load(() => {});
     }
   }, []);
 

@@ -5,8 +5,8 @@ import { bottomSheetState } from '@/jotai/global/store';
 
 import styled from 'styled-components';
 import DistanceSummary from './components/DistanceSummary';
-import HotPlaceModal from './components/HotPlaceModal';
-import ResultMap from './components/ResultMap';
+import HotPlaceModal from '@/components/HotPlaceModal';
+import MeetingMap from '@/components/MeetingMap';
 
 import { useRouter } from 'next/navigation';
 import { Button } from '@nextui-org/react';
@@ -45,7 +45,9 @@ export default function ResultBody({ queryMapId }: ResultBodyProps) {
           <div>핫플레이스를 추천해요!</div>
         </>
       ),
-      contents: <HotPlaceModal station={station} />,
+      contents: (
+        <HotPlaceModal x={station.station.end_x} y={station.station.end_y} />
+      ),
       height: 60,
     }));
   };
@@ -93,11 +95,12 @@ export default function ResultBody({ queryMapId }: ResultBodyProps) {
           onPrev={handlePrev}
           onSelectStation={handleSelectStation}
         />
-        <ResultMap
-          station={currentStation}
+        <MeetingMap
+          stationName={currentStation.stationName}
+          endX={currentStation.station.end_x}
+          endY={currentStation.station.end_y}
           participants={participants}
           itinerary={currentStation.itinerary}
-          stationName={currentStation.stationName}
         />
         <FloatingButton
           radius="full"

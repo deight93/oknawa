@@ -2,6 +2,7 @@ import { ChangeEvent, useState } from 'react';
 import styled from 'styled-components';
 import { useResetAtom } from 'jotai/utils';
 import debounce from 'lodash/debounce';
+import { UseFormSetValue } from 'react-hook-form';
 
 import Place from './components/Place';
 
@@ -9,9 +10,12 @@ import useKakaoPlaceService from '@/hooks/common/useKakaoPlaceService';
 
 import { KakaoPlace } from './types';
 
-import { bottomSheetState } from '@/jotai/global/store';
+import { bottomSheetState, SearchState } from '@/jotai/global/store';
 import { useAtom } from 'jotai';
-import { searchHistoryState } from '@/jotai/search/store';
+import {
+  SearchHistoryItem,
+  searchHistoryState,
+} from '@/jotai/search/store';
 import { ArrowBackIcon } from '@/assets/icons/ArrowBack';
 import { useRouter } from 'next/navigation';
 import { Input } from '@nextui-org/react';
@@ -19,23 +23,49 @@ import { MapMarkerIcon } from '@/assets/icons/MapMarker';
 import { MagnifyIcon } from '@/assets/icons/Magnify';
 
 interface AddressProps {
-  setValue: any;
-  currentIndex: number;
+  setValue: UseFormSetValue<SearchState>;
 }
 
-export default function Address({ setValue, currentIndex }: AddressProps) {
+const isSearchHistoryItem = (value: unknown): value is SearchHistoryItem => {
+  const item = value as Partial<SearchHistoryItem> | null;
+
+  if (!item || typeof item !== 'object') {
+    return false;
+  }
+
+  return (
+    typeof item.fullAddress === 'string' &&
+    typeof item.regionName === 'string' &&
+    typeof item.latitude === 'number' &&
+    typeof item.longitude === 'number'
+  );
+};
+
+const parseSearchHistory = (value: string | null): SearchHistoryItem[] => {
+  if (!value) return [];
+
+  try {
+    const parsedValue = JSON.parse(value);
+    return Array.isArray(parsedValue)
+      ? parsedValue.filter(isSearchHistoryItem)
+      : [];
+  } catch {
+    return [];
+  }
+};
+
+export default function Address({ setValue }: AddressProps) {
   const router = useRouter();
   const resetBottomSheet = useResetAtom(bottomSheetState);
   const [input, setInput] = useState('');
   const [isOpenDropItem, setIsOpenDropItem] = useState(false);
   const [searchHistory, setSearchHistory] = useAtom(searchHistoryState);
-  // const recentSearchRef = useRef<any>(null);
 
   const { places, setPlaces, kakaoPlaceService, searchPlaceCB } =
     useKakaoPlaceService();
 
   const recentSearches = localStorage.getItem('searchHistory');
-  const recentSearchesArray = recentSearches ? JSON.parse(recentSearches) : [];
+  const recentSearchesArray = parseSearchHistory(recentSearches);
 
   const debouncedSearch = debounce(address => {
     if (address && kakaoPlaceService) {
@@ -50,8 +80,8 @@ export default function Address({ setValue, currentIndex }: AddressProps) {
 
     setValue('address', {
       fullAddress: address_name,
-      latitude: y,
-      longitude: x,
+      latitude: Number(y),
+      longitude: Number(x),
       regionName: place_name,
     });
 
@@ -72,15 +102,15 @@ export default function Address({ setValue, currentIndex }: AddressProps) {
     setSearchHistory([
       {
         fullAddress: address_name,
-        latitude: y,
-        longitude: x,
+        latitude: Number(y),
+        longitude: Number(x),
         regionName: place_name,
       },
       ...searchHistory,
     ]);
   };
 
-  const handleHistoryItemClick = (item: any) => {
+  const handleHistoryItemClick = (item: SearchHistoryItem) => {
     setValue('address', item);
     resetBottomSheet();
   };
@@ -111,10 +141,10 @@ export default function Address({ setValue, currentIndex }: AddressProps) {
         <>
           <RecentSearch>
             검색 히스토리
-            {recentSearchesArray.map((item: any, index: any) => {
+            {recentSearchesArray.map((item, index) => {
               return (
                 <RecentSearchItem
-                  key={index}
+                  key={`${item.fullAddress}-${index}`}
                   onClick={() => handleHistoryItemClick(item)}
                 >
                   <MagnifyIcon />

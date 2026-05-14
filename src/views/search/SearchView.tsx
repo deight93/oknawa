@@ -51,7 +51,7 @@ export default function SearchView({ type, shareRoomId }: SearchViewProps) {
     setBottomSheet(prevState => ({
       ...prevState,
       isOpen: true,
-      contents: <Address setValue={setValue} currentIndex={index} />,
+      contents: <Address setValue={setValue} />,
       isFullContents: true,
     }));
   };

@@ -5,6 +5,13 @@ export type HotPlacePoint = {
   y: number;
 };
 
+export interface HotPlaceBusinessHour {
+  day_of_the_week?: string;
+  day_time?: {
+    start_end_time?: string;
+  };
+}
+
 export interface HotPlace {
   address_name: string;
   category_group_code: string;
@@ -19,5 +26,5 @@ export interface HotPlace {
   main_photo_url: string;
   x: string;
   y: string;
-  day_business_hours_infos: any;
+  day_business_hours_infos?: HotPlaceBusinessHour[];
 }

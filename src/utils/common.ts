@@ -1,5 +1,3 @@
-declare let kakao: any;
-
 export const 동이름에_건물명_추가 = (
   buildingName: string,
   extraAddress: string,
@@ -19,11 +17,14 @@ export const 위도_경도_생성 = (
 ): Promise<{ latitude: number; longitude: number }> => {
   return new Promise((resolve, reject) => {
     const geocoder = new kakao.maps.services.Geocoder();
-    geocoder.addressSearch(전체주소, function (result: any, status: string) {
+    geocoder.addressSearch(전체주소, function (result, status) {
       if (status === kakao.maps.services.Status.OK) {
-        const coords = new kakao.maps.LatLng(result[0].y, result[0].x);
-        const latitude = coords.Ma;
-        const longitude = coords.La;
+        const coords = new kakao.maps.LatLng(
+          Number(result[0].y),
+          Number(result[0].x),
+        );
+        const latitude = coords.getLat();
+        const longitude = coords.getLng();
 
         resolve({ latitude, longitude });
       } else {

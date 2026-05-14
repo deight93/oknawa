@@ -60,13 +60,14 @@ export default function useKakaoShare() {
     try {
       const confirmUrl = getConfirmUrl(shareKey);
       const isReady = initKakao();
+      const kakaoSdk = window.Kakao;
 
-      if (!isReady) {
+      if (!isReady || !kakaoSdk) {
         void copyShareUrl(confirmUrl);
         return;
       }
 
-      window.Kakao.Share.sendDefault({
+      kakaoSdk.Share.sendDefault({
         objectType: 'feed',
         content: {
           title: `오늘은 ${stationName}에서 만나요!`,

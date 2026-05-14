@@ -44,11 +44,9 @@ export default function PWAIntallGuidance() {
       deferredPrompt.userChoice.then(choiceResult => {
         if (choiceResult.outcome === 'accepted') {
           setUserChoice('accepted');
-          console.log('사용자가 앱 설치를 동의했습니다.');
         }
         if (choiceResult.outcome === 'dismissed') {
           setUserChoice('dismissed');
-          console.log('사용자가 앱 설치를 거부했습니다.');
         }
       });
       setDeferredPrompt(null);
