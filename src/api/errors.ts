@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const getResponseField = (
   value: unknown,
-  key: 'error' | 'message',
+  key: 'error' | 'message' | 'errorCode',
 ): string | null => {
   const record = value as Record<string, unknown> | null;
 
@@ -18,9 +18,33 @@ const getResponseField = (
   return null;
 };
 
+const apiErrorMessageMap: Record<string, string> = {
+  invalid_json_body: '요청 형식이 올바르지 않습니다. 다시 시도해주세요.',
+  invalid_participant: '출발지 정보가 올바르지 않습니다. 다시 입력해주세요.',
+  candidate_location_empty:
+    '추천 후보 데이터를 찾지 못했습니다. 잠시 후 다시 시도해주세요.',
+  no_route_result:
+    '이동 경로를 계산하지 못했습니다. 출발지를 다시 확인해주세요.',
+  location_result_insert_failed:
+    '추천 결과를 저장하지 못했습니다. 잠시 후 다시 시도해주세요.',
+  station_info_insert_failed:
+    '후보 장소를 저장하지 못했습니다. 잠시 후 다시 시도해주세요.',
+  external_api_error:
+    '지도 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.',
+  method_not_allowed: '지원하지 않는 요청입니다.',
+  invalid_category: '장소 카테고리가 올바르지 않습니다.',
+  missing_coordinates: '좌표 정보가 없습니다.',
+};
+
 const getErrorMessage = (error: unknown) => {
   if (axios.isAxiosError(error)) {
     const responseData = error.response?.data;
+    const errorCode = getResponseField(responseData, 'errorCode');
+
+    if (errorCode && apiErrorMessageMap[errorCode]) {
+      return apiErrorMessageMap[errorCode];
+    }
+
     const responseMessage =
       getResponseField(responseData, 'message') ??
       getResponseField(responseData, 'error');

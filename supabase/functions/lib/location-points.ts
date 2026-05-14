@@ -378,7 +378,7 @@ function getCandidatePoolSize(priority: number, locationCount: number): number {
   );
 }
 
-function selectBestStationItineraries(
+export function selectBestStationItineraries(
   stationInfoList: StationItineraryResult[],
   participantCount: number,
   priority: number,

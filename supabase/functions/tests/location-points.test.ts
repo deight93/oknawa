@@ -6,7 +6,12 @@ import {
   fetchCandidateMeetingLocations,
   parseLocationPointsRequest,
   resolveRecommendType,
+  selectBestStationItineraries,
 } from '../lib/location-points.ts';
+import type {
+  RouteItinerary,
+  StationItineraryResult,
+} from '../lib/location-types.ts';
 import { ExternalApiError, responseApiError, responseError } from '../lib/utils.ts';
 
 const createParticipant = (fullAddress: string) => ({
@@ -32,6 +37,32 @@ const createSupabaseMock = (
       }),
     }),
   }),
+});
+
+const createRoute = (
+  totalTime: number,
+  transferCount = 0,
+  walkingTime = 0,
+): RouteItinerary => ({
+  name: '테스터',
+  region_name: '테스트역',
+  itinerary: {
+    totalTime,
+    transferCount,
+    walkingTime,
+    total_polyline: [],
+  },
+});
+
+const createStationResult = (
+  stationName: string,
+  routes: RouteItinerary[],
+): StationItineraryResult => ({
+  station_name: stationName,
+  address_name: `${stationName} 주소`,
+  end_x: 127,
+  end_y: 37,
+  itinerary: routes,
 });
 
 Deno.test('responseApiError keeps a structured error payload', async () => {
@@ -129,4 +160,39 @@ Deno.test('fetchCandidateMeetingLocations falls back to the other candidate type
 
   assert(result.ok);
   assertEquals(result.data[0].name, '강남역');
+});
+
+Deno.test('selectBestStationItineraries rewards fewer transfers and shorter walking time', () => {
+  const result = selectBestStationItineraries(
+    [
+      createStationResult('빠르지만 번거로운 역', [
+        createRoute(1200, 1, 120),
+        createRoute(1200, 1, 120),
+      ]),
+      createStationResult('조금 느려도 편한 역', [
+        createRoute(1250, 0, 80),
+        createRoute(1250, 0, 80),
+      ]),
+    ],
+    2,
+    2,
+  );
+
+  assertEquals(result[0].station_name, '조금 느려도 편한 역');
+});
+
+Deno.test('selectBestStationItineraries penalizes candidates missing participant routes', () => {
+  const result = selectBestStationItineraries(
+    [
+      createStationResult('일부만 빠른 역', [createRoute(300, 0, 20)]),
+      createStationResult('모두 갈 수 있는 역', [
+        createRoute(1200, 0, 80),
+        createRoute(1200, 0, 80),
+      ]),
+    ],
+    2,
+    2,
+  );
+
+  assertEquals(result[0].station_name, '모두 갈 수 있는 역');
 });
