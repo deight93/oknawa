@@ -81,10 +81,10 @@ export const HostControlPanel = styled.div`
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 14px;
+  padding: 16px;
   border: 1px solid #28282d;
   border-radius: 8px;
-  background-color: #1c1c20;
+  background-color: #18181b;
 `;
 
 export const HostControlTitle = styled.p`
@@ -95,7 +95,7 @@ export const HostControlTitle = styled.p`
 
 export const HostControlDescription = styled.p`
   color: #9ca3af;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   line-height: 1.45;
 `;
@@ -104,6 +104,7 @@ export const HostControlButtonWrapper = styled.div`
   display: grid;
   grid-template-columns: 1fr;
   gap: 8px;
+  margin-top: 2px;
 `;
 
 export const IndicatorWrapper = styled.div`

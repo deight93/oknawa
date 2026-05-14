@@ -117,12 +117,15 @@ export default function DistanceSummary({
 }
 
 const CancelConfirmButton = styled(Button)`
-  border: 1px solid #18c964;
-  background-color: #18c964;
-  color: #101012;
+  height: 48px;
+  border: 1px solid #52525b;
+  background-color: transparent;
+  color: #f4f4f5;
   font-weight: 800;
 
   &:hover {
-    background-color: #14b057;
+    border-color: #18c964;
+    background-color: rgba(24, 201, 100, 0.1);
+    color: #18c964;
   }
 `;
