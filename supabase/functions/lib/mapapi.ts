@@ -125,7 +125,7 @@ export async function callGoogleMapItineraries(
     const itineraryList = resultList
       .filter(
         (result): result is RouteResult =>
-          Boolean(result) && result.stationIndex === stationIndex,
+          isRouteResult(result) && result.stationIndex === stationIndex,
       )
       .sort((a, b) => a.participantIndex - b.participantIndex)
       .map(result => result.route);
@@ -139,6 +139,10 @@ export async function callGoogleMapItineraries(
       place_quality: station.place_quality,
     };
   });
+}
+
+function isRouteResult(result: RouteResult | null): result is RouteResult {
+  return result !== null;
 }
 
 function parseDuration(durationStr: string): number {
