@@ -27,9 +27,11 @@ import {
   StationName,
   TitleWrapper,
   HostControlButtonWrapper,
+  HostControlDescription,
   HostControlPanel,
   HostControlTitle,
 } from '../style';
+import styled from 'styled-components';
 
 interface DistanceSummaryProps {
   activeMapId: string;
@@ -47,8 +49,7 @@ export default function DistanceSummary({
   const router = useRouter();
 
   const { shareConfirmedResult } = useKakaoShare();
-  const { canManage, requestCancelConfirm, requestResetVote } =
-    useHostControlFlow(activeMapId);
+  const { canManage, requestCancelConfirm } = useHostControlFlow(activeMapId);
 
   const reset = useResetAtom(modalState);
 
@@ -96,17 +97,14 @@ export default function DistanceSummary({
         </ContentWrapper>
         {canManage && (
           <HostControlPanel>
-            <HostControlTitle>방장 관리</HostControlTitle>
+            <HostControlTitle>약속 지역 관리</HostControlTitle>
+            <HostControlDescription>
+              확정을 취소하고 후보 화면으로 돌아가 다시 고를 수 있어요.
+            </HostControlDescription>
             <HostControlButtonWrapper>
-              <Button
-                label="재투표 시작"
-                size="small"
-                onClick={requestResetVote}
-                $widthFull
-              />
-              <Button
-                label="확정 취소"
-                size="small"
+              <CancelConfirmButton
+                label="확정 취소하고 다시 고르기"
+                size="large"
                 onClick={requestCancelConfirm}
                 $widthFull
               />
@@ -117,3 +115,14 @@ export default function DistanceSummary({
     </Container>
   );
 }
+
+const CancelConfirmButton = styled(Button)`
+  border: 1px solid #18c964;
+  background-color: #18c964;
+  color: #101012;
+  font-weight: 800;
+
+  &:hover {
+    background-color: #14b057;
+  }
+`;

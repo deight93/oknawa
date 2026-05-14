@@ -80,8 +80,8 @@ export const ArrivalTime = styled.span<ExpandProps>`
 export const HostControlPanel = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 12px;
+  gap: 12px;
+  padding: 14px;
   border: 1px solid #28282d;
   border-radius: 8px;
   background-color: #1c1c20;
@@ -93,9 +93,16 @@ export const HostControlTitle = styled.p`
   font-weight: 700;
 `;
 
+export const HostControlDescription = styled.p`
+  color: #9ca3af;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.45;
+`;
+
 export const HostControlButtonWrapper = styled.div`
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 8px;
 `;
 
