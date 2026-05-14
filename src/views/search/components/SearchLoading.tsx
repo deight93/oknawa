@@ -61,7 +61,7 @@ export default function SearchLoading({
 }
 
 const Container = styled.div`
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   display: flex;
@@ -70,6 +70,7 @@ const Container = styled.div`
   width: 100%;
   height: 100vh;
   background: rgba(0, 0, 0, 0.7);
+  z-index: 9999;
 `;
 
 const Wrapper = styled.div`

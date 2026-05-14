@@ -27,6 +27,7 @@ import { Check } from '@/assets/icons/Check';
 
 import ButtonPrimary from '@/components/ButtonPrimary';
 import Button from '@/components/Button';
+import SearchLoading from '@/views/search/components/SearchLoading';
 
 import { convertToKoreanTime } from '@/utils/date';
 import {
@@ -235,11 +236,8 @@ export default function DistanceSummary({
 
   const { setModalContents } = useModal();
   const { copyInvitationLink } = useResultShare(queryMapId);
-  const { isVote, requestVote, requestConfirm, canConfirm } = useVoteFlow(
-    shareKey,
-    queryMapId,
-    voteRound,
-  );
+  const { isVote, isConfirming, requestVote, requestConfirm, canConfirm } =
+    useVoteFlow(shareKey, queryMapId, voteRound);
   const { canManage, requestCancelConfirm, requestResetVote } =
     useHostControlFlow(activeMapId);
 
@@ -634,6 +632,7 @@ export default function DistanceSummary({
           {isExpandTail ? <ChevronBottom /> : <ChevronTop />}
         </Tail>
       </TailWrapper>
+      {isConfirming && <SearchLoading phase="fetching" />}
     </Container>
   );
 }

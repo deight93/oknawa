@@ -28,13 +28,14 @@ export default function useVoteFlow(
   const setResultConfirm = useSetAtom(resultConfirmState);
   const resetModal = useResetAtom(modalState);
   const { setModalContents } = useModal();
-  const { mutate: placeSearchWithShareKey } =
+  const { mutateAsync: fetchPlaceWithShareKey } =
     usePlaceSearchWithShareKeyMutation();
 
   const activeMapId = (queryMapId || mapIdInfo.mapId) ?? '';
   const activeMapHostId =
     mapIdInfo.mapId === activeMapId ? mapIdInfo.mapHostId : '';
   const [isVote, setIsVote] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
 
   useEffect(() => {
     setIsVote(hasVotedForMap(activeMapId, voteRound));
@@ -72,30 +73,21 @@ export default function useVoteFlow(
     }
   };
 
-  const moveToFinal = () => {
-    placeSearchWithShareKey(shareKey, {
-      onSuccess: data => {
-        if (data) {
-          setResultConfirm(data);
-        }
-        clearVotedForMap(activeMapId, voteRound);
-        router.replace(`/result/confirm?sharekey=${shareKey}`);
-        resetModal();
-      },
-      onError: error => {
-        logApiError('moveToFinal', error);
-        setModalContents({
-          buttonLabel: '확인',
-          contents: getApiErrorMessage(
-            error,
-            '확정 결과를 불러오지 못했습니다. 다시 시도해주세요.',
-          ),
-        });
-      },
-    });
+  const moveToFinal = async () => {
+    const data = await fetchPlaceWithShareKey(shareKey);
+
+    if (data) {
+      setResultConfirm(data);
+    }
+
+    clearVotedForMap(activeMapId, voteRound);
+    router.replace(`/result/confirm?sharekey=${shareKey}`);
   };
 
   const confirmVote = async () => {
+    resetModal();
+    setIsConfirming(true);
+
     try {
       await VoteService.setVoteConfirm(
         {
@@ -105,11 +97,7 @@ export default function useVoteFlow(
         shareKey,
       );
 
-      setModalContents({
-        buttonLabel: '확인',
-        contents: '이번 약속 지역이 확정되었어요!',
-        onConfirm: moveToFinal,
-      });
+      await moveToFinal();
     } catch (error) {
       logApiError('voteConfirm', error);
       setModalContents({
@@ -119,6 +107,8 @@ export default function useVoteFlow(
           '확정에 실패했습니다. 다시 시도해주세요.',
         ),
       });
+    } finally {
+      setIsConfirming(false);
     }
   };
 
@@ -152,6 +142,7 @@ export default function useVoteFlow(
 
   return {
     isVote,
+    isConfirming,
     requestVote,
     requestConfirm,
     canConfirm: Boolean(activeMapHostId),
