@@ -14,8 +14,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  frontend-build:
-    name: Frontend build
+  frontend:
+    name: Frontend checks
     runs-on: ubuntu-latest
 
     steps:
@@ -35,5 +35,28 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Lint
+        run: pnpm lint
+
       - name: Build
         run: pnpm build
+
+  supabase-functions:
+    name: Supabase functions check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v1.x
+
+      - name: Check Edge Functions
+        run: |
+          deno check --config supabase/functions/location-meeting/deno.json supabase/functions/location-meeting/index.ts
+          deno check --config supabase/functions/location-meeting-terminal/deno.json supabase/functions/location-meeting-terminal/index.ts
+          deno check --config supabase/functions/location-point-place/deno.json supabase/functions/location-point-place/index.ts
+          deno check --config supabase/functions/location-points/deno.json supabase/functions/location-points/index.ts
