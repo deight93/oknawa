@@ -80,6 +80,20 @@ SUPABASE_PROJECT_REF
 Run these before pushing meaningful changes:
 
 ```bash
+pnpm agent:harness
+```
+
+For a faster static contract pass while editing:
+
+```bash
+pnpm agent:harness:quick
+```
+
+The harness is documented in `docs/agent-harness.md`.
+
+The underlying checks are:
+
+```bash
 pnpm lint
 pnpm build
 pnpm dlx deno check --config supabase/functions/location-points/deno.json \

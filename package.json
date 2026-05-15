@@ -7,7 +7,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "agent:harness": "node scripts/agent-harness.mjs --full",
+    "agent:harness:quick": "node scripts/agent-harness.mjs --quick"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.2",

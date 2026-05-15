@@ -35,6 +35,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Agent harness contracts
+        run: pnpm agent:harness:quick
+
       - name: Lint
         run: pnpm lint
 
