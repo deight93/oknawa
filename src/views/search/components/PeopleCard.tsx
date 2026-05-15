@@ -21,10 +21,12 @@ export default function PeopleCard({
   return (
     <Container>
       <Wrapper>
-        <Avatar color="white" size="lg" />
+        <Avatar color="var(--surface-muted)" size="lg" />
         <div>
           <Name>
-            {type === 'together' && index === 0 && <Crown color="#18C964" />}
+            {type === 'together' && index === 0 && (
+              <Crown color="var(--primary)" />
+            )}
             {name}
           </Name>
           <Place>{place}</Place>
@@ -44,11 +46,11 @@ export default function PeopleCard({
 const Container = styled.div`
   display: flex;
   justify-content: space-between;
-  background-color: #1c1c20;
+  background-color: var(--surface-raised);
   width: 100%;
   padding: 17px;
   border-radius: 10px;
-  border: 1px solid #28282d;
+  border: 1px solid var(--border);
 `;
 
 const Wrapper = styled.div`
@@ -64,7 +66,7 @@ const Name = styled.p`
 
 const Place = styled.p`
   font-size: 14px;
-  color: #6a6a72;
+  color: var(--text-muted);
 `;
 
 const IconsBox = styled.div`

@@ -290,7 +290,7 @@ const Title = styled.h1`
 
 const Desc = styled.p`
   margin-top: 5px;
-  color: #8d8d94;
+  color: var(--text-muted);
 `;
 
 const ButtonWrapper = styled.div`
@@ -317,7 +317,7 @@ const QuitRoom = styled.div`
 `;
 
 const WaitingText = styled.p`
-  color: #8d8d94;
+  color: var(--text-muted);
   line-height: 1.5;
   text-align: center;
 `;

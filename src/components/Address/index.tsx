@@ -12,10 +12,7 @@ import { KakaoPlace } from './types';
 
 import { bottomSheetState, SearchState } from '@/jotai/global/store';
 import { useAtom } from 'jotai';
-import {
-  SearchHistoryItem,
-  searchHistoryState,
-} from '@/jotai/search/store';
+import { SearchHistoryItem, searchHistoryState } from '@/jotai/search/store';
 import { ArrowBackIcon } from '@/assets/icons/ArrowBack';
 import { useRouter } from 'next/navigation';
 import { Input } from '@nextui-org/react';
@@ -180,7 +177,8 @@ export default function Address({ setValue }: AddressProps) {
 }
 
 const Container = styled.div`
-  background-color: black;
+  background-color: var(--app-bg);
+  color: var(--text-primary);
   padding-top: 20px;
 `;
 
@@ -209,7 +207,7 @@ const PlacesList = styled.ul`
   flex-direction: column;
   min-height: 50vh;
   :hover {
-    background-color: #35353b;
+    background-color: var(--surface-muted);
   }
   cursor: pointer;
 `;
@@ -225,11 +223,11 @@ const RecentSearch = styled.div`
   display: flex;
   flex-direction: column;
   gap: 10px;
-  color: #82828a;
+  color: var(--text-muted);
   font-size: 14px;
 
   :hover {
-    background-color: #35353b;
+    background-color: var(--surface-muted);
   }
 `;
 
@@ -238,8 +236,8 @@ const RecentSearchItem = styled.p`
   gap: 15px;
   padding-top: 10px;
   padding: 5px 0 5px 8px;
-  border-bottom: solid 1px #35353b;
-  color: white;
+  border-bottom: solid 1px var(--border);
+  color: var(--text-primary);
   cursor: pointer;
   font-size: 15px;
 
@@ -251,6 +249,6 @@ const RecentSearchItem = styled.p`
 const DividerLine = styled.div`
   width: 100%;
   height: 14px;
-  background-color: #424249;
+  background-color: var(--surface-strong);
   margin: 10px 0;
 `;

@@ -9,7 +9,7 @@ interface disabledProps {
 
 export const Container = styled.div`
   position: absolute;
-  background-color: #151518;
+  background-color: var(--surface);
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -37,7 +37,7 @@ export const SharingButton = styled.button`
   gap: 4px;
   align-items: center;
   font-size: 16px;
-  color: #d9d9d9;
+  color: var(--text-secondary);
 `;
 
 export const ExpandBody = styled.div`
@@ -78,23 +78,24 @@ export const RetrySelectButton = styled.button`
   min-width: 88px;
   height: 34px;
   padding: 0 14px;
-  border: 1px solid #3f3f46;
+  border: 1px solid var(--border-strong);
   border-radius: 999px;
-  color: #d9d9d9;
+  color: var(--text-secondary);
   font-size: 14px;
   font-weight: 700;
   line-height: 1;
   background-color: transparent;
 
   &:hover {
-    border-color: #18c964;
-    color: #18c964;
-    background-color: rgba(24, 201, 100, 0.08);
+    border-color: var(--primary);
+    color: var(--primary);
+    background-color: var(--primary-soft);
   }
 `;
 
 export const ArrivalTime = styled.span<ExpandProps>`
-  color: ${({ $isExpand }) => ($isExpand ? 'var(--primary)' : '#D0D0D0')};
+  color: ${({ $isExpand }) =>
+    $isExpand ? 'var(--primary)' : 'var(--text-secondary)'};
   font-weight: ${({ $isExpand }) => ($isExpand ? '700' : '500')};
   font-size: ${({ $isExpand }) => ($isExpand ? '18px' : ' 14px')};
 `;
@@ -104,19 +105,19 @@ export const HostControlPanel = styled.div`
   flex-direction: column;
   gap: 12px;
   padding: 16px;
-  border: 1px solid #28282d;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background-color: #18181b;
+  background-color: var(--surface);
 `;
 
 export const HostControlTitle = styled.p`
-  color: #f4f4f5;
+  color: var(--text-primary);
   font-size: 15px;
   font-weight: 700;
 `;
 
 export const HostControlDescription = styled.p`
-  color: #9ca3af;
+  color: var(--text-muted);
   font-size: 14px;
   font-weight: 500;
   line-height: 1.45;
@@ -138,7 +139,7 @@ export const IndicatorWrapper = styled.div`
 `;
 
 export const Indicator = styled.div`
-  color: #777781;
+  color: var(--text-subtle);
   font-size: 16px;
   font-weight: 500;
   letter-spacing: -0.003em;
@@ -170,7 +171,7 @@ export const VoteTitle = styled.div`
 `;
 export const Label = styled.p`
   font-size: 13px;
-  color: #777780;
+  color: var(--text-subtle);
 `;
 export const Count = styled.p`
   font-size: 13px;
@@ -218,7 +219,7 @@ export const FoldLabelWrapper = styled.div`
 export const DividerVertical = styled.div`
   width: 1px;
   height: 8px;
-  background-color: #28282d;
+  background-color: var(--border);
 `;
 
 export const ChevronWrapper = styled.div`
@@ -251,7 +252,7 @@ export const LikeButton = styled.div<disabledProps>`
   width: 40px;
   height: 40px;
   border-radius: 1000px;
-  background-color: #28282d;
+  background-color: var(--border);
   cursor: pointer;
 `;
 
@@ -262,7 +263,7 @@ export const ConfirmButton = styled.div<disabledProps>`
   width: 40px;
   height: 40px;
   border-radius: 1000px;
-  background-color: #18c964;
+  background-color: var(--primary);
   cursor: pointer;
 `;
 
@@ -279,7 +280,7 @@ export const Tail = styled.div`
   display: flex;
   justify-content: center;
   width: 64px;
-  background-color: #151518;
+  background-color: var(--surface);
   border-bottom-left-radius: 16px;
   border-bottom-right-radius: 16px;
   cursor: pointer;

@@ -582,7 +582,9 @@ export default function DistanceSummary({
                                 </QualityMetricValue>
                               </QualityMetric>
                               <QualityMetric>
-                                <QualityMetricLabel>평균 도보</QualityMetricLabel>
+                                <QualityMetricLabel>
+                                  평균 도보
+                                </QualityMetricLabel>
                                 <QualityMetricValue>
                                   {formatQualityValue(candidate, () =>
                                     convertToKoreanTime(
@@ -699,6 +701,6 @@ export default function DistanceSummary({
 
 const LikeButtonWithVote = styled(Button)<{ isVote: boolean }>`
   border: ${({ isVote }) =>
-    isVote ? '1px solid var(--primary)' : '1px solid #777780'};
-  color: ${({ isVote }) => (isVote ? ' var(--primary)' : '#777780')};
+    isVote ? '1px solid var(--primary)' : '1px solid var(--text-subtle)'};
+  color: ${({ isVote }) => (isVote ? ' var(--primary)' : 'var(--text-subtle)')};
 `;

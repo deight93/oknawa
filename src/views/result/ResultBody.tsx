@@ -115,6 +115,6 @@ const EmptyTitle = styled.h1`
 `;
 
 const EmptyText = styled.p`
-  color: #777;
+  color: var(--text-subtle);
   line-height: 1.5;
 `;

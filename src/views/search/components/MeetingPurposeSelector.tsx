@@ -50,9 +50,9 @@ const Container = styled.section`
   flex-direction: column;
   gap: 10px;
   padding: 14px;
-  border: 1px solid #28282d;
+  border: 1px solid var(--border);
   border-radius: 12px;
-  background-color: #1c1c20;
+  background-color: var(--surface-raised);
 `;
 
 const Header = styled.div`
@@ -62,13 +62,13 @@ const Header = styled.div`
 `;
 
 const Title = styled.p`
-  color: #f4f4f5;
+  color: var(--text-primary);
   font-size: 15px;
   font-weight: 800;
 `;
 
 const Description = styled.p`
-  color: #777780;
+  color: var(--text-subtle);
   font-size: 12px;
   font-weight: 600;
 `;
@@ -83,10 +83,14 @@ const OptionButton = styled.button<{ $isActive: boolean }>`
   min-width: fit-content;
   min-height: 32px;
   padding: 0 12px;
-  border: 1px solid ${({ $isActive }) => ($isActive ? '#18c964' : '#34343a')};
+  border: 1px solid
+    ${({ $isActive }) =>
+      $isActive ? 'var(--primary)' : 'var(--border-strong)'};
   border-radius: 999px;
-  background-color: ${({ $isActive }) => ($isActive ? '#123925' : '#202024')};
-  color: ${({ $isActive }) => ($isActive ? '#18c964' : '#bdbdbd')};
+  background-color: ${({ $isActive }) =>
+    $isActive ? 'var(--primary-soft)' : 'var(--surface-muted)'};
+  color: ${({ $isActive }) =>
+    $isActive ? 'var(--primary)' : 'var(--text-muted)'};
   font-size: 13px;
   font-weight: 800;
   white-space: nowrap;

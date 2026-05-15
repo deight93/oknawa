@@ -3,6 +3,7 @@ import { Toaster } from 'react-hot-toast';
 
 import ModalBox from '../ModalBox';
 import BottomSheet from '../BottomSheet';
+import ThemeToggle from '../ThemeToggle';
 
 import { flexCenter, media } from '@/styles/commonStyles';
 
@@ -12,8 +13,9 @@ export default function BaseLayout({
   children: React.ReactNode;
 }) {
   return (
-    <Container className="dark text-foreground ">
+    <Container>
       <Wrapper>
+        <ThemeToggle />
         {children}
         <BottomSheet />
       </Wrapper>
@@ -27,7 +29,7 @@ const Container = styled.div`
   ${flexCenter('row')}
   min-height: 100vh;
   overflow: auto;
-  background-color: #0d0d0d;
+  background-color: var(--app-outer-bg);
 `;
 
 const Wrapper = styled.div`
@@ -36,7 +38,8 @@ const Wrapper = styled.div`
   width: 100%;
   max-width: 500px;
   overflow: auto;
-  background-color: black;
+  background-color: var(--app-bg);
+  color: var(--text-primary);
 
   ${media.mobile} {
     min-width: 100%; // 모바일 화면에서는 더 넓은 비율을 차지

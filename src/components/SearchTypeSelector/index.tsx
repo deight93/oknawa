@@ -37,14 +37,14 @@ export default function SearchTypeSelector({
 }
 
 const Container = styled.div`
-  background-color: #27272a;
+  background-color: var(--surface-strong);
   padding: 16px 22px;
   border-radius: 9px;
   white-space: pre-line;
   cursor: pointer;
 
   &:hover {
-    background-color: #242d2d;
+    background-color: var(--surface-muted);
   }
 `;
 
@@ -58,7 +58,7 @@ const Description = styled.h3`
   font-size: 15px;
   line-height: 20px;
   font-weight: 500;
-  color: gray;
+  color: var(--text-muted);
 `;
 
 const AvatarBox = styled.div`

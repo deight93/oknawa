@@ -81,7 +81,7 @@ const Container = styled.div`
   align-items: center;
   width: 100%;
   height: 100vh;
-  background: rgba(0, 0, 0, 0.7);
+  background: var(--overlay-bg);
   z-index: 9999;
 `;
 
@@ -91,9 +91,9 @@ const Wrapper = styled.div`
   align-items: center;
   width: min(320px, calc(100vw - 48px));
   padding: 32px 24px;
-  border: 1px solid #20d86d;
+  border: 1px solid var(--primary);
   border-radius: 16px;
-  background-color: #151518;
+  background-color: var(--surface);
 `;
 
 const Image = styled.img`
@@ -102,7 +102,7 @@ const Image = styled.img`
 `;
 
 const Text = styled.p`
-  color: #f4f4f5;
+  color: var(--text-primary);
   font-size: 18px;
   font-weight: 800;
   line-height: 1.45;
@@ -121,7 +121,8 @@ const StepItem = styled.div<{ $isActive: boolean }>`
   display: flex;
   align-items: center;
   gap: 8px;
-  color: ${({ $isActive }) => ($isActive ? '#f4f4f5' : '#777780')};
+  color: ${({ $isActive }) =>
+    $isActive ? 'var(--text-primary)' : 'var(--text-subtle)'};
   font-size: 13px;
   font-weight: ${({ $isActive }) => ($isActive ? 800 : 600)};
 `;
@@ -130,5 +131,6 @@ const StepDot = styled.span<{ $isActive: boolean }>`
   width: 8px;
   height: 8px;
   border-radius: 999px;
-  background-color: ${({ $isActive }) => ($isActive ? '#18c964' : '#34343a')};
+  background-color: ${({ $isActive }) =>
+    $isActive ? 'var(--primary)' : 'var(--border-strong)'};
 `;

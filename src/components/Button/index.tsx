@@ -61,9 +61,12 @@ const Container = styled.button<{
   gap: 8px;
   padding: 16px 12px 16px 16px;
   border: ${({ disabled }) =>
-    disabled ? '1px solid #8D8D94' : '1px solid white'};
+    disabled
+      ? '1px solid var(--text-muted)'
+      : '1px solid var(--border-strong)'};
   border-radius: 8px;
-  color: ${({ disabled }) => (disabled ? '#8D8D94' : 'white')};
+  color: ${({ disabled }) =>
+    disabled ? 'var(--text-muted)' : 'var(--text-primary)'};
 `;
 
 const Text = styled.h1`

@@ -9,7 +9,7 @@ export const Container = styled.section`
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: rgba(0, 0, 0, 0.4);
+  background-color: var(--overlay-bg);
   z-index: 99999;
   animation: fadeIn_ani 0.3s both;
 
@@ -29,8 +29,8 @@ export const Modal = styled.div`
   width: 100%;
   max-width: 360px;
   padding: 24px;
-  background-color: #27272a;
-  box-shadow: 0px 4px 24px rgba(0, 0, 0, 08);
+  background-color: var(--surface-strong);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
   border-radius: 8px;
 `;
 
@@ -68,8 +68,8 @@ export const ModalButton = styled.div`
   height: 56px;
   justify-content: center;
   align-items: center;
-  background-color: #18c964;
-  color: #000000;
+  background-color: var(--primary);
+  color: var(--button-text-on-primary);
   font-weight: 500;
   border-radius: 16px;
   cursor: pointer;

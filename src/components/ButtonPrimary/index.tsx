@@ -45,12 +45,14 @@ const Container = styled.button<{
   height: 44px;
 
   border-radius: 8px;
-  color: ${({ disabled }) => (disabled ? '#8D8D94' : '#101012')};
-  background-color: #18c964;
+  color: ${({ disabled }) =>
+    disabled ? 'var(--text-muted)' : 'var(--button-text-on-primary)'};
+  background-color: var(--primary);
   cursor: pointer;
 
   &:hover {
-    background-color: ${({ disabled }) => (disabled ? 'initial' : '#14b057')};
+    background-color: ${({ disabled }) =>
+      disabled ? 'initial' : 'var(--primary-hover)'};
   }
 `;
 

@@ -71,7 +71,7 @@ const StyledCard = styled(Card)`
   flex-direction: column;
   gap: 12px;
   padding: 16px;
-  background-color: #313131;
+  background-color: var(--surface-raised);
 `;
 
 const PlaceLink = styled(Link)`
@@ -104,12 +104,12 @@ const PlaceName = styled.h3`
 
 const Category = styled.small`
   font-size: 12px;
-  color: #bdbdbd;
+  color: var(--text-muted);
 `;
 
 const CardBodyText = styled.p`
   font-size: 12px;
-  color: #bdbdbd;
+  color: var(--text-muted);
 `;
 
 const ImageBox = styled.div`
@@ -128,6 +128,6 @@ const DefaultImage = styled.div`
   justify-content: center;
   width: 80px;
   height: 64px;
-  background-color: #9e9e9e;
+  background-color: var(--surface-strong);
   border-radius: 8px;
 `;

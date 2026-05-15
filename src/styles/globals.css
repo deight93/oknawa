@@ -4,6 +4,51 @@
 
 :root {
   --primary: #18c964;
+  --primary-hover: #14b057;
+  --primary-soft: rgba(24, 201, 100, 0.12);
+  --app-outer-bg: #0d0d0d;
+  --app-bg: #000000;
+  --surface: #151518;
+  --surface-raised: #1c1c20;
+  --surface-muted: #202024;
+  --surface-strong: #27272a;
+  --surface-inset: #111113;
+  --border: #28282d;
+  --border-strong: #34343a;
+  --text-primary: #f4f4f5;
+  --text-secondary: #d9d9d9;
+  --text-muted: #8d8d94;
+  --text-subtle: #777780;
+  --button-text-on-primary: #101012;
+  --overlay-bg: rgba(0, 0, 0, 0.48);
+  --shadow-panel: 0 -12px 40px rgba(0, 0, 0, 0.32);
+  color-scheme: dark;
+}
+
+.light {
+  --app-outer-bg: #e8ebef;
+  --app-bg: #f7f8fa;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-muted: #f1f3f5;
+  --surface-strong: #e9ecef;
+  --surface-inset: #f7f8fa;
+  --border: #dde1e6;
+  --border-strong: #c9ced6;
+  --text-primary: #17181c;
+  --text-secondary: #343840;
+  --text-muted: #69707a;
+  --text-subtle: #7c838d;
+  --button-text-on-primary: #07130d;
+  --overlay-bg: rgba(15, 23, 42, 0.28);
+  --shadow-panel: 0 -12px 40px rgba(15, 23, 42, 0.16);
+  color-scheme: light;
+}
+
+html,
+body {
+  background: var(--app-outer-bg);
+  color: var(--text-primary);
 }
 
 * {
@@ -16,4 +61,8 @@ input[type='text'] {
   font-size: 16px;
   transform: scale(0.8);
   transform-origin: left;
+}
+
+button {
+  color: inherit;
 }

@@ -27,7 +27,7 @@ const PlaceContainer = styled.li`
   gap: 15px;
   align-items: center;
   padding-left: 8px;
-  border-bottom: solid 1px #35353b;
+  border-bottom: solid 1px var(--border);
   &:last-child {
     border-bottom: none;
   }
@@ -36,11 +36,11 @@ const PlaceContainer = styled.li`
 const TitleContainer = styled.h2`
   padding-top: 10px;
   font-size: 15px;
-  color: white;
+  color: var(--text-primary);
 `;
 
 const SubTitleContainer = styled.h3`
   margin-bottom: 0.8rem;
   font-size: 12px;
-  color: gray;
+  color: var(--text-muted);
 `;

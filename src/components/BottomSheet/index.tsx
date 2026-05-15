@@ -64,7 +64,7 @@ const Container = styled.section`
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  background-color: rgba(0, 0, 0, 0.4);
+  background-color: var(--overlay-bg);
   z-index: 10;
   animation: fadeIn_ani 0.3s both;
 
@@ -86,7 +86,8 @@ const Wrapper = styled.div<{ height: number; isFullContents: boolean }>`
   padding: 1rem;
   border-radius: 0.8rem 0.8rem 0 0;
   background-color: ${({ isFullContents }) =>
-    isFullContents ? 'black' : '#27272a'};
+    isFullContents ? 'var(--app-bg)' : 'var(--surface-strong)'};
+  color: var(--text-primary);
   height: ${({ isFullContents, height }) =>
     isFullContents ? '100%' : `${height}%`};
   animation: slide_up 0.4s both;

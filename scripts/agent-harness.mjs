@@ -182,11 +182,41 @@ const staticContracts = [
     },
   },
   {
+    name: 'theme mode support stays wired',
+    run: () => {
+      assertIncludes(
+        'src/app/providers.tsx',
+        '<NextThemesProvider',
+        'theme provider must stay enabled',
+      );
+      assertIncludes(
+        'src/app/providers.tsx',
+        'defaultTheme="dark"',
+        'dark mode should remain the default experience',
+      );
+      assertIncludes(
+        'src/components/ThemeToggle/index.tsx',
+        "setTheme(isLight ? 'dark' : 'light')",
+        'theme toggle must switch between light and dark modes',
+      );
+      assertIncludes(
+        'src/styles/globals.css',
+        '.light',
+        'light mode token overrides must exist',
+      );
+      assertIncludes(
+        'src/components/layout/BaseLayout.tsx',
+        '<ThemeToggle />',
+        'theme toggle must be globally reachable',
+      );
+    },
+  },
+  {
     name: 'recommendation result type controls result presentation',
     run: () => {
       assertIncludes(
         'supabase/functions/lib/location-types.ts',
-        "resultType?: PopularLocationType",
+        'resultType?: PopularLocationType',
         'location-points request info must carry the result type',
       );
       assertIncludes(
