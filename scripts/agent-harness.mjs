@@ -95,6 +95,11 @@ const staticContracts = [
         'search UI must expose travel mode selection',
       );
       assertIncludes(
+        'src/types/recommendationOptions.ts',
+        "{ value: 'distance', label: '위치 기준' }",
+        'distance midpoint option should use a clearer user-facing label',
+      );
+      assertIncludes(
         'supabase/functions/lib/location-points.ts',
         'recommendationOptions.travelMode',
         'location-points must use travel mode when building routes',
@@ -166,8 +171,23 @@ const staticContracts = [
     run: () => {
       assertIncludes(
         'supabase/functions/lib/location-points.ts',
+        "return hasNonSeoulGyeonggi ? 'city' : 'local_area';",
+        'car recommendations must use area/city candidates',
+      );
+      assertIncludes(
+        'supabase/migrations/20260515140000_seed_car_meeting_candidates.sql',
+        "'local_area'",
+        'car recommendations must have local area candidate seeds',
+      );
+      assertIncludes(
+        'supabase/migrations/20260515140000_seed_car_meeting_candidates.sql',
+        "'city'",
+        'car recommendations must have city candidate seeds',
+      );
+      assertIncludes(
+        'supabase/functions/lib/location-points.ts',
         "return hasNonSeoulGyeonggi ? 'terminal' : 'station';",
-        'non Seoul/Gyeonggi participants must use terminal candidates',
+        'transit recommendations must keep station/terminal candidates',
       );
       assertIncludes(
         'supabase/functions/tests/location-points.test.ts',

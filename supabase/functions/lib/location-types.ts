@@ -1,4 +1,4 @@
-export type PopularLocationType = 'station' | 'terminal';
+export type PopularLocationType = 'station' | 'terminal' | 'local_area' | 'city';
 export type TravelMode = 'transit' | 'car';
 export type MidpointBasis = 'time' | 'distance';
 export type MeetingPurpose =

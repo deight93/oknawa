@@ -160,10 +160,15 @@ export async function parseLocationPointsRequest(
 
 export function resolveRecommendType(
   participants: RouteParticipant[],
+  recommendationOptions: RecommendationOptions = DEFAULT_RECOMMENDATION_OPTIONS,
 ): PopularLocationType {
   const hasNonSeoulGyeonggi = participants.some(
     participant => !isSeoulOrGyeonggi(participant.full_address),
   );
+
+  if (recommendationOptions.travelMode === 'car') {
+    return hasNonSeoulGyeonggi ? 'city' : 'local_area';
+  }
 
   return hasNonSeoulGyeonggi ? 'terminal' : 'station';
 }
@@ -199,29 +204,25 @@ export async function fetchCandidateMeetingLocations(
   supabase: SupabaseClient,
   preferredType: PopularLocationType,
 ): Promise<StepResult<PopularMeetingLocation[]>> {
-  const preferredLocations = await fetchPopularMeetingLocations(
-    supabase,
-    preferredType,
-  );
+  const fallbackTypes = getCandidateFallbackTypes(preferredType);
 
-  if (preferredLocations.ok) {
-    return preferredLocations;
-  }
-
-  const fallbackType = preferredType === 'station' ? 'terminal' : 'station';
-  const fallbackLocations = await fetchPopularMeetingLocations(
-    supabase,
-    fallbackType,
-  );
-
-  if (fallbackLocations.ok) {
-    console.error(
-      `candidate fallback used: ${preferredType} -> ${fallbackType}`,
+  for (const candidateType of [preferredType, ...fallbackTypes]) {
+    const locations = await fetchPopularMeetingLocations(
+      supabase,
+      candidateType,
     );
-    return fallbackLocations;
+
+    if (!locations.ok) continue;
+
+    if (candidateType !== preferredType) {
+      console.error(
+        `candidate fallback used: ${preferredType} -> ${candidateType}`,
+      );
+    }
+    return locations;
   }
 
-  return preferredLocations;
+  return fetchPopularMeetingLocations(supabase, preferredType);
 }
 
 export async function buildStationItineraries(
@@ -369,7 +370,10 @@ export async function runLocationPointsFlow(
   supabase: SupabaseClient,
   request: LocationPointsRequest,
 ): Promise<StepResult<LocationResultRow>> {
-  const recommendType = resolveRecommendType(request.participants);
+  const recommendType = resolveRecommendType(
+    request.participants,
+    request.recommendationOptions,
+  );
   const locations = await fetchCandidateMeetingLocations(
     supabase,
     recommendType,
@@ -414,6 +418,21 @@ export async function runLocationPointsFlow(
 
 function isSeoulOrGyeonggi(fullAddress: string): boolean {
   return fullAddress.includes('서울') || fullAddress.includes('경기');
+}
+
+function getCandidateFallbackTypes(
+  preferredType: PopularLocationType,
+): PopularLocationType[] {
+  switch (preferredType) {
+    case 'local_area':
+      return ['station', 'terminal'];
+    case 'city':
+      return ['terminal', 'station'];
+    case 'station':
+      return ['terminal', 'local_area'];
+    case 'terminal':
+      return ['city', 'station'];
+  }
 }
 
 function getCandidatePoolSize(priority: number, locationCount: number): number {

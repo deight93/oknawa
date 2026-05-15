@@ -24,5 +24,5 @@ export const MIDPOINT_BASIS_OPTIONS: Array<{
   label: string;
 }> = [
   { value: 'time', label: '시간 기준' },
-  { value: 'distance', label: '거리 기준' },
+  { value: 'distance', label: '위치 기준' },
 ];

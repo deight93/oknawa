@@ -162,6 +162,29 @@ Deno.test('resolveRecommendType uses stations for Seoul/Gyeonggi and terminals o
   );
 });
 
+Deno.test('resolveRecommendType uses area and city candidates for car recommendations', () => {
+  assertEquals(
+    resolveRecommendType(
+      [
+        createParticipant('서울특별시 강남구'),
+        createParticipant('경기도 성남시'),
+      ],
+      { travelMode: 'car', midpointBasis: 'time' },
+    ),
+    'local_area',
+  );
+  assertEquals(
+    resolveRecommendType(
+      [
+        createParticipant('서울특별시 강남구'),
+        createParticipant('부산광역시 해운대구'),
+      ],
+      { travelMode: 'car', midpointBasis: 'distance' },
+    ),
+    'city',
+  );
+});
+
 Deno.test('fetchCandidateMeetingLocations falls back to the other candidate type', async () => {
   const supabase = createSupabaseMock({
     terminal: [],
@@ -180,6 +203,30 @@ Deno.test('fetchCandidateMeetingLocations falls back to the other candidate type
   const result = await fetchCandidateMeetingLocations(
     supabase as never,
     'terminal',
+  );
+
+  assert(result.ok);
+  assertEquals(result.data[0].name, '강남역');
+});
+
+Deno.test('fetchCandidateMeetingLocations falls back from car area to station candidates', async () => {
+  const supabase = createSupabaseMock({
+    local_area: [],
+    station: [
+      {
+        name: '강남역',
+        type: 'station',
+        url: 'https://place.map.kakao.com/1',
+        address: '서울 강남구',
+        location_x: 127.0276,
+        location_y: 37.4979,
+      },
+    ],
+  });
+
+  const result = await fetchCandidateMeetingLocations(
+    supabase as never,
+    'local_area',
   );
 
   assert(result.ok);
