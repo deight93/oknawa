@@ -9,15 +9,18 @@ import {
 import { SearchState } from '@/jotai/global/store';
 import SearchFormWithTogether from '@/model/search-together/SearchFormWithTogether';
 import { MeetingPurpose } from '@/types/meetingPurpose';
+import { RecommendationOptions } from '@/types/recommendationOptions';
 
 export default class SearchService {
   static async searchPlaces(
     searchForm: SearchState[],
     meetingPurpose?: MeetingPurpose,
+    recommendationOptions?: RecommendationOptions,
   ) {
     const requestBody = SearchForm.convertToRequestBody(
       searchForm,
       meetingPurpose,
+      recommendationOptions,
     );
 
     const { data } = await edgeApi.post('/functions/v1/location-points', {

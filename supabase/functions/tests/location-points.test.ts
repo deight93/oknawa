@@ -111,6 +111,8 @@ Deno.test('parseLocationPointsRequest validates JSON and participants', async ()
           createParticipant('경기도 성남시'),
         ],
         meetingPurpose: 'cafe',
+        travelMode: 'car',
+        midpointBasis: 'distance',
       }),
     }),
   );
@@ -118,7 +120,29 @@ Deno.test('parseLocationPointsRequest validates JSON and participants', async ()
   assert(valid.ok);
   assertEquals(valid.data.priority, 10);
   assertEquals(valid.data.meetingPurpose, 'cafe');
+  assertEquals(valid.data.recommendationOptions.travelMode, 'car');
+  assertEquals(valid.data.recommendationOptions.midpointBasis, 'distance');
   assertEquals(valid.data.participants.length, 2);
+});
+
+Deno.test('parseLocationPointsRequest falls back to default recommendation options', async () => {
+  const valid = await parseLocationPointsRequest(
+    new Request('https://example.com/functions/v1/location-points', {
+      method: 'POST',
+      body: JSON.stringify({
+        participant: [
+          createParticipant('서울특별시 강남구'),
+          createParticipant('경기도 성남시'),
+        ],
+        travelMode: 'bike',
+        midpointBasis: 'price',
+      }),
+    }),
+  );
+
+  assert(valid.ok);
+  assertEquals(valid.data.recommendationOptions.travelMode, 'transit');
+  assertEquals(valid.data.recommendationOptions.midpointBasis, 'time');
 });
 
 Deno.test('resolveRecommendType uses stations for Seoul/Gyeonggi and terminals otherwise', () => {
@@ -195,4 +219,31 @@ Deno.test('selectBestStationItineraries penalizes candidates missing participant
   );
 
   assertEquals(result[0].station_name, '모두 갈 수 있는 역');
+});
+
+Deno.test('selectBestStationItineraries can rank by distance score', () => {
+  const nearButSlower = {
+    ...createStationResult('거리상 가까운 역', [
+      createRoute(1800, 0, 80),
+      createRoute(1800, 0, 80),
+    ]),
+    distance_score: 100,
+  };
+  const farButFaster = {
+    ...createStationResult('시간상 빠른 역', [
+      createRoute(600, 0, 20),
+      createRoute(600, 0, 20),
+    ]),
+    distance_score: 1000,
+  };
+
+  const result = selectBestStationItineraries(
+    [farButFaster, nearButSlower],
+    2,
+    2,
+    undefined,
+    'distance',
+  );
+
+  assertEquals(result[0].station_name, '거리상 가까운 역');
 });

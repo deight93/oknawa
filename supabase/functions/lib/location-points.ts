@@ -1,18 +1,25 @@
 import type { SupabaseClient } from 'jsr:@supabase/supabase-js';
 import {
-  getBalancedMeetingLocations,
   getCenterCoordinates,
+  getScoredMeetingLocationCandidates,
 } from './distance.ts';
 import type {
   LocationPointsRequestBody,
+  MidpointBasis,
   MeetingPurpose,
   PopularLocationType,
   PopularMeetingLocation,
+  RecommendationOptions,
   RouteParticipant,
   StationInfoInsert,
   StationItineraryResult,
 } from './location-types.ts';
-import { isMeetingPurpose, isRouteParticipantList } from './location-types.ts';
+import {
+  isMeetingPurpose,
+  isMidpointBasis,
+  isRouteParticipantList,
+  isTravelMode,
+} from './location-types.ts';
 import { callGoogleMapItineraries } from './mapapi.ts';
 import { attachPlaceQualities } from './place-quality.ts';
 import { responseApiError, responseJson } from './utils.ts';
@@ -21,6 +28,7 @@ export interface LocationPointsRequest {
   participants: RouteParticipant[];
   priority: number;
   meetingPurpose?: MeetingPurpose;
+  recommendationOptions: RecommendationOptions;
 }
 
 interface LocationResultRow {
@@ -31,6 +39,11 @@ interface LocationResultRow {
 const CANDIDATE_POOL_MULTIPLIER = 2;
 const MAX_CANDIDATE_POOL_SIZE = 12;
 const MISSING_PARTICIPANT_TIME_PENALTY_SECONDS = 7200;
+const MISSING_PARTICIPANT_DISTANCE_PENALTY_METERS = 100000;
+const DEFAULT_RECOMMENDATION_OPTIONS: RecommendationOptions = {
+  travelMode: 'transit',
+  midpointBasis: 'time',
+};
 
 const RECOMMEND_SCORE_WEIGHTS: Record<
   MeetingPurpose | 'default',
@@ -127,11 +140,21 @@ export async function parseLocationPointsRequest(
   const meetingPurpose = isMeetingPurpose(body?.meetingPurpose)
     ? body.meetingPurpose
     : undefined;
+  const travelMode = isTravelMode(body?.travelMode)
+    ? body.travelMode
+    : DEFAULT_RECOMMENDATION_OPTIONS.travelMode;
+  const midpointBasis = isMidpointBasis(body?.midpointBasis)
+    ? body.midpointBasis
+    : DEFAULT_RECOMMENDATION_OPTIONS.midpointBasis;
 
   return ok({
     participants,
     priority,
     meetingPurpose,
+    recommendationOptions: {
+      travelMode,
+      midpointBasis,
+    },
   });
 }
 
@@ -207,30 +230,45 @@ export async function buildStationItineraries(
   locations: PopularMeetingLocation[],
   priority: number,
   meetingPurpose?: MeetingPurpose,
+  recommendationOptions: RecommendationOptions = DEFAULT_RECOMMENDATION_OPTIONS,
 ): Promise<StepResult<StationItineraryResult[]>> {
   const centerCoordinates = getCenterCoordinates(participants);
   const candidatePoolSize = getCandidatePoolSize(priority, locations.length);
-  const centerLocationDataList = getBalancedMeetingLocations(
+  const centerLocationDataList = getScoredMeetingLocationCandidates(
     centerCoordinates,
     participants,
     locations,
-    candidatePoolSize,
   );
+  const rankedLocationDataList = centerLocationDataList
+    .sort(
+      (a, b) =>
+        a.score - b.score ||
+        a.maxParticipantDistanceMeters - b.maxParticipantDistanceMeters ||
+        a.centerDistanceMeters - b.centerDistanceMeters ||
+        a.station.name.localeCompare(b.station.name),
+    )
+    .slice(0, candidatePoolSize)
+    .map(item => ({
+      ...item.station,
+      distance_score: item.score,
+    }));
   const qualityAdjustedLocationDataList = await attachPlaceQualities(
     supabase,
-    centerLocationDataList,
+    rankedLocationDataList,
     meetingPurpose,
   );
   const stationInfoList = await callGoogleMapItineraries(
     supabase,
     participants,
     qualityAdjustedLocationDataList,
+    recommendationOptions.travelMode,
   );
   const bestStationInfoList = selectBestStationItineraries(
     stationInfoList,
     participants.length,
     priority,
     meetingPurpose,
+    recommendationOptions.midpointBasis,
   );
 
   if (
@@ -247,6 +285,7 @@ export async function createLocationResult(
   supabase: SupabaseClient,
   participants: RouteParticipant[],
   meetingPurpose?: MeetingPurpose,
+  recommendationOptions: RecommendationOptions = DEFAULT_RECOMMENDATION_OPTIONS,
 ): Promise<StepResult<LocationResultRow>> {
   const mapId = crypto.randomUUID();
   const mapHostId = crypto.randomUUID();
@@ -256,7 +295,11 @@ export async function createLocationResult(
     .insert({
       map_id: mapId,
       map_host_id: mapHostId,
-      request_info: { participant: participants, meetingPurpose },
+      request_info: {
+        participant: participants,
+        meetingPurpose,
+        recommendationOptions,
+      },
       confirmed: null,
     })
     .select('map_id, map_host_id')
@@ -281,6 +324,7 @@ export function buildStationInfoInserts(
   participants: RouteParticipant[],
   stationInfoList: StationItineraryResult[],
   meetingPurpose?: MeetingPurpose,
+  recommendationOptions: RecommendationOptions = DEFAULT_RECOMMENDATION_OPTIONS,
 ): StationInfoInsert[] {
   return stationInfoList.map(station => ({
     map_id: mapId,
@@ -295,6 +339,7 @@ export function buildStationInfoInserts(
     request_info: {
       participant: participants,
       meetingPurpose,
+      recommendationOptions,
       placeQuality: station.place_quality,
     },
   }));
@@ -337,6 +382,7 @@ export async function runLocationPointsFlow(
     locations.data,
     request.priority,
     request.meetingPurpose,
+    request.recommendationOptions,
   );
   if (!stationInfoList.ok) return stationInfoList;
 
@@ -344,6 +390,7 @@ export async function runLocationPointsFlow(
     supabase,
     request.participants,
     request.meetingPurpose,
+    request.recommendationOptions,
   );
   if (!locationResult.ok) return locationResult;
 
@@ -352,6 +399,7 @@ export async function runLocationPointsFlow(
     request.participants,
     stationInfoList.data,
     request.meetingPurpose,
+    request.recommendationOptions,
   );
 
   const stationInsert = await insertStationInfo(
@@ -383,6 +431,7 @@ export function selectBestStationItineraries(
   participantCount: number,
   priority: number,
   meetingPurpose?: MeetingPurpose,
+  midpointBasis: MidpointBasis = DEFAULT_RECOMMENDATION_OPTIONS.midpointBasis,
 ): StationItineraryResult[] {
   return stationInfoList
     .filter(station => station.itinerary.length > 0)
@@ -392,6 +441,7 @@ export function selectBestStationItineraries(
         station,
         participantCount,
         meetingPurpose,
+        midpointBasis,
       ),
     }))
     .sort(
@@ -407,7 +457,19 @@ function getStationItineraryScore(
   station: StationItineraryResult,
   participantCount: number,
   meetingPurpose?: MeetingPurpose,
+  midpointBasis: MidpointBasis = DEFAULT_RECOMMENDATION_OPTIONS.midpointBasis,
 ): number {
+  if (midpointBasis === 'distance') {
+    const missingParticipantCount = Math.max(
+      participantCount - station.itinerary.length,
+      0,
+    );
+    return (
+      (station.distance_score ?? Number.POSITIVE_INFINITY) +
+      missingParticipantCount * MISSING_PARTICIPANT_DISTANCE_PENALTY_METERS
+    );
+  }
+
   const weights = RECOMMEND_SCORE_WEIGHTS[meetingPurpose ?? 'default'];
   const routeCount = station.itinerary.length;
   const travelTimes = station.itinerary.map(route => route.itinerary.totalTime);

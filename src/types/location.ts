@@ -1,4 +1,5 @@
 import { MeetingPurpose } from './meetingPurpose';
+import { RecommendationOptions } from './recommendationOptions';
 
 export interface PolylinePoint {
   lat: number;
@@ -36,6 +37,7 @@ export interface StationPlaceQuality {
 export interface RequestInfo {
   participant: Participant[];
   meetingPurpose?: MeetingPurpose;
+  recommendationOptions?: RecommendationOptions;
   placeQuality?: StationPlaceQuality;
 }
 

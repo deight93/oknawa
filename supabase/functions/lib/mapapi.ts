@@ -6,6 +6,7 @@ import type {
   RouteItinerary,
   RouteParticipant,
   StationItineraryResult,
+  TravelMode,
 } from './location-types.ts';
 import { fetchJson } from './utils.ts';
 
@@ -43,13 +44,16 @@ interface RouteCacheUpsert {
   origin_y: number;
   destination_x: number;
   destination_y: number;
-  travel_mode: 'SUBWAY';
+  travel_mode: RouteTravelMode;
   expires_at: string;
   updated_at: string;
 }
 
+type RouteTravelMode = 'SUBWAY' | 'DRIVE';
+
 interface RouteRequest {
   routeKey: string;
+  travelMode: RouteTravelMode;
   stationIndex: number;
   participantIndex: number;
   station: PopularMeetingLocation;
@@ -70,6 +74,7 @@ export async function callGoogleMapItineraries(
   supabase: SupabaseClient,
   participants: RouteParticipant[],
   stations: PopularMeetingLocation[],
+  travelMode: TravelMode = 'transit',
 ): Promise<StationItineraryResult[]> {
   const GOOGLE_API_KEY = getEnv('GOOGLE_API_KEY');
   const GOOGLE_API_URL = getEnv('GOOGLE_API_URL');
@@ -81,7 +86,7 @@ export async function callGoogleMapItineraries(
       'routes.duration,routes.legs.steps.distanceMeters,routes.legs.steps.staticDuration,routes.legs.steps.travelMode,routes.polyline.encodedPolyline',
   };
 
-  const routeRequests = buildRouteRequests(participants, stations);
+  const routeRequests = buildRouteRequests(participants, stations, travelMode);
   const routeCacheMap = await fetchRouteCacheMap(
     supabase,
     routeRequests.map(request => request.routeKey),
@@ -99,6 +104,7 @@ export async function callGoogleMapItineraries(
       const itinerary = await fetchGoogleRouteItinerarySafely(
         request.participant,
         request.station,
+        request.travelMode,
         headers,
         GOOGLE_API_URL,
       );
@@ -114,7 +120,11 @@ export async function callGoogleMapItineraries(
     const request = routeRequests[index];
     return toRouteResult(
       request,
-      createEstimatedRouteItinerary(request.participant, request.station),
+      createEstimatedRouteItinerary(
+        request.participant,
+        request.station,
+        request.travelMode,
+      ),
     );
   });
 
@@ -135,6 +145,7 @@ export async function callGoogleMapItineraries(
       end_y: Number(station.location_y),
       itinerary: itineraryList,
       place_quality: station.place_quality,
+      distance_score: station.distance_score,
     };
   });
 }
@@ -168,10 +179,14 @@ function summarizeRouteMetrics(route: GoogleRoute) {
 function buildRouteRequests(
   participants: RouteParticipant[],
   stations: PopularMeetingLocation[],
+  travelMode: TravelMode,
 ): RouteRequest[] {
+  const routeTravelMode = toRouteTravelMode(travelMode);
+
   return stations.flatMap((station, stationIndex) =>
     participants.map((participant, participantIndex) => ({
-      routeKey: buildRouteCacheKey(participant, station),
+      routeKey: buildRouteCacheKey(participant, station, routeTravelMode),
+      travelMode: routeTravelMode,
       stationIndex,
       participantIndex,
       station,
@@ -224,6 +239,7 @@ async function upsertRouteCache(
 async function fetchGoogleRouteItinerary(
   participant: RouteParticipant,
   station: PopularMeetingLocation,
+  travelMode: RouteTravelMode,
   headers: Record<string, string>,
   googleApiUrl: string,
 ): Promise<RouteItinerary['itinerary'] | null> {
@@ -245,15 +261,17 @@ async function fetchGoogleRouteItinerary(
     },
   };
 
-  const payload = {
+  const payload: Record<string, unknown> = {
     origin,
     destination,
-    travelMode: 'TRANSIT',
-    transitPreferences: {
-      allowedTravelModes: ['SUBWAY'],
-    },
+    travelMode: travelMode === 'DRIVE' ? 'DRIVE' : 'TRANSIT',
     languageCode: 'ko-KR',
   };
+  if (travelMode === 'SUBWAY') {
+    payload.transitPreferences = {
+      allowedTravelModes: ['SUBWAY'],
+    };
+  }
 
   const json = await fetchJson<GoogleRoutesResponse>(
     `${googleApiUrl}/directions/v2:computeRoutes`,
@@ -286,6 +304,7 @@ async function fetchGoogleRouteItinerary(
 async function fetchGoogleRouteItinerarySafely(
   participant: RouteParticipant,
   station: PopularMeetingLocation,
+  travelMode: RouteTravelMode,
   headers: Record<string, string>,
   googleApiUrl: string,
 ): Promise<RouteItinerary['itinerary'] | null> {
@@ -293,6 +312,7 @@ async function fetchGoogleRouteItinerarySafely(
     return await fetchGoogleRouteItinerary(
       participant,
       station,
+      travelMode,
       headers,
       googleApiUrl,
     );
@@ -305,6 +325,7 @@ async function fetchGoogleRouteItinerarySafely(
 function createEstimatedRouteItinerary(
   participant: RouteParticipant,
   station: PopularMeetingLocation,
+  travelMode: RouteTravelMode,
 ): RouteItinerary['itinerary'] {
   const destinationLat = Number(station.location_y);
   const destinationLng = Number(station.location_x);
@@ -314,7 +335,9 @@ function createEstimatedRouteItinerary(
   );
   const estimatedSeconds = Math.max(
     600,
-    Math.round((distanceMeters / 1000 / 25) * 3600),
+    Math.round(
+      (distanceMeters / 1000 / getEstimatedSpeedKph(travelMode)) * 3600,
+    ),
   );
 
   return {
@@ -359,7 +382,7 @@ function toRouteCacheUpsert(
     origin_y: request.participant.start_y,
     destination_x: Number(request.station.location_x),
     destination_y: Number(request.station.location_y),
-    travel_mode: 'SUBWAY',
+    travel_mode: request.travelMode,
     expires_at: expiresAt.toISOString(),
     updated_at: now.toISOString(),
   };
@@ -393,15 +416,24 @@ async function mapWithConcurrency<T, U>(
 function buildRouteCacheKey(
   participant: RouteParticipant,
   station: PopularMeetingLocation,
+  travelMode: RouteTravelMode,
 ): string {
   return [
     ROUTE_KEY_VERSION,
-    'subway',
+    travelMode.toLowerCase(),
     normalizeCoordinate(participant.start_x),
     normalizeCoordinate(participant.start_y),
     normalizeCoordinate(station.location_x),
     normalizeCoordinate(station.location_y),
   ].join(':');
+}
+
+function toRouteTravelMode(travelMode: TravelMode): RouteTravelMode {
+  return travelMode === 'car' ? 'DRIVE' : 'SUBWAY';
+}
+
+function getEstimatedSpeedKph(travelMode: RouteTravelMode): number {
+  return travelMode === 'DRIVE' ? 35 : 25;
 }
 
 function normalizeCoordinate(value: number | string): string {

@@ -16,11 +16,16 @@ import Button from '@/components/Button';
 import { APP_BASE_URL } from '@/config/env';
 import SearchLoading from './components/SearchLoading';
 import MeetingPurposeSelector from './components/MeetingPurposeSelector';
+import RecommendationOptionSelector from './components/RecommendationOptionSelector';
 import { roomState } from '@/jotai/global/room';
 import { Participant } from '@/types/location';
 import useCreateResultFlow from '@/hooks/search/useCreateResultFlow';
 import { MeetingPurpose } from '@/types/meetingPurpose';
 import SearchService from '@/services/search/SearchService';
+import {
+  DEFAULT_RECOMMENDATION_OPTIONS,
+  RecommendationOptions,
+} from '@/types/recommendationOptions';
 
 export default function SearchCompleteListWithTogetherView() {
   const router = useRouter();
@@ -28,6 +33,8 @@ export default function SearchCompleteListWithTogetherView() {
   const setSearchList = useSetAtom(searchState);
   const [storageRoomData, setStorageRoomData] = useAtom(roomState);
   const [meetingPurpose, setMeetingPurpose] = useState<MeetingPurpose>();
+  const [recommendationOptions, setRecommendationOptions] =
+    useState<RecommendationOptions>(DEFAULT_RECOMMENDATION_OPTIONS);
   const { requestResult, isLoading, loadingPhase } = useCreateResultFlow();
 
   const { data: roomStatus, participant: participants } =
@@ -93,30 +100,35 @@ export default function SearchCompleteListWithTogetherView() {
       resultMapId: undefined,
     }));
 
-    requestResult(transformedParticipants, meetingPurpose, {
-      beforeCreate: () =>
-        SearchService.startRoomRecommendation(
-          storageRoomData.roomId,
-          storageRoomData.hostId,
-          meetingPurpose,
-        ),
-      onReady: async data => {
-        await SearchService.completeRoomRecommendation(
-          storageRoomData.roomId,
-          storageRoomData.hostId,
-          data.map_id,
-        );
-        setStorageRoomData(prevState => ({
-          ...prevState,
-          resultMapId: data.map_id,
-        }));
+    requestResult(
+      transformedParticipants,
+      meetingPurpose,
+      {
+        beforeCreate: () =>
+          SearchService.startRoomRecommendation(
+            storageRoomData.roomId,
+            storageRoomData.hostId,
+            meetingPurpose,
+          ),
+        onReady: async data => {
+          await SearchService.completeRoomRecommendation(
+            storageRoomData.roomId,
+            storageRoomData.hostId,
+            data.map_id,
+          );
+          setStorageRoomData(prevState => ({
+            ...prevState,
+            resultMapId: data.map_id,
+          }));
+        },
+        onError: () =>
+          SearchService.failRoomRecommendation(
+            storageRoomData.roomId,
+            storageRoomData.hostId,
+          ),
       },
-      onError: () =>
-        SearchService.failRoomRecommendation(
-          storageRoomData.roomId,
-          storageRoomData.hostId,
-        ),
-    });
+      recommendationOptions,
+    );
   };
 
   const handleQuiteRoomBtnClick = () => {
@@ -167,10 +179,16 @@ export default function SearchCompleteListWithTogetherView() {
           </Button>
         </ButtonWrapper>
         {isHost && (
-          <MeetingPurposeSelector
-            value={meetingPurpose}
-            onChange={setMeetingPurpose}
-          />
+          <>
+            <MeetingPurposeSelector
+              value={meetingPurpose}
+              onChange={setMeetingPurpose}
+            />
+            <RecommendationOptionSelector
+              value={recommendationOptions}
+              onChange={setRecommendationOptions}
+            />
+          </>
         )}
         {!isHost && (
           <WaitingText>

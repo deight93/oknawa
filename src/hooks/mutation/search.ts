@@ -8,10 +8,12 @@ import { SearchState } from '@/jotai/global/store';
 
 import useModal from '@/hooks/common/useModal';
 import { MeetingPurpose } from '@/types/meetingPurpose';
+import { RecommendationOptions } from '@/types/recommendationOptions';
 
 interface PlaceSearchVariables {
   searchForm: SearchState[];
   meetingPurpose?: MeetingPurpose;
+  recommendationOptions?: RecommendationOptions;
 }
 
 export const usePlaceSearchMutation = () => {
@@ -19,8 +21,16 @@ export const usePlaceSearchMutation = () => {
 
   return useMutation({
     mutationKey: ['placeSearch'],
-    mutationFn: ({ searchForm, meetingPurpose }: PlaceSearchVariables) =>
-      SearchService.searchPlaces(searchForm, meetingPurpose),
+    mutationFn: ({
+      searchForm,
+      meetingPurpose,
+      recommendationOptions,
+    }: PlaceSearchVariables) =>
+      SearchService.searchPlaces(
+        searchForm,
+        meetingPurpose,
+        recommendationOptions,
+      ),
     onError: error => {
       logApiError('placeSearch', error);
       setModalContents({

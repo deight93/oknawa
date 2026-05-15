@@ -10,6 +10,7 @@ import Button from '@/components/Button';
 import PeopleCard from './components/PeopleCard';
 import SearchLoading from './components/SearchLoading';
 import MeetingPurposeSelector from './components/MeetingPurposeSelector';
+import RecommendationOptionSelector from './components/RecommendationOptionSelector';
 import { ArrowBackIcon } from '@/assets/icons/ArrowBack';
 
 import { useAtom } from 'jotai';
@@ -19,16 +20,22 @@ import { Button as FloatingButton } from '@nextui-org/react';
 
 import useCreateResultFlow from '@/hooks/search/useCreateResultFlow';
 import { MeetingPurpose } from '@/types/meetingPurpose';
+import {
+  DEFAULT_RECOMMENDATION_OPTIONS,
+  RecommendationOptions,
+} from '@/types/recommendationOptions';
 
 export default function SearchCompleteList() {
   const router = useRouter();
 
   const [searchList, setSearchList] = useAtom(searchState);
   const [meetingPurpose, setMeetingPurpose] = useState<MeetingPurpose>();
+  const [recommendationOptions, setRecommendationOptions] =
+    useState<RecommendationOptions>(DEFAULT_RECOMMENDATION_OPTIONS);
   const { requestResult, isLoading, loadingPhase } = useCreateResultFlow();
 
   const handleSearchBtnClick = () => {
-    requestResult(searchList, meetingPurpose);
+    requestResult(searchList, meetingPurpose, undefined, recommendationOptions);
   };
 
   const handleDeleteIconClick = (index: number) => {
@@ -71,6 +78,10 @@ export default function SearchCompleteList() {
         <MeetingPurposeSelector
           value={meetingPurpose}
           onChange={setMeetingPurpose}
+        />
+        <RecommendationOptionSelector
+          value={recommendationOptions}
+          onChange={setRecommendationOptions}
         />
       </Wrapper>
       <SubmitButton

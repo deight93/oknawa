@@ -3,7 +3,7 @@ import type {
   RouteParticipant,
 } from './location-types.ts';
 
-interface ScoredMeetingLocation {
+export interface ScoredMeetingLocation {
   station: PopularMeetingLocation;
   score: number;
   centerDistanceMeters: number;
@@ -36,7 +36,7 @@ export function getBalancedMeetingLocations(
   stations: PopularMeetingLocation[],
   priority: number,
 ): PopularMeetingLocation[] {
-  return scoreMeetingLocationCandidates(
+  return getScoredMeetingLocationCandidates(
     centerCoordinates,
     participants,
     stations,
@@ -52,7 +52,7 @@ export function getBalancedMeetingLocations(
     .map(item => item.station);
 }
 
-function scoreMeetingLocationCandidates(
+export function getScoredMeetingLocationCandidates(
   centerCoordinates: [number, number],
   participants: RouteParticipant[],
   stations: PopularMeetingLocation[],

@@ -1,4 +1,6 @@
 export type PopularLocationType = 'station' | 'terminal';
+export type TravelMode = 'transit' | 'car';
+export type MidpointBasis = 'time' | 'distance';
 export type MeetingPurpose =
   | 'meal'
   | 'cafe'
@@ -18,6 +20,13 @@ export interface RouteParticipant {
 export interface LocationPointsRequestBody {
   participant?: unknown;
   meetingPurpose?: unknown;
+  travelMode?: unknown;
+  midpointBasis?: unknown;
+}
+
+export interface RecommendationOptions {
+  travelMode: TravelMode;
+  midpointBasis: MidpointBasis;
 }
 
 export interface PopularMeetingLocation {
@@ -28,6 +37,7 @@ export interface PopularMeetingLocation {
   location_x: number | string;
   location_y: number | string;
   place_quality?: StationPlaceQuality;
+  distance_score?: number;
   created_at?: string;
   updated_at?: string;
   deleted_at?: string | null;
@@ -66,6 +76,7 @@ export interface StationItineraryResult {
   itinerary: RouteItinerary[];
   place_quality?: StationPlaceQuality;
   recommend_score?: number;
+  distance_score?: number;
 }
 
 export interface StationInfoInsert {
@@ -81,6 +92,7 @@ export interface StationInfoInsert {
   request_info: {
     participant: RouteParticipant[];
     meetingPurpose?: MeetingPurpose;
+    recommendationOptions?: RecommendationOptions;
     placeQuality?: StationPlaceQuality;
   };
 }
@@ -138,4 +150,12 @@ export function isMeetingPurpose(value: unknown): value is MeetingPurpose {
     value === 'date' ||
     value === 'meeting'
   );
+}
+
+export function isTravelMode(value: unknown): value is TravelMode {
+  return value === 'transit' || value === 'car';
+}
+
+export function isMidpointBasis(value: unknown): value is MidpointBasis {
+  return value === 'time' || value === 'distance';
 }

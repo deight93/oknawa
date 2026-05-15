@@ -59,6 +59,16 @@ const staticContracts = [
         'meetingPurpose',
         'individual search must pass meeting purpose',
       );
+      assertIncludes(
+        'src/model/search/SearchForm.ts',
+        'travelMode: recommendationOptions.travelMode',
+        'individual search must pass travel mode',
+      );
+      assertIncludes(
+        'src/model/search/SearchForm.ts',
+        'midpointBasis: recommendationOptions.midpointBasis',
+        'individual search must pass midpoint basis',
+      );
     },
   },
   {
@@ -73,6 +83,36 @@ const staticContracts = [
         'src/services/search/SearchService.ts',
         'p_full_address',
         'participant join RPC must receive full_address',
+      );
+    },
+  },
+  {
+    name: 'recommendation options reach the location scoring engine',
+    run: () => {
+      assertIncludes(
+        'src/views/search/components/RecommendationOptionSelector.tsx',
+        '이동 방식',
+        'search UI must expose travel mode selection',
+      );
+      assertIncludes(
+        'supabase/functions/lib/location-points.ts',
+        'recommendationOptions.travelMode',
+        'location-points must use travel mode when building routes',
+      );
+      assertIncludes(
+        'supabase/functions/lib/location-points.ts',
+        'recommendationOptions.midpointBasis',
+        'location-points must use midpoint basis when ranking candidates',
+      );
+      assertIncludes(
+        'supabase/functions/lib/mapapi.ts',
+        "travelMode === 'DRIVE' ? 'DRIVE' : 'TRANSIT'",
+        'Google route requests must support car routes',
+      );
+      assertIncludes(
+        'supabase/functions/tests/location-points.test.ts',
+        'can rank by distance score',
+        'distance basis ranking must have a regression test',
       );
     },
   },

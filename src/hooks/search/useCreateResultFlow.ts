@@ -12,6 +12,7 @@ import { searchState, SearchState } from '@/jotai/global/store';
 import { mapIdState } from '@/jotai/mapId/store';
 import { resultState } from '@/jotai/result/store';
 import { MeetingPurpose } from '@/types/meetingPurpose';
+import { RecommendationOptions } from '@/types/recommendationOptions';
 import { clearLegacyVoteState } from '@/utils/voteStorage';
 
 export type CreateResultLoadingPhase = 'generating' | 'fetching';
@@ -44,6 +45,7 @@ export default function useCreateResultFlow() {
     searchList: SearchState[],
     meetingPurpose?: MeetingPurpose,
     options?: RequestResultOptions,
+    recommendationOptions?: RecommendationOptions,
   ) => {
     const callErrorHandler = (error: unknown) => {
       void Promise.resolve(options?.onError?.(error)).catch(handlerError => {
@@ -53,7 +55,7 @@ export default function useCreateResultFlow() {
 
     const create = () => {
       createResult(
-        { searchForm: searchList, meetingPurpose },
+        { searchForm: searchList, meetingPurpose, recommendationOptions },
         {
           onSuccess: data => {
             const createdResult = data as CreatedResult;
