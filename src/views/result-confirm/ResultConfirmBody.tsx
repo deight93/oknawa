@@ -11,6 +11,7 @@ import MeetingMap from '@/components/MeetingMap';
 import { Button } from '@nextui-org/react';
 
 import useConfirmedResult from '@/hooks/result/useConfirmedResult';
+import { isCarRecommendation } from '@/utils/recommendationDisplay';
 
 interface ResultConfirmBodyProps {
   queryShareKey: string | null;
@@ -25,11 +26,13 @@ export default function ResultConfirmBody({
     stationName,
     shareKey,
     averageTravelTime,
+    recommendationOptions,
     hasResult,
     isLoading,
   } = useConfirmedResult(queryShareKey);
 
   const { station_name, itinerary, request_info, end_x, end_y } = resultConfirm;
+  const shouldShowHotPlaceButton = !isCarRecommendation(recommendationOptions);
 
   const handleHotplaceBtnClick = () => {
     setBottomSheet(prevState => ({
@@ -74,6 +77,7 @@ export default function ResultConfirmBody({
           stationName={stationName}
           shareKey={shareKey}
           averageTravelTime={averageTravelTime}
+          recommendationOptions={recommendationOptions}
         />
         <MeetingMap
           stationName={station_name}
@@ -83,15 +87,17 @@ export default function ResultConfirmBody({
           itinerary={itinerary}
         />
 
-        <FloatingButton
-          radius="full"
-          size="lg"
-          color="success"
-          variant="shadow"
-          onClick={handleHotplaceBtnClick}
-        >
-          {stationName} 핫플레이스는 어디?
-        </FloatingButton>
+        {shouldShowHotPlaceButton && (
+          <FloatingButton
+            radius="full"
+            size="lg"
+            color="success"
+            variant="shadow"
+            onClick={handleHotplaceBtnClick}
+          >
+            {stationName} 핫플레이스는 어디?
+          </FloatingButton>
+        )}
       </Container>
     </>
   );

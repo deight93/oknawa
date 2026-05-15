@@ -122,6 +122,31 @@ const staticContracts = [
     },
   },
   {
+    name: 'car recommendation results avoid transit-only presentation',
+    run: () => {
+      assertIncludes(
+        'src/utils/recommendationDisplay.ts',
+        "recommendationOptions?.travelMode === 'car'",
+        'result display helpers must detect car recommendations',
+      );
+      assertIncludes(
+        'src/utils/recommendationDisplay.ts',
+        "'위치가 좋은 지역'",
+        'car distance recommendations should use area-oriented copy',
+      );
+      assertIncludes(
+        'src/utils/recommendationDisplay.ts',
+        "option.value !== 'transfer' && option.value !== 'walking'",
+        'car results must hide transit-only sort options',
+      );
+      assertIncludes(
+        'src/views/result-confirm/ResultConfirmBody.tsx',
+        'shouldShowHotPlaceButton',
+        'confirmed car results must not show the hot place prompt',
+      );
+    },
+  },
+  {
     name: 'room recommendation state syncs participants to result pages',
     run: () => {
       assertIncludes(

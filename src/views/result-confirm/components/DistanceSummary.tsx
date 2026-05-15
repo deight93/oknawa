@@ -7,6 +7,8 @@ import useHostControlFlow from '@/hooks/result/useHostControlFlow';
 import useKakaoShare from '@/hooks/result/useKakaoShare';
 
 import { convertToKoreanTime } from '@/utils/date';
+import { getConfirmTitle } from '@/utils/recommendationDisplay';
+import { RecommendationOptions } from '@/types/recommendationOptions';
 
 import { ShareIcon } from '@/assets/icons/Share';
 import { HomeIcon } from '@/assets/icons/Home';
@@ -33,6 +35,7 @@ interface DistanceSummaryProps {
   stationName: string;
   shareKey: string;
   averageTravelTime: number;
+  recommendationOptions?: RecommendationOptions;
 }
 
 export default function DistanceSummary({
@@ -40,6 +43,7 @@ export default function DistanceSummary({
   stationName,
   shareKey,
   averageTravelTime,
+  recommendationOptions,
 }: DistanceSummaryProps) {
   const router = useRouter();
 
@@ -50,6 +54,7 @@ export default function DistanceSummary({
 
   const { setModalContents } = useModal();
   const averageTravelTimeLabel = convertToKoreanTime(averageTravelTime);
+  const title = getConfirmTitle(stationName, recommendationOptions);
 
   const handleKakaoSharingBtnClick = () => {
     shareConfirmedResult(stationName, shareKey);
@@ -83,7 +88,7 @@ export default function DistanceSummary({
       <ExpandBody>
         <ContentWrapper>
           <TitleWrapper>
-            <StationName>{stationName}을 추천해요</StationName>
+            <StationName>{title}</StationName>
             <AverageArrivalTime>
               도착하는데 평균{' '}
               <ArrivalTime>{averageTravelTimeLabel}</ArrivalTime> 걸려요!

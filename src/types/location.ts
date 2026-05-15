@@ -91,4 +91,5 @@ export interface DistanceSummaryItem {
   recommendScore: number;
   vote: number;
   preferenceMatches: ResultPreferenceMatch[];
+  recommendationOptions?: RecommendationOptions;
 }

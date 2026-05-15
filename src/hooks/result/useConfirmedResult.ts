@@ -13,6 +13,7 @@ export default function useConfirmedResult(queryShareKey: string | null) {
     usePlaceSearchWithShareKeyMutation();
 
   const { station_name, share_key, itinerary, request_info } = resultConfirm;
+  const recommendationOptions = request_info?.recommendationOptions;
   const shouldFetchShareResult = Boolean(
     queryShareKey && (share_key !== queryShareKey || !resultConfirm.map_id),
   );
@@ -65,6 +66,7 @@ export default function useConfirmedResult(queryShareKey: string | null) {
     stationName,
     shareKey: share_key,
     averageTravelTime,
+    recommendationOptions,
     hasResult,
     isLoading,
   };

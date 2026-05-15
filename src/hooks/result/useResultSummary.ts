@@ -2,6 +2,7 @@ import { useAtomValue } from 'jotai';
 
 import { resultState } from '@/jotai/result/store';
 import { DistanceSummaryItem, ResultSortOption } from '@/types/location';
+import { isCarRecommendation } from '@/utils/recommendationDisplay';
 
 const compareBySortOption = (sortOption: ResultSortOption) => {
   return (a: DistanceSummaryItem, b: DistanceSummaryItem) => {
@@ -68,6 +69,9 @@ export default function useResultSummary(
     const shareKey = station.share_key;
     const stationParticipants = station.request_info?.participant ?? [];
     const placeQuality = station.request_info?.placeQuality;
+    const recommendationOptions =
+      station.request_info?.recommendationOptions ??
+      request_info?.recommendationOptions;
     const travelTimes = itinerary.map(
       itinerary => itinerary.itinerary.totalTime,
     );
@@ -141,6 +145,7 @@ export default function useResultSummary(
       recommendScore,
       vote,
       preferenceMatches: [],
+      recommendationOptions,
     };
   });
 
@@ -176,11 +181,13 @@ export default function useResultSummary(
         ...(summary.maxTravelTime === minMaxTravelTime
           ? (['maxTime'] as const)
           : []),
-        ...(summary.hasRouteQualityMetrics &&
+        ...(!isCarRecommendation(summary.recommendationOptions) &&
+        summary.hasRouteQualityMetrics &&
         summary.averageTransferCount === minAverageTransferCount
           ? (['transfer'] as const)
           : []),
-        ...(summary.hasRouteQualityMetrics &&
+        ...(!isCarRecommendation(summary.recommendationOptions) &&
+        summary.hasRouteQualityMetrics &&
         summary.averageWalkingTime === minAverageWalkingTime
           ? (['walking'] as const)
           : []),
