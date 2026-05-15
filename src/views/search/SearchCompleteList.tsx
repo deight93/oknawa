@@ -92,7 +92,12 @@ export default function SearchCompleteList() {
       >
         이대로 추천 받기
       </SubmitButton>
-      {isLoading && <SearchLoading phase={loadingPhase} />}
+      {isLoading && (
+        <SearchLoading
+          phase={loadingPhase}
+          recommendationOptions={recommendationOptions}
+        />
+      )}
     </Container>
   );
 }

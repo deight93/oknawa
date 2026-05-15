@@ -90,6 +90,7 @@ export default class SearchService {
     roomId: string,
     roomHostId: string,
     meetingPurpose?: MeetingPurpose,
+    recommendationOptions?: RecommendationOptions,
   ) {
     const { data } = await api.post(
       '/rest/v1/rpc/location_room_recommend_start',
@@ -97,6 +98,7 @@ export default class SearchService {
         p_room_id: roomId,
         p_room_host_id: roomHostId,
         p_meeting_purpose: meetingPurpose ?? null,
+        p_recommendation_options: recommendationOptions ?? null,
       },
     );
 

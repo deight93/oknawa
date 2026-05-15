@@ -25,5 +25,6 @@ export interface RoomStatusResponse {
   result_map_id?: string | null;
   recommendation_status?: RoomRecommendationStatus;
   meeting_purpose?: string | null;
+  recommendation_options?: unknown;
   participant?: unknown[];
 }

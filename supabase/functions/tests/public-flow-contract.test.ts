@@ -9,7 +9,10 @@ const togetherRoomSyncMigration = await Deno.readTextFile(
 const confirmCancelResetMigration = await Deno.readTextFile(
   'supabase/migrations/20260514144500_make_confirm_cancel_reset_votes.sql',
 );
-const publicGrantSql = `${rlsMigration}\n${togetherRoomSyncMigration}`;
+const roomRecommendationOptionsMigration = await Deno.readTextFile(
+  'supabase/migrations/20260515152000_store_room_recommendation_options.sql',
+);
+const publicGrantSql = `${rlsMigration}\n${togetherRoomSyncMigration}\n${roomRecommendationOptionsMigration}`;
 
 const requiredPublicTables = [
   'location_result',
@@ -32,7 +35,7 @@ const requiredAnonFunctions = [
   'location_points_vote(uuid, text, integer, text)',
   'location_confirm_cancel(uuid, text)',
   'location_vote_reset(uuid, text)',
-  'location_room_recommend_start(uuid, text, text)',
+  'location_room_recommend_start(uuid, text, text, jsonb)',
   'location_room_recommend_complete(uuid, text, uuid)',
   'location_room_recommend_fail(uuid, text)',
 ];
@@ -95,6 +98,21 @@ Deno.test('together rooms store recommendation status and result map id', () => 
   assert(
     togetherRoomSyncMigration.includes("SET recommendation_status = 'completed'"),
     'room recommendation complete must publish result state',
+  );
+});
+
+Deno.test('together rooms store recommendation options for shared loading state', () => {
+  assert(
+    roomRecommendationOptionsMigration.includes(
+      'ADD COLUMN IF NOT EXISTS recommendation_options JSONB',
+    ),
+    'location_room must store recommendation options',
+  );
+  assert(
+    roomRecommendationOptionsMigration.includes(
+      'recommendation_options = p_recommendation_options',
+    ),
+    'room recommendation start must publish recommendation options',
   );
 });
 

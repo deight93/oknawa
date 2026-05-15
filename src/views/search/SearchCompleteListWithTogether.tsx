@@ -27,6 +27,27 @@ import {
   RecommendationOptions,
 } from '@/types/recommendationOptions';
 
+const toRecommendationOptions = (
+  value: unknown,
+): RecommendationOptions | undefined => {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+
+  const options = value as Partial<RecommendationOptions>;
+  if (
+    (options.travelMode === 'transit' || options.travelMode === 'car') &&
+    (options.midpointBasis === 'time' || options.midpointBasis === 'distance')
+  ) {
+    return {
+      travelMode: options.travelMode,
+      midpointBasis: options.midpointBasis,
+    };
+  }
+
+  return undefined;
+};
+
 export default function SearchCompleteListWithTogetherView() {
   const router = useRouter();
 
@@ -46,6 +67,9 @@ export default function SearchCompleteListWithTogetherView() {
   const resultMapId = roomStatus
     ? roomStatus.result_map_id
     : storageRoomData.resultMapId;
+  const roomRecommendationOptions =
+    toRecommendationOptions(roomStatus?.recommendation_options) ??
+    recommendationOptions;
   const shouldShowLoading = isLoading || isRoomGenerating;
 
   useEffect(() => {
@@ -109,6 +133,7 @@ export default function SearchCompleteListWithTogetherView() {
             storageRoomData.roomId,
             storageRoomData.hostId,
             meetingPurpose,
+            recommendationOptions,
           ),
         onReady: async data => {
           await SearchService.completeRoomRecommendation(
@@ -213,7 +238,12 @@ export default function SearchCompleteListWithTogetherView() {
           {isHost ? '만나기 편한 장소 추천받기' : '방장 추천 대기 중'}
         </SubmitButton>
       </div>
-      {shouldShowLoading && <SearchLoading phase={loadingPhase} />}
+      {shouldShowLoading && (
+        <SearchLoading
+          phase={loadingPhase}
+          recommendationOptions={roomRecommendationOptions}
+        />
+      )}
     </Container>
   );
 }

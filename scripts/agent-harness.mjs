@@ -147,6 +147,31 @@ const staticContracts = [
     },
   },
   {
+    name: 'search loading copy follows recommendation options',
+    run: () => {
+      assertIncludes(
+        'src/views/search/components/SearchLoading.tsx',
+        '만나기 좋은 지역을 고르는 중',
+        'car search loading must avoid station-only copy',
+      );
+      assertIncludes(
+        'src/views/search/components/SearchLoading.tsx',
+        '자동차 이동 시간을 계산 중',
+        'car search loading must mention car travel time',
+      );
+      assertIncludes(
+        'src/views/search/SearchCompleteListWithTogether.tsx',
+        'roomRecommendationOptions',
+        'together participants must use room recommendation options for loading',
+      );
+      assertIncludes(
+        'supabase/migrations/20260515152000_store_room_recommendation_options.sql',
+        'recommendation_options JSONB',
+        'room recommendation options must be persisted',
+      );
+    },
+  },
+  {
     name: 'room recommendation state syncs participants to result pages',
     run: () => {
       assertIncludes(

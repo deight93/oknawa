@@ -3,15 +3,25 @@
 import { useEffect, useState } from 'react';
 import styled from 'styled-components';
 
+import { RecommendationOptions } from '@/types/recommendationOptions';
+import { isCarRecommendation } from '@/utils/recommendationDisplay';
+
 type SearchLoadingPhase = 'generating' | 'fetching';
 
 interface SearchLoadingProps {
   phase?: SearchLoadingPhase;
+  recommendationOptions?: RecommendationOptions;
 }
 
-const GENERATING_STEPS = [
+const TRANSIT_GENERATING_STEPS = [
   '후보 역을 고르는 중',
   '경로와 환승 정보를 계산 중',
+  '추천 결과를 정리 중',
+];
+
+const CAR_GENERATING_STEPS = [
+  '만나기 좋은 지역을 고르는 중',
+  '자동차 이동 시간을 계산 중',
   '추천 결과를 정리 중',
 ];
 
@@ -19,12 +29,16 @@ const FETCHING_STEP = '결과 화면을 준비 중';
 
 export default function SearchLoading({
   phase = 'generating',
+  recommendationOptions,
 }: SearchLoadingProps) {
   const [activeStepIndex, setActiveStepIndex] = useState(0);
+  const generatingSteps = isCarRecommendation(recommendationOptions)
+    ? CAR_GENERATING_STEPS
+    : TRANSIT_GENERATING_STEPS;
   const steps =
     phase === 'fetching'
-      ? [...GENERATING_STEPS, FETCHING_STEP]
-      : GENERATING_STEPS;
+      ? [...generatingSteps, FETCHING_STEP]
+      : generatingSteps;
   const displayStepIndex =
     phase === 'fetching' ? steps.length - 1 : activeStepIndex;
 
@@ -32,13 +46,11 @@ export default function SearchLoading({
     if (phase === 'fetching') return;
 
     const intervalId = window.setInterval(() => {
-      setActiveStepIndex(
-        prevIndex => (prevIndex + 1) % GENERATING_STEPS.length,
-      );
+      setActiveStepIndex(prevIndex => (prevIndex + 1) % generatingSteps.length);
     }, 1600);
 
     return () => window.clearInterval(intervalId);
-  }, [phase]);
+  }, [generatingSteps.length, phase]);
 
   return (
     <Container>
