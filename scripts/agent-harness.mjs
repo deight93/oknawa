@@ -312,6 +312,36 @@ const staticContracts = [
     },
   },
   {
+    name: 'car candidate data covers area and transport hub use cases',
+    run: () => {
+      assertIncludes(
+        'supabase/migrations/20260515173000_refine_car_meeting_candidates.sql',
+        "'마곡·발산 상권'",
+        'car local area candidates must cover northwest Seoul',
+      );
+      assertIncludes(
+        'supabase/migrations/20260515173000_refine_car_meeting_candidates.sql',
+        "'서현 상권'",
+        'car local area candidates must cover Bundang beyond Pangyo/Jungja',
+      );
+      assertIncludes(
+        'supabase/migrations/20260515173000_refine_car_meeting_candidates.sql',
+        "'안산중앙 상권'",
+        'car local area candidates must cover southwest Gyeonggi',
+      );
+      assertIncludes(
+        'supabase/migrations/20260515173000_refine_car_meeting_candidates.sql',
+        '대전복합터미널',
+        'city candidates must be anchored to transport hubs instead of city halls',
+      );
+      assertIncludes(
+        'supabase/migrations/20260515173000_refine_car_meeting_candidates.sql',
+        '제주버스터미널',
+        'external city candidates must include regional terminal anchors',
+      );
+    },
+  },
+  {
     name: 'public RPC and RLS contracts stay covered',
     run: () => {
       assertIncludes(
