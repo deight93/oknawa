@@ -70,6 +70,7 @@ export interface RouteItinerary {
 
 export interface StationItineraryResult {
   station_name: string;
+  result_type?: PopularLocationType;
   address_name: string;
   end_x: number;
   end_y: number;
@@ -93,6 +94,7 @@ export interface StationInfoInsert {
     participant: RouteParticipant[];
     meetingPurpose?: MeetingPurpose;
     recommendationOptions?: RecommendationOptions;
+    resultType?: PopularLocationType;
     placeQuality?: StationPlaceQuality;
   };
 }

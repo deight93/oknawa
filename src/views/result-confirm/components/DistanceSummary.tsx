@@ -8,6 +8,7 @@ import useKakaoShare from '@/hooks/result/useKakaoShare';
 
 import { convertToKoreanTime } from '@/utils/date';
 import { getConfirmTitle } from '@/utils/recommendationDisplay';
+import { ResultLocationType } from '@/types/location';
 import { RecommendationOptions } from '@/types/recommendationOptions';
 
 import { ShareIcon } from '@/assets/icons/Share';
@@ -36,6 +37,7 @@ interface DistanceSummaryProps {
   shareKey: string;
   averageTravelTime: number;
   recommendationOptions?: RecommendationOptions;
+  resultType?: ResultLocationType;
 }
 
 export default function DistanceSummary({
@@ -44,6 +46,7 @@ export default function DistanceSummary({
   shareKey,
   averageTravelTime,
   recommendationOptions,
+  resultType,
 }: DistanceSummaryProps) {
   const router = useRouter();
 
@@ -54,7 +57,7 @@ export default function DistanceSummary({
 
   const { setModalContents } = useModal();
   const averageTravelTimeLabel = convertToKoreanTime(averageTravelTime);
-  const title = getConfirmTitle(stationName, recommendationOptions);
+  const title = getConfirmTitle(stationName, recommendationOptions, resultType);
 
   const handleKakaoSharingBtnClick = () => {
     shareConfirmedResult(stationName, shareKey);

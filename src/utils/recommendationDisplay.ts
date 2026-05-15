@@ -1,4 +1,4 @@
-import { ResultSortOption } from '@/types/location';
+import { ResultLocationType, ResultSortOption } from '@/types/location';
 import { RecommendationOptions } from '@/types/recommendationOptions';
 
 export const isCarRecommendation = (
@@ -7,25 +7,45 @@ export const isCarRecommendation = (
 
 export const getResultTitleLabel = (
   recommendationOptions?: RecommendationOptions,
+  resultType?: ResultLocationType,
 ) => {
-  if (!isCarRecommendation(recommendationOptions)) {
-    return '만나기 좋은 역';
+  switch (resultType) {
+    case 'local_area':
+      return '만나기 좋은 지역';
+    case 'city':
+      return '중간 도시';
+    case 'terminal':
+      return '만나기 좋은 터미널';
+    case 'station':
+      return '만나기 좋은 역';
   }
 
-  return recommendationOptions?.midpointBasis === 'distance'
-    ? '위치가 좋은 지역'
-    : '만나기 좋은 지역';
+  if (isCarRecommendation(recommendationOptions)) {
+    return recommendationOptions?.midpointBasis === 'distance'
+      ? '위치가 좋은 지역'
+      : '만나기 좋은 지역';
+  }
+
+  return '만나기 좋은 역';
 };
 
 export const getConfirmTitle = (
   name: string,
-  recommendationOptions?: RecommendationOptions,
+  _recommendationOptions?: RecommendationOptions,
+  _resultType?: ResultLocationType,
 ) => {
-  if (!isCarRecommendation(recommendationOptions)) {
-    return `${name}을 추천해요`;
+  return `${name}을 추천해요`;
+};
+
+export const getLocationDisplayName = (
+  name: string,
+  resultType?: ResultLocationType,
+) => {
+  if (resultType === 'local_area' || resultType === 'city') {
+    return name;
   }
 
-  return `${name}에서 만나요`;
+  return name.split(' ')[0] ?? '';
 };
 
 export const getRouteStatText = (

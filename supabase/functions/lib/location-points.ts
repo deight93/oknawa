@@ -288,6 +288,7 @@ export async function createLocationResult(
   participants: RouteParticipant[],
   meetingPurpose?: MeetingPurpose,
   recommendationOptions: RecommendationOptions = DEFAULT_RECOMMENDATION_OPTIONS,
+  resultType?: PopularLocationType,
 ): Promise<StepResult<LocationResultRow>> {
   const mapId = crypto.randomUUID();
   const mapHostId = crypto.randomUUID();
@@ -301,6 +302,7 @@ export async function createLocationResult(
         participant: participants,
         meetingPurpose,
         recommendationOptions,
+        resultType,
       },
       confirmed: null,
     })
@@ -342,6 +344,7 @@ export function buildStationInfoInserts(
       participant: participants,
       meetingPurpose,
       recommendationOptions,
+      resultType: station.result_type,
       placeQuality: station.place_quality,
     },
   }));
@@ -380,6 +383,7 @@ export async function runLocationPointsFlow(
     recommendType,
   );
   if (!locations.ok) return locations;
+  const actualRecommendType = locations.data[0]?.type ?? recommendType;
 
   const stationInfoList = await buildStationItineraries(
     supabase,
@@ -396,6 +400,7 @@ export async function runLocationPointsFlow(
     request.participants,
     request.meetingPurpose,
     request.recommendationOptions,
+    actualRecommendType,
   );
   if (!locationResult.ok) return locationResult;
 

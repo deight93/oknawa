@@ -140,6 +140,7 @@ export async function callGoogleMapItineraries(
 
     return {
       station_name: station.name,
+      result_type: station.type,
       address_name: station.address,
       end_x: Number(station.location_x),
       end_y: Number(station.location_y),

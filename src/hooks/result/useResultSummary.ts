@@ -2,7 +2,10 @@ import { useAtomValue } from 'jotai';
 
 import { resultState } from '@/jotai/result/store';
 import { DistanceSummaryItem, ResultSortOption } from '@/types/location';
-import { isCarRecommendation } from '@/utils/recommendationDisplay';
+import {
+  getLocationDisplayName,
+  isCarRecommendation,
+} from '@/utils/recommendationDisplay';
 
 const compareBySortOption = (sortOption: ResultSortOption) => {
   return (a: DistanceSummaryItem, b: DistanceSummaryItem) => {
@@ -64,7 +67,12 @@ export default function useResultSummary(
   }
 
   const summaries = station_info.map(station => {
-    const stationName = station.station_name?.split(' ')[0] ?? '';
+    const resultType =
+      station.request_info?.resultType ?? request_info?.resultType;
+    const stationName = getLocationDisplayName(
+      station.station_name ?? '',
+      resultType,
+    );
     const itinerary = station.itinerary ?? [];
     const shareKey = station.share_key;
     const stationParticipants = station.request_info?.participant ?? [];
@@ -146,6 +154,7 @@ export default function useResultSummary(
       vote,
       preferenceMatches: [],
       recommendationOptions,
+      resultType,
     };
   });
 

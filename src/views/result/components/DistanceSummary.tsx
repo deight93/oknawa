@@ -287,7 +287,10 @@ export default function DistanceSummary({
     SORT_OPTIONS,
     station.recommendationOptions,
   );
-  const resultTitleLabel = getResultTitleLabel(station.recommendationOptions);
+  const resultTitleLabel = getResultTitleLabel(
+    station.recommendationOptions,
+    station.resultType,
+  );
   const visiblePreferences = getVisiblePreferences(
     station.preferenceMatches,
     2,

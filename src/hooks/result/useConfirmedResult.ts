@@ -4,6 +4,7 @@ import { useAtom } from 'jotai';
 
 import { usePlaceSearchWithShareKeyMutation } from '@/hooks/mutation/search';
 import { resultConfirmState } from '@/jotai/result-confirm/store';
+import { getLocationDisplayName } from '@/utils/recommendationDisplay';
 
 export default function useConfirmedResult(queryShareKey: string | null) {
   const [resultConfirm, setResultConfirm] = useAtom(resultConfirmState);
@@ -14,6 +15,7 @@ export default function useConfirmedResult(queryShareKey: string | null) {
 
   const { station_name, share_key, itinerary, request_info } = resultConfirm;
   const recommendationOptions = request_info?.recommendationOptions;
+  const resultType = request_info?.resultType;
   const shouldFetchShareResult = Boolean(
     queryShareKey && (share_key !== queryShareKey || !resultConfirm.map_id),
   );
@@ -51,7 +53,7 @@ export default function useConfirmedResult(queryShareKey: string | null) {
   const averageTravelTime = itinerary.length
     ? totalTravelTime / itinerary.length
     : 0;
-  const stationName = station_name.split(' ')[0];
+  const stationName = getLocationDisplayName(station_name, resultType);
   const hasResult =
     Boolean(station_name) &&
     itinerary.length > 0 &&
@@ -67,6 +69,7 @@ export default function useConfirmedResult(queryShareKey: string | null) {
     shareKey: share_key,
     averageTravelTime,
     recommendationOptions,
+    resultType,
     hasResult,
     isLoading,
   };

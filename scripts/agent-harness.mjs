@@ -172,6 +172,46 @@ const staticContracts = [
     },
   },
   {
+    name: 'recommendation result type controls result presentation',
+    run: () => {
+      assertIncludes(
+        'supabase/functions/lib/location-types.ts',
+        "resultType?: PopularLocationType",
+        'location-points request info must carry the result type',
+      );
+      assertIncludes(
+        'supabase/functions/lib/mapapi.ts',
+        'result_type: station.type',
+        'route results must preserve the candidate location type',
+      );
+      assertIncludes(
+        'src/types/location.ts',
+        'ResultLocationType',
+        'frontend result types must model the candidate location type',
+      );
+      assertIncludes(
+        'src/hooks/result/useResultSummary.ts',
+        'request_info?.resultType',
+        'result page summaries must read the persisted result type',
+      );
+      assertIncludes(
+        'src/hooks/result/useConfirmedResult.ts',
+        'request_info?.resultType',
+        'confirmed result page must read the persisted result type',
+      );
+      assertIncludes(
+        'src/utils/recommendationDisplay.ts',
+        "'중간 도시'",
+        'external car results must use city-oriented copy',
+      );
+      assertIncludes(
+        'supabase/functions/tests/location-points.test.ts',
+        'preserves recommendation result type in request info',
+        'result type persistence must have a regression test',
+      );
+    },
+  },
+  {
     name: 'search loading copy follows recommendation options',
     run: () => {
       assertIncludes(

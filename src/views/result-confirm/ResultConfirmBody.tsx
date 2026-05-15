@@ -27,6 +27,7 @@ export default function ResultConfirmBody({
     shareKey,
     averageTravelTime,
     recommendationOptions,
+    resultType,
     hasResult,
     isLoading,
   } = useConfirmedResult(queryShareKey);
@@ -78,9 +79,10 @@ export default function ResultConfirmBody({
           shareKey={shareKey}
           averageTravelTime={averageTravelTime}
           recommendationOptions={recommendationOptions}
+          resultType={resultType}
         />
         <MeetingMap
-          stationName={station_name}
+          stationName={stationName}
           endX={end_x}
           endY={end_y}
           participants={request_info?.participant}

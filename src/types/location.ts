@@ -1,6 +1,8 @@
 import { MeetingPurpose } from './meetingPurpose';
 import { RecommendationOptions } from './recommendationOptions';
 
+export type ResultLocationType = 'station' | 'terminal' | 'local_area' | 'city';
+
 export interface PolylinePoint {
   lat: number;
   lng: number;
@@ -38,6 +40,7 @@ export interface RequestInfo {
   participant: Participant[];
   meetingPurpose?: MeetingPurpose;
   recommendationOptions?: RecommendationOptions;
+  resultType?: ResultLocationType;
   placeQuality?: StationPlaceQuality;
 }
 
@@ -92,4 +95,5 @@ export interface DistanceSummaryItem {
   vote: number;
   preferenceMatches: ResultPreferenceMatch[];
   recommendationOptions?: RecommendationOptions;
+  resultType?: ResultLocationType;
 }

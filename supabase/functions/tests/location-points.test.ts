@@ -3,6 +3,7 @@ import {
   assertEquals,
 } from 'https://deno.land/std@0.224.0/assert/mod.ts';
 import {
+  buildStationInfoInserts,
   fetchCandidateMeetingLocations,
   parseLocationPointsRequest,
   resolveRecommendType,
@@ -231,6 +232,30 @@ Deno.test('fetchCandidateMeetingLocations falls back from car area to station ca
 
   assert(result.ok);
   assertEquals(result.data[0].name, '강남역');
+});
+
+Deno.test('buildStationInfoInserts preserves recommendation result type in request info', () => {
+  const inserts = buildStationInfoInserts(
+    '00000000-0000-0000-0000-000000000000',
+    [
+      createParticipant('서울특별시 강남구'),
+      createParticipant('경기도 성남시'),
+    ],
+    [
+      {
+        ...createStationResult('판교 상권', [
+          createRoute(1200, 0, 0),
+          createRoute(1300, 0, 0),
+        ]),
+        result_type: 'local_area',
+      },
+    ],
+    undefined,
+    { travelMode: 'car', midpointBasis: 'time' },
+  );
+
+  assertEquals(inserts[0].request_info.resultType, 'local_area');
+  assertEquals(inserts[0].request_info.recommendationOptions?.travelMode, 'car');
 });
 
 Deno.test('selectBestStationItineraries rewards fewer transfers and shorter walking time', () => {
