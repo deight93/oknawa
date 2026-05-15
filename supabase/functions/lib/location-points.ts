@@ -38,6 +38,8 @@ interface LocationResultRow {
 
 const CANDIDATE_POOL_MULTIPLIER = 2;
 const MAX_CANDIDATE_POOL_SIZE = 12;
+const CAR_TIME_CANDIDATE_POOL_MULTIPLIER = 4;
+const MAX_CAR_TIME_CANDIDATE_POOL_SIZE = 20;
 const MISSING_PARTICIPANT_TIME_PENALTY_SECONDS = 7200;
 const MISSING_PARTICIPANT_DISTANCE_PENALTY_METERS = 100000;
 const CAR_DISTANCE_TIME_SPREAD_PENALTY_METERS_PER_SECOND = 3;
@@ -235,7 +237,11 @@ export async function buildStationItineraries(
   recommendationOptions: RecommendationOptions = DEFAULT_RECOMMENDATION_OPTIONS,
 ): Promise<StepResult<StationItineraryResult[]>> {
   const centerCoordinates = getCenterCoordinates(participants);
-  const candidatePoolSize = getCandidatePoolSize(priority, locations.length);
+  const candidatePoolSize = getCandidatePoolSize(
+    priority,
+    locations.length,
+    recommendationOptions,
+  );
   const centerLocationDataList = getScoredMeetingLocationCandidates(
     centerCoordinates,
     participants,
@@ -441,12 +447,26 @@ function getCandidateFallbackTypes(
   }
 }
 
-function getCandidatePoolSize(priority: number, locationCount: number): number {
+export function getCandidatePoolSize(
+  priority: number,
+  locationCount: number,
+  recommendationOptions: RecommendationOptions = DEFAULT_RECOMMENDATION_OPTIONS,
+): number {
+  const isCarTimeRecommendation =
+    recommendationOptions.travelMode === 'car' &&
+    recommendationOptions.midpointBasis === 'time';
+  const multiplier = isCarTimeRecommendation
+    ? CAR_TIME_CANDIDATE_POOL_MULTIPLIER
+    : CANDIDATE_POOL_MULTIPLIER;
+  const maxCandidatePoolSize = isCarTimeRecommendation
+    ? MAX_CAR_TIME_CANDIDATE_POOL_SIZE
+    : MAX_CANDIDATE_POOL_SIZE;
+
   return Math.min(
     locationCount,
     Math.max(
       priority,
-      Math.min(priority * CANDIDATE_POOL_MULTIPLIER, MAX_CANDIDATE_POOL_SIZE),
+      Math.min(priority * multiplier, maxCandidatePoolSize),
     ),
   );
 }

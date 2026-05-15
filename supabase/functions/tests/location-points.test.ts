@@ -5,11 +5,15 @@ import {
 import {
   buildStationInfoInserts,
   fetchCandidateMeetingLocations,
+  getCandidatePoolSize,
   parseLocationPointsRequest,
   resolveRecommendType,
   selectBestStationItineraries,
 } from '../lib/location-points.ts';
+import { getScoredMeetingLocationCandidates } from '../lib/distance.ts';
 import type {
+  PopularLocationType,
+  PopularMeetingLocation,
   RouteItinerary,
   StationItineraryResult,
 } from '../lib/location-types.ts';
@@ -22,6 +26,11 @@ const createParticipant = (fullAddress: string) => ({
   start_x: 127.0276,
   start_y: 37.4979,
 });
+
+const CAR_CANDIDATE_MIGRATIONS = [
+  'supabase/migrations/20260515140000_seed_car_meeting_candidates.sql',
+  'supabase/migrations/20260515173000_refine_car_meeting_candidates.sql',
+];
 
 const createSupabaseMock = (
   dataByType: Record<string, unknown[]>,
@@ -65,6 +74,61 @@ const createStationResult = (
   end_y: 37,
   itinerary: routes,
 });
+
+async function loadCarCandidates(type: PopularLocationType) {
+  const candidateMap = new Map<string, PopularMeetingLocation>();
+
+  for (const path of CAR_CANDIDATE_MIGRATIONS) {
+    const migration = await Deno.readTextFile(path);
+    const rowPattern =
+      /\('([^']+)',\s*'(local_area|city)',\s*'([^']+)',\s*'([^']+)',\s*([0-9.]+),\s*([0-9.]+)/g;
+
+    for (const match of migration.matchAll(rowPattern)) {
+      const [, name, candidateType, url, address, locationX, locationY] = match;
+
+      if (candidateType !== type) continue;
+
+      candidateMap.set(name, {
+        name,
+        type: candidateType,
+        url,
+        address,
+        location_x: Number(locationX),
+        location_y: Number(locationY),
+      });
+    }
+  }
+
+  return Array.from(candidateMap.values());
+}
+
+function getTopCandidateNames(
+  candidates: PopularMeetingLocation[],
+  participants: ReturnType<typeof createParticipant>[],
+  limit: number,
+) {
+  const centerCoordinates: [number, number] = [
+    participants.reduce((sum, participant) => sum + participant.start_x, 0) /
+      participants.length,
+    participants.reduce((sum, participant) => sum + participant.start_y, 0) /
+      participants.length,
+  ];
+
+  return getScoredMeetingLocationCandidates(
+    centerCoordinates,
+    participants,
+    candidates,
+  )
+    .sort(
+      (a, b) =>
+        a.score - b.score ||
+        a.maxParticipantDistanceMeters - b.maxParticipantDistanceMeters ||
+        a.centerDistanceMeters - b.centerDistanceMeters ||
+        a.station.name.localeCompare(b.station.name),
+    )
+    .slice(0, limit)
+    .map(candidate => candidate.station.name);
+}
 
 Deno.test('responseApiError keeps a structured error payload', async () => {
   const response = responseApiError('invalid_request', '잘못된 요청입니다', 400, {
@@ -183,6 +247,81 @@ Deno.test('resolveRecommendType uses area and city candidates for car recommenda
       { travelMode: 'car', midpointBasis: 'distance' },
     ),
     'city',
+  );
+});
+
+Deno.test('car recommendation QA keeps a wider candidate pool for drive-time ranking', () => {
+  assertEquals(
+    getCandidatePoolSize(4, 50, { travelMode: 'transit', midpointBasis: 'time' }),
+    8,
+  );
+  assertEquals(
+    getCandidatePoolSize(4, 50, { travelMode: 'car', midpointBasis: 'distance' }),
+    8,
+  );
+  assertEquals(
+    getCandidatePoolSize(4, 50, { travelMode: 'car', midpointBasis: 'time' }),
+    16,
+  );
+});
+
+Deno.test('car recommendation QA covers Seoul/Gyeonggi area candidates', async () => {
+  const localAreaCandidates = await loadCarCandidates('local_area');
+  const topCandidateNames = getTopCandidateNames(
+    localAreaCandidates,
+    [
+      {
+        ...createParticipant('서울특별시 강남구 역삼동'),
+        start_x: 127.0276,
+        start_y: 37.4979,
+      },
+      {
+        ...createParticipant('경기도 수원시 팔달구 매산로1가'),
+        start_x: 127.0002,
+        start_y: 37.2656,
+      },
+    ],
+    getCandidatePoolSize(4, localAreaCandidates.length, {
+      travelMode: 'car',
+      midpointBasis: 'time',
+    }),
+  );
+
+  assert(localAreaCandidates.length >= 45);
+  assert(
+    topCandidateNames.some(name =>
+      ['판교 상권', '정자 상권', '사당 상권', '교대 상권'].includes(name),
+    ),
+  );
+});
+
+Deno.test('car recommendation QA covers external city hub candidates', async () => {
+  const cityCandidates = await loadCarCandidates('city');
+  const topCandidateNames = getTopCandidateNames(
+    cityCandidates,
+    [
+      {
+        ...createParticipant('서울특별시 중구 봉래동2가'),
+        start_x: 126.9707,
+        start_y: 37.5547,
+      },
+      {
+        ...createParticipant('부산광역시 동구 초량동'),
+        start_x: 129.0397,
+        start_y: 35.1151,
+      },
+    ],
+    getCandidatePoolSize(4, cityCandidates.length, {
+      travelMode: 'car',
+      midpointBasis: 'time',
+    }),
+  );
+
+  assert(cityCandidates.length >= 35);
+  assert(
+    topCandidateNames.some(name =>
+      ['대전광역시', '대구광역시', '청주시', '천안시'].includes(name),
+    ),
   );
 });
 

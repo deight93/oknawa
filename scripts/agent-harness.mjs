@@ -135,9 +135,19 @@ const staticContracts = [
         'car distance ranking must lightly penalize severe time imbalance',
       );
       assertIncludes(
+        'supabase/functions/lib/location-points.ts',
+        'CAR_TIME_CANDIDATE_POOL_MULTIPLIER',
+        'car drive-time ranking must evaluate a wider pre-route candidate pool',
+      );
+      assertIncludes(
         'supabase/functions/tests/location-points.test.ts',
         'ranks car time by drive travel time without transit penalties',
         'car time scoring must have a regression test',
+      );
+      assertIncludes(
+        'supabase/functions/tests/location-points.test.ts',
+        'keeps a wider candidate pool for drive-time ranking',
+        'car time candidate pool sizing must have a regression test',
       );
       assertIncludes(
         'supabase/functions/tests/location-points.test.ts',
