@@ -26,15 +26,15 @@
 }
 
 .light {
-  --app-outer-bg: #e8ebef;
-  --app-bg: #f7f8fa;
-  --surface: #ffffff;
-  --surface-raised: #ffffff;
-  --surface-muted: #f1f3f5;
-  --surface-strong: #e9ecef;
-  --surface-inset: #f7f8fa;
-  --border: #dde1e6;
-  --border-strong: #c9ced6;
+  --app-outer-bg: #dfe4ea;
+  --app-bg: #eef1f4;
+  --surface: #f4f6f8;
+  --surface-raised: #f0f3f6;
+  --surface-muted: #e7ebef;
+  --surface-strong: #dde3e8;
+  --surface-inset: #e9edf2;
+  --border: #d1d7df;
+  --border-strong: #b8c1cc;
   --text-primary: #17181c;
   --text-secondary: #343840;
   --text-muted: #69707a;
