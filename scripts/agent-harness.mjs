@@ -122,6 +122,31 @@ const staticContracts = [
     },
   },
   {
+    name: 'car recommendation scoring is separated from transit scoring',
+    run: () => {
+      assertIncludes(
+        'supabase/functions/lib/location-points.ts',
+        "recommendationOptions.travelMode === 'car'",
+        'car recommendations must use a separate scoring path',
+      );
+      assertIncludes(
+        'supabase/functions/lib/location-points.ts',
+        'CAR_DISTANCE_TIME_SPREAD_PENALTY_METERS_PER_SECOND',
+        'car distance ranking must lightly penalize severe time imbalance',
+      );
+      assertIncludes(
+        'supabase/functions/tests/location-points.test.ts',
+        'ranks car time by drive travel time without transit penalties',
+        'car time scoring must have a regression test',
+      );
+      assertIncludes(
+        'supabase/functions/tests/location-points.test.ts',
+        'lightly penalizes severe time imbalance',
+        'car distance scoring must have a regression test',
+      );
+    },
+  },
+  {
     name: 'car recommendation results avoid transit-only presentation',
     run: () => {
       assertIncludes(

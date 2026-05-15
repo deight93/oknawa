@@ -40,6 +40,7 @@ const CANDIDATE_POOL_MULTIPLIER = 2;
 const MAX_CANDIDATE_POOL_SIZE = 12;
 const MISSING_PARTICIPANT_TIME_PENALTY_SECONDS = 7200;
 const MISSING_PARTICIPANT_DISTANCE_PENALTY_METERS = 100000;
+const CAR_DISTANCE_TIME_SPREAD_PENALTY_METERS_PER_SECOND = 3;
 const DEFAULT_RECOMMENDATION_OPTIONS: RecommendationOptions = {
   travelMode: 'transit',
   midpointBasis: 'time',
@@ -269,7 +270,7 @@ export async function buildStationItineraries(
     participants.length,
     priority,
     meetingPurpose,
-    recommendationOptions.midpointBasis,
+    recommendationOptions,
   );
 
   if (
@@ -450,7 +451,7 @@ export function selectBestStationItineraries(
   participantCount: number,
   priority: number,
   meetingPurpose?: MeetingPurpose,
-  midpointBasis: MidpointBasis = DEFAULT_RECOMMENDATION_OPTIONS.midpointBasis,
+  recommendationOptions: RecommendationOptions = DEFAULT_RECOMMENDATION_OPTIONS,
 ): StationItineraryResult[] {
   return stationInfoList
     .filter(station => station.itinerary.length > 0)
@@ -460,7 +461,7 @@ export function selectBestStationItineraries(
         station,
         participantCount,
         meetingPurpose,
-        midpointBasis,
+        recommendationOptions,
       ),
     }))
     .sort(
@@ -476,47 +477,108 @@ function getStationItineraryScore(
   station: StationItineraryResult,
   participantCount: number,
   meetingPurpose?: MeetingPurpose,
-  midpointBasis: MidpointBasis = DEFAULT_RECOMMENDATION_OPTIONS.midpointBasis,
+  recommendationOptions: RecommendationOptions = DEFAULT_RECOMMENDATION_OPTIONS,
 ): number {
-  if (midpointBasis === 'distance') {
-    const missingParticipantCount = Math.max(
-      participantCount - station.itinerary.length,
-      0,
-    );
-    return (
-      (station.distance_score ?? Number.POSITIVE_INFINITY) +
-      missingParticipantCount * MISSING_PARTICIPANT_DISTANCE_PENALTY_METERS
-    );
+  const metrics = getStationRouteMetrics(station, participantCount);
+
+  if (recommendationOptions.travelMode === 'car') {
+    return getCarItineraryScore(station, metrics, recommendationOptions);
   }
 
+  if (recommendationOptions.midpointBasis === 'distance') {
+    return getDistanceBasisScore(station, metrics);
+  }
+
+  return getTransitTimeBasisScore(station, metrics, meetingPurpose);
+}
+
+function getTransitTimeBasisScore(
+  station: StationItineraryResult,
+  metrics: StationRouteMetrics,
+  meetingPurpose?: MeetingPurpose,
+): number {
   const weights = RECOMMEND_SCORE_WEIGHTS[meetingPurpose ?? 'default'];
+  const placeQualityBenefit =
+    (station.place_quality?.score ?? 0) * weights.placeQualityBenefit;
+
+  return (
+    metrics.averageTravelTime * weights.averageTravelTime +
+    metrics.maxTravelTime * weights.maxTravelTime +
+    metrics.averageTransferCount * weights.transferPenalty +
+    metrics.averageWalkingTime * weights.walkingTimePenalty +
+    metrics.missingParticipantCount * MISSING_PARTICIPANT_TIME_PENALTY_SECONDS -
+    placeQualityBenefit
+  );
+}
+
+function getCarItineraryScore(
+  station: StationItineraryResult,
+  metrics: StationRouteMetrics,
+  recommendationOptions: RecommendationOptions,
+): number {
+  if (recommendationOptions.midpointBasis === 'distance') {
+    return getDistanceBasisScore(station, metrics);
+  }
+
+  return (
+    metrics.averageTravelTime +
+    metrics.maxTravelTime * 0.35 +
+    metrics.missingParticipantCount * MISSING_PARTICIPANT_TIME_PENALTY_SECONDS
+  );
+}
+
+function getDistanceBasisScore(
+  station: StationItineraryResult,
+  metrics: StationRouteMetrics,
+): number {
+  return (
+    (station.distance_score ?? Number.POSITIVE_INFINITY) +
+    metrics.travelTimeSpread *
+      CAR_DISTANCE_TIME_SPREAD_PENALTY_METERS_PER_SECOND +
+    metrics.missingParticipantCount * MISSING_PARTICIPANT_DISTANCE_PENALTY_METERS
+  );
+}
+
+interface StationRouteMetrics {
+  averageTravelTime: number;
+  maxTravelTime: number;
+  averageTransferCount: number;
+  averageWalkingTime: number;
+  travelTimeSpread: number;
+  missingParticipantCount: number;
+}
+
+function getStationRouteMetrics(
+  station: StationItineraryResult,
+  participantCount: number,
+): StationRouteMetrics {
   const routeCount = station.itinerary.length;
   const travelTimes = station.itinerary.map(route => route.itinerary.totalTime);
   const totalTravelTime = travelTimes.reduce((sum, time) => sum + time, 0);
-  const averageTravelTime = totalTravelTime / routeCount;
-  const maxTravelTime = Math.max(...travelTimes);
-  const averageTransferCount =
-    station.itinerary.reduce(
-      (sum, route) => sum + (route.itinerary.transferCount ?? 0),
-      0,
-    ) / routeCount;
-  const averageWalkingTime =
-    station.itinerary.reduce(
-      (sum, route) => sum + (route.itinerary.walkingTime ?? 0),
-      0,
-    ) / routeCount;
-  const placeQualityBenefit =
-    (station.place_quality?.score ?? 0) * weights.placeQualityBenefit;
-  const missingParticipantCount = Math.max(participantCount - routeCount, 0);
+  const averageTravelTime = routeCount ? totalTravelTime / routeCount : 0;
+  const maxTravelTime = travelTimes.length ? Math.max(...travelTimes) : 0;
+  const minTravelTime = travelTimes.length ? Math.min(...travelTimes) : 0;
+  const averageTransferCount = routeCount
+    ? station.itinerary.reduce(
+        (sum, route) => sum + (route.itinerary.transferCount ?? 0),
+        0,
+      ) / routeCount
+    : 0;
+  const averageWalkingTime = routeCount
+    ? station.itinerary.reduce(
+        (sum, route) => sum + (route.itinerary.walkingTime ?? 0),
+        0,
+      ) / routeCount
+    : 0;
 
-  return (
-    averageTravelTime * weights.averageTravelTime +
-    maxTravelTime * weights.maxTravelTime +
-    averageTransferCount * weights.transferPenalty +
-    averageWalkingTime * weights.walkingTimePenalty +
-    missingParticipantCount * MISSING_PARTICIPANT_TIME_PENALTY_SECONDS -
-    placeQualityBenefit
-  );
+  return {
+    averageTravelTime,
+    maxTravelTime,
+    averageTransferCount,
+    averageWalkingTime,
+    travelTimeSpread: Math.max(maxTravelTime - minTravelTime, 0),
+    missingParticipantCount: Math.max(participantCount - routeCount, 0),
+  };
 }
 
 function parsePriority(url: string): number {

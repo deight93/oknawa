@@ -289,8 +289,56 @@ Deno.test('selectBestStationItineraries can rank by distance score', () => {
     2,
     2,
     undefined,
-    'distance',
+    { travelMode: 'transit', midpointBasis: 'distance' },
   );
 
   assertEquals(result[0].station_name, '거리상 가까운 역');
+});
+
+Deno.test('selectBestStationItineraries ranks car time by drive travel time without transit penalties', () => {
+  const fasterWithTransitNoise = createStationResult('자동차로 빠른 지역', [
+    createRoute(900, 5, 2000),
+    createRoute(900, 5, 2000),
+  ]);
+  const slowerWithoutTransitNoise = createStationResult('자동차로 느린 지역', [
+    createRoute(1200, 0, 0),
+    createRoute(1200, 0, 0),
+  ]);
+
+  const result = selectBestStationItineraries(
+    [slowerWithoutTransitNoise, fasterWithTransitNoise],
+    2,
+    2,
+    undefined,
+    { travelMode: 'car', midpointBasis: 'time' },
+  );
+
+  assertEquals(result[0].station_name, '자동차로 빠른 지역');
+});
+
+Deno.test('selectBestStationItineraries keeps car distance ranking but lightly penalizes severe time imbalance', () => {
+  const balancedLocation = {
+    ...createStationResult('조금 멀어도 균형 좋은 지역', [
+      createRoute(1000, 0, 0),
+      createRoute(1000, 0, 0),
+    ]),
+    distance_score: 5000,
+  };
+  const imbalancedLocation = {
+    ...createStationResult('가깝지만 치우친 지역', [
+      createRoute(100, 0, 0),
+      createRoute(2000, 0, 0),
+    ]),
+    distance_score: 1000,
+  };
+
+  const result = selectBestStationItineraries(
+    [imbalancedLocation, balancedLocation],
+    2,
+    2,
+    undefined,
+    { travelMode: 'car', midpointBasis: 'distance' },
+  );
+
+  assertEquals(result[0].station_name, '조금 멀어도 균형 좋은 지역');
 });
