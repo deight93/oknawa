@@ -1,6 +1,6 @@
 import { MinusIcon } from '@/assets/icons/Minus';
 import { Crown } from 'lucide-react';
-import Avatar from '@/components/Avatar';
+import Avatar, { AVATAR_COLORS } from '@/components/Avatar';
 import styled from 'styled-components';
 
 interface PeopleCardProps {
@@ -18,10 +18,12 @@ export default function PeopleCard({
   index,
   type = 'individual',
 }: PeopleCardProps) {
+  const avatarColor = AVATAR_COLORS[index ?? 0] ?? 'var(--primary)';
+
   return (
     <Container>
       <Wrapper>
-        <Avatar color="var(--surface-muted)" size="lg" />
+        <Avatar name={name} color={avatarColor} size="lg" />
         <div>
           <Name>
             {type === 'together' && index === 0 && (
@@ -61,6 +63,7 @@ const Wrapper = styled.div`
 const Name = styled.p`
   display: flex;
   gap: 4px;
+  color: var(--text-primary);
   font-weight: 600;
 `;
 

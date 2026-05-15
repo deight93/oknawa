@@ -64,6 +64,7 @@ export default function SearchCompleteList() {
                 key={index}
                 name={search.name}
                 place={search.address.regionName}
+                index={index}
                 onDeleteIconClick={() => handleDeleteIconClick(index)}
               />
             );
