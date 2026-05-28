@@ -34,41 +34,57 @@ const generateContainerSize = (size: string) => {
   }
 };
 
-const generateFontSize = (size: string) => {
+const generateFontSize = (size: string, textLength: number) => {
+  const isCompact = textLength > 1;
+
   switch (size) {
     case 'sm':
-      return '8px';
+      return isCompact ? '12px' : '16px';
     case 'md':
-      return '16px';
+      return isCompact ? '14px' : '16px';
     case 'lg':
-      return '24px';
+      return isCompact ? '18px' : '24px';
     default:
-      return '16px';
+      return isCompact ? '14px' : '16px';
   }
 };
 
+const getAvatarLabel = (name: string) =>
+  Array.from(name.trim().replace(/\s+/g, '')).slice(0, 2).join('');
+
 export default function Avatar({ name = '', size = 'sm', color }: AvatarProps) {
-  const userName = name.length > 4 ? `${name.slice(0, 4)}` : name;
+  const userName = getAvatarLabel(name);
 
   return (
-    <Container size={size} color={color}>
-      {name && <Name size={size}>{userName}</Name>}
+    <Container $size={size} $color={color}>
+      {userName && (
+        <Name $size={size} $textLength={Array.from(userName).length}>
+          {userName}
+        </Name>
+      )}
     </Container>
   );
 }
 
-const Container = styled.div<{ size: string; color: AvatarColor }>`
+const Container = styled.div<{ $size: string; $color: AvatarColor }>`
   display: flex;
   justify-content: center;
   align-items: center;
-  width: ${({ size }) => generateContainerSize(size)};
-  height: ${({ size }) => generateContainerSize(size)};
+  width: ${({ $size }) => generateContainerSize($size)};
+  height: ${({ $size }) => generateContainerSize($size)};
   border-radius: 50%;
-  background-color: ${({ color }) => color};
+  background-color: ${({ $color }) => $color};
 `;
 
-const Name = styled.span<{ size: string }>`
-  font-size: ${({ size }) => generateFontSize(size)};
+const Name = styled.span<{ $size: string; $textLength: number }>`
+  display: block;
+  max-width: calc(100% - 8px);
+  overflow: hidden;
+  font-size: ${({ $size, $textLength }) =>
+    generateFontSize($size, $textLength)};
   font-weight: 700;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
   color: #ffffff;
 `;
