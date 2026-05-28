@@ -1,4 +1,3 @@
-import { atom } from 'jotai';
 import { atomWithReset, atomWithStorage, createJSONStorage } from 'jotai/utils';
 import { ReactNode } from 'react';
 
@@ -29,6 +28,12 @@ interface BottomSheetState {
   isFullContents: boolean;
 }
 
+interface StringStorage {
+  getItem: (key: string) => string | null;
+  setItem: (key: string, newValue: string) => void;
+  removeItem: (key: string) => void;
+}
+
 const initialState: ModalState = {
   isOpen: false,
   title: '',
@@ -45,9 +50,24 @@ const bottomSheetInitialState: BottomSheetState = {
   isFullContents: false,
 };
 
+const noopStringStorage: StringStorage = {
+  getItem: () => null,
+  setItem: () => {},
+  removeItem: () => {},
+};
+
+const searchStorage = createJSONStorage<SearchState[]>(() =>
+  typeof window === 'undefined' ? noopStringStorage : window.sessionStorage,
+);
+
 export const modalState = atomWithReset<ModalState>(initialState);
 
-export const searchState = atom<SearchState[]>([]);
+export const searchState = atomWithStorage<SearchState[]>(
+  'searchList',
+  [],
+  searchStorage,
+  { getOnInit: true },
+);
 
 export const bottomSheetState = atomWithReset<BottomSheetState>(
   bottomSheetInitialState,
