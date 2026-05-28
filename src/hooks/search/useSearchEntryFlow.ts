@@ -24,6 +24,16 @@ const toDeparturePointRequestBody = (
   start_y: searchForm.address.latitude,
 });
 
+const toSearchStateSnapshot = (searchForm: SearchState): SearchState => ({
+  name: searchForm.name,
+  address: {
+    fullAddress: searchForm.address.fullAddress,
+    latitude: searchForm.address.latitude,
+    longitude: searchForm.address.longitude,
+    regionName: searchForm.address.regionName,
+  },
+});
+
 export default function useSearchEntryFlow(
   type: SearchViewType,
   shareRoomId: string | null,
@@ -39,18 +49,18 @@ export default function useSearchEntryFlow(
   const isIndividualView = type === 'individual';
   const searchCount = searchList.length;
 
-  const moveToIndividualListOrReset = () => {
+  const submitIndividualSearch = (searchForm: SearchState) => {
+    setSearchList(prevState => [
+      ...prevState,
+      toSearchStateSnapshot(searchForm),
+    ]);
+
     if (searchCount >= 1) {
       router.push('/search/list');
       return;
     }
 
     resetForm();
-  };
-
-  const submitIndividualSearch = (searchForm: SearchState) => {
-    setSearchList(prevState => [...prevState, searchForm]);
-    moveToIndividualListOrReset();
   };
 
   const submitDeparturePointToRoom = (

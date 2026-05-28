@@ -50,7 +50,7 @@ const generateFontSize = (size: string, textLength: number) => {
 };
 
 const getAvatarLabel = (name: string) =>
-  Array.from(name.trim().replace(/\s+/g, '')).slice(0, 2).join('');
+  Array.from(name.trim().replace(/\s+/g, '')).slice(0, 1).join('');
 
 export default function Avatar({ name = '', size = 'sm', color }: AvatarProps) {
   const userName = getAvatarLabel(name);
