@@ -24,7 +24,7 @@ const apiErrorMessageMap: Record<string, string> = {
   candidate_location_empty:
     '추천 후보 데이터를 찾지 못했습니다. 잠시 후 다시 시도해주세요.',
   no_route_result:
-    '이동 경로를 계산하지 못했습니다. 출발지를 다시 확인해주세요.',
+    '참가자 모두의 이동 경로를 확인하지 못했어요. 잠시 후 다시 시도하거나 이동 방식을 바꿔주세요.',
   location_result_insert_failed:
     '추천 결과를 저장하지 못했습니다. 잠시 후 다시 시도해주세요.',
   station_info_insert_failed:

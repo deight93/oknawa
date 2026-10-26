@@ -479,7 +479,7 @@ export function selectBestStationItineraries(
   recommendationOptions: RecommendationOptions = DEFAULT_RECOMMENDATION_OPTIONS,
 ): StationItineraryResult[] {
   return stationInfoList
-    .filter(station => station.itinerary.length > 0)
+    .filter(station => station.itinerary.length === participantCount)
     .map(station => ({
       ...station,
       recommend_score: getStationItineraryScore(
