@@ -10,7 +10,7 @@
     "lint": "next lint",
     "agent:harness": "node scripts/agent-harness.mjs --full",
     "agent:harness:quick": "node scripts/agent-harness.mjs --quick",
-    "test:app": "tsx --test tests/*.test.ts tests/*.test.tsx"
+    "test:app": "node --import tsx --test tests/*.test.ts tests/*.test.tsx"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.2",

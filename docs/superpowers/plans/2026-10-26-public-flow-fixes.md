@@ -53,5 +53,5 @@
 
 ### Task 4: Review and open PR
 
-- [ ] Request independent branch review, resolve substantive findings with regression tests.
+- [x] Request independent branch review, resolve substantive findings with regression tests.
 - [ ] Verify final tree; push `codex/public-flow-fixes`; create and attach PR.
