@@ -22,8 +22,7 @@ export default function useResultPageState(queryMapId: string | null) {
     sortOption,
     activeMapId,
   );
-  const { data, isLoading, clearRefetchInterval } =
-    usePlaceSearchMapIdQuery(activeMapId);
+  const { data, isLoading } = usePlaceSearchMapIdQuery(activeMapId);
   const voteRound = data?.vote_round ?? 1;
   const currentStation = distanceSummaries[currentIndex];
   const stationCount = distanceSummaries.length;
@@ -39,12 +38,6 @@ export default function useResultPageState(queryMapId: string | null) {
       clearLegacyVoteState();
     }
   }, [queryMapId]);
-
-  useEffect(() => {
-    if (data?.confirmed) {
-      clearRefetchInterval();
-    }
-  }, [data, clearRefetchInterval]);
 
   useEffect(() => {
     if (currentIndex >= stationCount) {

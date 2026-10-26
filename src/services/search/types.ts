@@ -1,3 +1,8 @@
+export interface CreatedResult {
+  map_id: string;
+  map_host_id: string;
+}
+
 export interface SubmitDeparturePointRequestBody {
   room_id: string;
   name: string;

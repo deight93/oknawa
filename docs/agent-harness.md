@@ -15,7 +15,7 @@ Use `pnpm agent:harness:quick` while designing or editing small pieces. It runs
 static contract checks only.
 
 Use `pnpm agent:harness` before committing feature work. It runs the static
-contracts, frontend lint/build, and Supabase Edge Function type/test checks.
+contracts, executable React/SQL regression tests, frontend lint/build, and Supabase Edge Function type/test checks.
 
 ## Covered Flows
 
@@ -55,3 +55,11 @@ contracts:
 - Voting, confirmation, or retry semantics.
 - Room status and participant navigation behavior.
 - Public RPC grants, RLS policy assumptions, or migration contracts.
+
+## Regression tests
+
+`pnpm test:app` exercises public RPC permissions with all migrations in PGlite and
+shared-result hooks with real React, Jotai, and Query providers. External HTTP
+responses are controlled by an Axios adapter. Deno tests additionally cover empty
+routes, provider failures, incomplete group routes, and transit request options.
+Local and CI Edge Function checks use Deno 2.9.6.

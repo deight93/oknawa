@@ -94,14 +94,15 @@ The harness is documented in `docs/agent-harness.md`.
 The underlying checks are:
 
 ```bash
+pnpm test:app
 pnpm lint
 pnpm build
-pnpm dlx deno check --config supabase/functions/location-points/deno.json \
+pnpm dlx deno@2.9.6 check --no-lock --config supabase/functions/location-points/deno.json \
   supabase/functions/location-points/index.ts \
   supabase/functions/location-meeting/index.ts \
   supabase/functions/location-meeting-terminal/index.ts \
   supabase/functions/location-point-place/index.ts
-pnpm dlx deno test --allow-read=supabase/migrations \
+pnpm dlx deno@2.9.6 test --no-lock --allow-read=supabase/migrations \
   --config supabase/functions/location-points/deno.json \
   supabase/functions/tests/*.test.ts
 ```
@@ -112,3 +113,9 @@ Current automated coverage includes:
 - Edge Function type checks
 - Location recommendation fallback and scoring tests
 - RLS/RPC public flow contract tests
+
+Route recommendations require a verified route for every participant. If the
+routing provider cannot supply one, the app reports that routes are unavailable
+instead of generating a travel-time estimate from straight-line distance. Transit
+requests include all supported public transport modes. Provider coverage still
+limits car recommendations; changing providers is a separate follow-up.

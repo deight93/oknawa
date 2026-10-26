@@ -1,76 +1,70 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAtomValue } from 'jotai';
 
-import { useAtom } from 'jotai';
-
-import { usePlaceSearchWithShareKeyMutation } from '@/hooks/mutation/search';
+import {
+  usePlaceSearchMapIdQuery,
+  usePlaceSearchWithShareKeyQuery,
+} from '@/hooks/query/search';
 import { resultConfirmState } from '@/jotai/result-confirm/store';
 import { getLocationDisplayName } from '@/utils/recommendationDisplay';
 
 export default function useConfirmedResult(queryShareKey: string | null) {
-  const [resultConfirm, setResultConfirm] = useAtom(resultConfirmState);
-  const [loadFailed, setLoadFailed] = useState(false);
+  const router = useRouter();
+  const storedResult = useAtomValue(resultConfirmState);
+  const activeShareKey = queryShareKey || storedResult.share_key;
+  const { data, isLoading: isLoadingStation } =
+    usePlaceSearchWithShareKeyQuery(activeShareKey);
+  const mapId = data?.map_id ?? '';
+  const {
+    data: liveResult,
+    isLoading: isLoadingMap,
+    isFetchedAfterMount,
+    isError,
+  } = usePlaceSearchMapIdQuery(mapId);
+  // Wait for a fresh read: a cached pre-confirmation null must not send us back.
+  const hasLiveResult = Boolean(liveResult && isFetchedAfterMount && !isError);
 
-  const { mutate: placeSearchWithShareKey, isPending } =
-    usePlaceSearchWithShareKeyMutation();
+  useEffect(() => {
+    if (!hasLiveResult || !liveResult || !mapId) return;
+    if (!liveResult.confirmed) {
+      router.replace(`/result?mapId=${mapId}`);
+    } else if (liveResult.confirmed !== activeShareKey) {
+      router.replace(`/result/confirm?sharekey=${liveResult.confirmed}`);
+    }
+  }, [activeShareKey, hasLiveResult, liveResult, mapId, router]);
 
+  const resultConfirm = data ?? storedResult;
   const { station_name, share_key, itinerary, request_info } = resultConfirm;
   const recommendationOptions = request_info?.recommendationOptions;
   const resultType = request_info?.resultType;
-  const shouldFetchShareResult = Boolean(
-    queryShareKey && (share_key !== queryShareKey || !resultConfirm.map_id),
-  );
-
-  useEffect(() => {
-    if (!shouldFetchShareResult || !queryShareKey) {
-      return;
-    }
-
-    setLoadFailed(false);
-    placeSearchWithShareKey(queryShareKey, {
-      onSuccess: data => {
-        if (data) {
-          setResultConfirm(data);
-          return;
-        }
-
-        setLoadFailed(true);
-      },
-      onError: () => {
-        setLoadFailed(true);
-      },
-    });
-  }, [
-    queryShareKey,
-    shouldFetchShareResult,
-    placeSearchWithShareKey,
-    setResultConfirm,
-  ]);
-
   const totalTravelTime = itinerary.reduce(
-    (sum, itinerary) => sum + itinerary.itinerary.totalTime,
+    (sum, route) => sum + route.itinerary.totalTime,
     0,
   );
   const averageTravelTime = itinerary.length
     ? totalTravelTime / itinerary.length
     : 0;
-  const stationName = getLocationDisplayName(station_name, resultType);
-  const hasResult =
-    Boolean(station_name) &&
-    itinerary.length > 0 &&
-    Boolean(request_info?.participant?.length) &&
-    !shouldFetchShareResult;
-  const isLoading = Boolean(
-    queryShareKey && !loadFailed && (isPending || shouldFetchShareResult),
+  const hasResult = Boolean(
+    data &&
+      station_name &&
+      itinerary.length &&
+      request_info?.participant?.length &&
+      hasLiveResult &&
+      liveResult?.confirmed === activeShareKey,
   );
 
   return {
     resultConfirm,
-    stationName,
+    stationName: getLocationDisplayName(station_name, resultType),
     shareKey: share_key,
     averageTravelTime,
     recommendationOptions,
     resultType,
     hasResult,
-    isLoading,
+    isLoading:
+      isLoadingStation ||
+      isLoadingMap ||
+      (Boolean(mapId) && !isFetchedAfterMount && !isError),
   };
 }

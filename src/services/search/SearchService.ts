@@ -3,6 +3,7 @@ import { api, edgeApi } from '@/api/client';
 import SearchForm from '@/model/search/SearchForm';
 
 import {
+  CreatedResult,
   RoomStatusResponse,
   SubmitDeparturePointRequestBody,
 } from './types';
@@ -10,6 +11,7 @@ import { SearchState } from '@/jotai/global/store';
 import SearchFormWithTogether from '@/model/search-together/SearchFormWithTogether';
 import { MeetingPurpose } from '@/types/meetingPurpose';
 import { RecommendationOptions } from '@/types/recommendationOptions';
+import { LocationResult, StationInfo } from '@/types/location';
 
 export default class SearchService {
   static async searchPlaces(
@@ -23,17 +25,23 @@ export default class SearchService {
       recommendationOptions,
     );
 
-    const { data } = await edgeApi.post('/functions/v1/location-points', {
-      ...requestBody,
-    });
+    const { data } = await edgeApi.post<CreatedResult>(
+      '/functions/v1/location-points',
+      {
+        ...requestBody,
+      },
+    );
 
     return data;
   }
 
   static async searchPolling(mapId: string) {
-    const { data } = await api.post('/rest/v1/rpc/location_result_by_map_id', {
-      p_map_id: mapId,
-    });
+    const { data } = await api.post<LocationResult | null>(
+      '/rest/v1/rpc/location_result_by_map_id',
+      {
+        p_map_id: mapId,
+      },
+    );
 
     return data ?? null;
   }
@@ -43,7 +51,7 @@ export default class SearchService {
       return null;
     }
 
-    const { data } = await api.post(
+    const { data } = await api.post<StationInfo | null>(
       '/rest/v1/rpc/location_station_by_share_key',
       {
         p_share_key: shareKey,
@@ -64,11 +72,14 @@ export default class SearchService {
   }
 
   static async getInputStatusList(roomId: string) {
-    const { data } = await api.post('/rest/v1/rpc/location_room_status', {
-      p_room_id: roomId,
-    });
+    const { data } = await api.post<RoomStatusResponse | null>(
+      '/rest/v1/rpc/location_room_status',
+      {
+        p_room_id: roomId,
+      },
+    );
 
-    return (data ?? null) as RoomStatusResponse | null;
+    return data ?? null;
   }
 
   static async submitDeparturePoint(

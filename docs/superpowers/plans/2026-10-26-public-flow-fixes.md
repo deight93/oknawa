@@ -28,28 +28,28 @@
 **Files:** new permission migration, `src/services/search/types.ts`, `tests/public-rpc.test.ts`, test tooling.
 **Interfaces:** Existing RPC signatures remain; public result/room JSON excludes host fields; creation retains host tokens.
 
-- [ ] Add PGlite tests executing every migration and asserting public token omission plus allowed/denied host actions.
-- [ ] Run app tests and observe failing disclosure assertions.
-- [ ] Add an additive migration with explicit public fields; correct the frontend response type.
-- [ ] Run tests and commit.
+- [x] Add PGlite tests executing every migration and asserting public token omission plus allowed/denied host actions.
+- [x] Run app tests and observe failing disclosure assertions.
+- [x] Add an additive migration with explicit public fields; correct the frontend response type.
+- [x] Run tests and commit.
 
 ### Task 2: Report route failures honestly
 
 **Files:** route API/scoring boundary, Deno regression tests, error copy, Deno tooling.
 **Interfaces:** Only API/cache-backed routes enter results; a group candidate needs every participant's route. Transit requests allow all transit modes under a new cache namespace.
 
-- [ ] Test empty/error/partial routes, complete candidates, and transit request payloads; observe failures with the existing type check temporarily bypassed.
-- [ ] Remove fabricated routes, exclude incomplete candidates, fix polyline import, and clarify errors.
-- [ ] Run complete Deno type/tests and commit.
+- [x] Test empty/error/partial routes, complete candidates, and transit request payloads; observe failures with the existing type check temporarily bypassed.
+- [x] Remove fabricated routes, exclude incomplete candidates, fix polyline import, and clarify errors.
+- [x] Run complete Deno type/tests and commit.
 
 ### Task 3: Synchronize shared result lifecycle
 
 **Files:** create-result and confirmed-result hooks, query/service types, `tests/result-flows.test.tsx`.
 **Interfaces:** Creation awaits preparation/generation/fetch/publication before navigation, with a pending guard for the whole lifecycle. Confirmation follows live map state.
 
-- [ ] Add actual React hook tests for preparation/publication failure, repeated clicks, reset, and new confirmation; observe failures.
-- [ ] Implement lifecycle fixes without altering the midpoint algorithm.
-- [ ] Run app tests, lint, build, complete harness; commit.
+- [x] Add actual React hook tests for preparation/publication failure, repeated clicks, reset, and new confirmation; observe failures.
+- [x] Implement lifecycle fixes without altering the midpoint algorithm.
+- [x] Run app tests, lint, build, complete harness; commit.
 
 ### Task 4: Review and open PR
 

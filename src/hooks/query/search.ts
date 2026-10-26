@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
 import SearchService from '@/services/search/SearchService';
 
@@ -36,25 +36,13 @@ export const useInputStatusListQuery = (roomId: string) => {
 };
 
 export const usePlaceSearchMapIdQuery = (mapId: string) => {
-  const queryClient = useQueryClient();
   const hasMapId = isUuid(mapId);
-
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isFetchedAfterMount, isError } = useQuery({
     queryKey: ['placeSearchMapId', mapId],
     queryFn: () => SearchService.searchPolling(mapId),
     enabled: hasMapId,
     refetchInterval: hasMapId ? 2000 : false,
+    refetchOnMount: 'always',
   });
-
-  const clearRefetchInterval = () => {
-    queryClient.setQueryDefaults(['placeSearchMapId', mapId], {
-      refetchInterval: false,
-    });
-  };
-
-  return {
-    data,
-    isLoading,
-    clearRefetchInterval,
-  };
+  return { data, isLoading, isFetchedAfterMount, isError };
 };
