@@ -20,7 +20,6 @@ export type RoomRecommendationStatus =
 
 export interface RoomStatusResponse {
   room_id: string;
-  room_host_id: string;
   confirmed_share_key?: string | null;
   result_map_id?: string | null;
   recommendation_status?: RoomRecommendationStatus;
