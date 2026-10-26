@@ -38,6 +38,9 @@ jobs:
       - name: Agent harness contracts
         run: pnpm agent:harness:quick
 
+      - name: Application and RPC regression tests
+        run: pnpm test:app
+
       - name: Lint
         run: pnpm lint
 
@@ -55,14 +58,14 @@ jobs:
       - name: Setup Deno
         uses: denoland/setup-deno@v2
         with:
-          deno-version: v1.x
+          deno-version: v2.9.6
 
       - name: Check Edge Functions
         run: |
-          deno check --config supabase/functions/location-meeting/deno.json supabase/functions/location-meeting/index.ts
-          deno check --config supabase/functions/location-meeting-terminal/deno.json supabase/functions/location-meeting-terminal/index.ts
-          deno check --config supabase/functions/location-point-place/deno.json supabase/functions/location-point-place/index.ts
-          deno check --config supabase/functions/location-points/deno.json supabase/functions/location-points/index.ts
+          deno check --no-lock --config supabase/functions/location-meeting/deno.json supabase/functions/location-meeting/index.ts
+          deno check --no-lock --config supabase/functions/location-meeting-terminal/deno.json supabase/functions/location-meeting-terminal/index.ts
+          deno check --no-lock --config supabase/functions/location-point-place/deno.json supabase/functions/location-point-place/index.ts
+          deno check --no-lock --config supabase/functions/location-points/deno.json supabase/functions/location-points/index.ts
 
       - name: Test Edge Function libraries
-        run: deno test --allow-read=supabase/migrations --config supabase/functions/location-points/deno.json supabase/functions/tests/*.test.ts
+        run: deno test --no-lock --allow-read=supabase/migrations --config supabase/functions/location-points/deno.json supabase/functions/tests/*.test.ts

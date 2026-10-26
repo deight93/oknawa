@@ -400,14 +400,16 @@ const staticContracts = [
 
 const commands = isFull
   ? [
+      ['pnpm', ['test:app']],
       ['pnpm', ['lint']],
       ['pnpm', ['build']],
       [
         'pnpm',
         [
           'dlx',
-          'deno',
+          'deno@2.9.6',
           'check',
+          '--no-lock',
           '--config',
           'supabase/functions/location-points/deno.json',
           'supabase/functions/location-points/index.ts',
@@ -421,8 +423,9 @@ const commands = isFull
         'pnpm',
         [
           'dlx',
-          'deno',
+          'deno@2.9.6',
           'test',
+          '--no-lock',
           '--allow-read=supabase/migrations',
           '--config',
           'supabase/functions/location-points/deno.json',

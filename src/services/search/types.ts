@@ -1,3 +1,8 @@
+export interface CreatedResult {
+  map_id: string;
+  map_host_id: string;
+}
+
 export interface SubmitDeparturePointRequestBody {
   room_id: string;
   name: string;
@@ -20,7 +25,6 @@ export type RoomRecommendationStatus =
 
 export interface RoomStatusResponse {
   room_id: string;
-  room_host_id: string;
   confirmed_share_key?: string | null;
   result_map_id?: string | null;
   recommendation_status?: RoomRecommendationStatus;
