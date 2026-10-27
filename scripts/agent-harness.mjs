@@ -326,7 +326,7 @@ const staticContracts = [
     run: () => {
       assertIncludes(
         'supabase/functions/lib/location-points.ts',
-        "return hasNonSeoulGyeonggi ? 'city' : 'local_area';",
+        "return hasNonMetropolitan ? 'city' : 'local_area';",
         'car recommendations must use area/city candidates',
       );
       assertIncludes(
@@ -341,7 +341,7 @@ const staticContracts = [
       );
       assertIncludes(
         'supabase/functions/lib/location-points.ts',
-        "return hasNonSeoulGyeonggi ? 'terminal' : 'station';",
+        "return hasNonMetropolitan ? 'terminal' : 'station';",
         'transit recommendations must keep station/terminal candidates',
       );
       assertIncludes(

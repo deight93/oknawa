@@ -5,7 +5,6 @@ import styled from 'styled-components';
 import {
   MIDPOINT_BASIS_OPTIONS,
   RecommendationOptions,
-  TRAVEL_MODE_OPTIONS,
 } from '@/types/recommendationOptions';
 
 interface RecommendationOptionSelectorProps {
@@ -19,21 +18,6 @@ export default function RecommendationOptionSelector({
 }: RecommendationOptionSelectorProps) {
   return (
     <Container>
-      <OptionGroup>
-        <Title>이동 방식</Title>
-        <OptionList>
-          {TRAVEL_MODE_OPTIONS.map(option => (
-            <OptionButton
-              key={option.value}
-              type="button"
-              $isActive={value.travelMode === option.value}
-              onClick={() => onChange({ ...value, travelMode: option.value })}
-            >
-              {option.label}
-            </OptionButton>
-          ))}
-        </OptionList>
-      </OptionGroup>
       <OptionGroup>
         <Title>중간 기준</Title>
         <OptionList>

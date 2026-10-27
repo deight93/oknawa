@@ -15,9 +15,15 @@ export default class SearchForm {
       participant: searchForm?.map(
         ({
           name,
+          travelMode,
           address: { latitude, longitude, regionName, fullAddress },
         }) => ({
           name,
+          travel_mode:
+            travelMode ??
+            (recommendationOptions.travelMode === 'mixed'
+              ? 'transit'
+              : recommendationOptions.travelMode),
           start_x: longitude,
           start_y: latitude,
           full_address: fullAddress,

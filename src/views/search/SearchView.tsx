@@ -12,6 +12,7 @@ import useSearchEntryFlow from '@/hooks/search/useSearchEntryFlow';
 import { bottomSheetState, SearchState } from '@/jotai/global/store';
 import Button from '@/components/Button';
 import { ArrowBackIcon } from '@/assets/icons/ArrowBack';
+import TravelModeSelector from './components/TravelModeSelector';
 
 const numberConfig: { [key: number]: string } = {
   1: '첫',
@@ -122,6 +123,12 @@ export default function SearchView({ type, shareRoomId }: SearchViewProps) {
               onClear={handleClearAddress}
             />
           </ClickableArea>
+          <TravelModeSelector
+            value={watch('travelMode') ?? 'transit'}
+            onChange={mode =>
+              setValue('travelMode', mode, { shouldDirty: true })
+            }
+          />
         </Section>
         {isIndividualView ? (
           <Button

@@ -1,5 +1,5 @@
 import { MeetingPurpose } from './meetingPurpose';
-import { RecommendationOptions } from './recommendationOptions';
+import { RecommendationOptions, TravelMode } from './recommendationOptions';
 
 export type ResultLocationType = 'station' | 'terminal' | 'local_area' | 'city';
 
@@ -10,6 +10,7 @@ export interface PolylinePoint {
 
 export interface ItineraryItem {
   name: string;
+  travel_mode?: TravelMode;
   itinerary: {
     totalTime: number;
     transferCount?: number;
@@ -22,6 +23,7 @@ export interface ItineraryItem {
 
 export interface Participant {
   name: string;
+  travel_mode?: TravelMode | null;
   region_name: string;
   full_address?: string;
   start_x: number;

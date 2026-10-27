@@ -65,6 +65,14 @@ export default function SearchCompleteList() {
                 name={search.name}
                 place={search.address.regionName}
                 index={index}
+                travelMode={search.travelMode ?? 'transit'}
+                onTravelModeChange={mode =>
+                  setSearchList(list =>
+                    list.map((person, i) =>
+                      i === index ? { ...person, travelMode: mode } : person,
+                    ),
+                  )
+                }
                 onDeleteIconClick={() => handleDeleteIconClick(index)}
               />
             );

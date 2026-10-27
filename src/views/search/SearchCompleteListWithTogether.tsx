@@ -25,6 +25,7 @@ import SearchService from '@/services/search/SearchService';
 import {
   DEFAULT_RECOMMENDATION_OPTIONS,
   RecommendationOptions,
+  isTravelMode,
 } from '@/types/recommendationOptions';
 
 const toRecommendationOptions = (
@@ -34,14 +35,15 @@ const toRecommendationOptions = (
     return undefined;
   }
 
-  const options = value as Partial<RecommendationOptions>;
   if (
-    (options.travelMode === 'transit' || options.travelMode === 'car') &&
-    (options.midpointBasis === 'time' || options.midpointBasis === 'distance')
+    'travelMode' in value &&
+    'midpointBasis' in value &&
+    (isTravelMode(value.travelMode) || value.travelMode === 'mixed') &&
+    (value.midpointBasis === 'time' || value.midpointBasis === 'distance')
   ) {
     return {
-      travelMode: options.travelMode,
-      midpointBasis: options.midpointBasis,
+      travelMode: value.travelMode,
+      midpointBasis: value.midpointBasis,
     };
   }
 
@@ -84,6 +86,7 @@ export default function SearchCompleteListWithTogetherView() {
 
   const toSearchState = (participant: Participant): SearchState => ({
     name: participant.name,
+    travelMode: participant.travel_mode ?? undefined,
     address: {
       fullAddress: participant.full_address ?? participant.region_name,
       latitude: participant.start_y,
@@ -183,6 +186,7 @@ export default function SearchCompleteListWithTogetherView() {
                 place={participant.region_name}
                 index={index}
                 type="together"
+                travelMode={participant.travel_mode ?? 'transit'}
               />
             );
           })}

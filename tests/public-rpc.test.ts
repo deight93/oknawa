@@ -109,3 +109,81 @@ test('public readers cannot confirm or reset without the creator capability', as
   assert.equal(reset[0].result.confirmed, null);
   assert.equal(reset[0].result.vote_round, 2);
 });
+
+test('room modes survive creation, joining and polling while legacy calls remain valid', async () => {
+  const { rows: created } = await db.query<{
+    room: { room_id: string; room_host_id: string };
+  }>('SELECT location_together($1, $2, $3, $4, $5, $6) AS room', [
+    '호스트',
+    '서울역',
+    '서울',
+    127,
+    37.5,
+    'car',
+  ]);
+  const room = created[0].room;
+  await db.query('SELECT location_join_room($1, $2, $3, $4, $5, $6, $7)', [
+    room.room_id,
+    '도보',
+    '시청',
+    '서울',
+    127.01,
+    37.5,
+    'walk',
+  ]);
+  await db.query('SELECT location_join_room($1, $2, $3, $4, $5, $6)', [
+    room.room_id,
+    '기존 사용자',
+    '을지로',
+    '서울',
+    127.02,
+    37.5,
+  ]);
+  const { rows } = await db.query<{
+    status: { participant: Array<{ travel_mode: string | null }> };
+  }>('SELECT location_room_status($1) AS status', [room.room_id]);
+  assert.deepEqual(
+    rows[0].status.participant.map(p => p.travel_mode),
+    ['car', 'walk', null],
+  );
+  assert.equal(
+    JSON.stringify(rows[0].status).includes(room.room_host_id),
+    false,
+  );
+  await assert.rejects(
+    db.query('SELECT location_join_room($1, $2, $3, $4, $5, $6, $7)', [
+      room.room_id,
+      '잘못된 수단',
+      '서울',
+      '서울',
+      127,
+      37.5,
+      'bike',
+    ]),
+    /Invalid travel mode/,
+  );
+});
+
+test('invalid room transport does not create a room', async () => {
+  const countRooms = async () => {
+    await db.exec('RESET ROLE');
+    try {
+      return (await db.query('SELECT count(*) FROM location_room')).rows;
+    } finally {
+      await db.exec('SET ROLE anon');
+    }
+  };
+  const before = await countRooms();
+  await assert.rejects(
+    db.query('SELECT location_together($1, $2, $3, $4, $5, $6)', [
+      '거부',
+      '서울',
+      '서울',
+      127,
+      37.5,
+      'boat',
+    ]),
+    /Invalid travel mode/,
+  );
+  assert.deepEqual(await countRooms(), before);
+});

@@ -1,3 +1,5 @@
+import { TravelMode } from '@/types/recommendationOptions';
+
 export interface CreatedResult {
   map_id: string;
   map_host_id: string;
@@ -6,6 +8,7 @@ export interface CreatedResult {
 export interface SubmitDeparturePointRequestBody {
   room_id: string;
   name: string;
+  travel_mode?: TravelMode | null;
   region_name: string;
   full_address: string;
   start_x: number;

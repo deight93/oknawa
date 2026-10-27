@@ -1,8 +1,8 @@
-export type TravelMode = 'transit' | 'car';
+export type TravelMode = 'transit' | 'car' | 'walk';
 export type MidpointBasis = 'time' | 'distance';
 
 export interface RecommendationOptions {
-  travelMode: TravelMode;
+  travelMode: TravelMode | 'mixed';
   midpointBasis: MidpointBasis;
 }
 
@@ -17,7 +17,11 @@ export const TRAVEL_MODE_OPTIONS: Array<{
 }> = [
   { value: 'transit', label: '대중교통' },
   { value: 'car', label: '자동차' },
+  { value: 'walk', label: '도보' },
 ];
+
+export const isTravelMode = (value: unknown): value is TravelMode =>
+  value === 'transit' || value === 'car' || value === 'walk';
 
 export const MIDPOINT_BASIS_OPTIONS: Array<{
   value: MidpointBasis;

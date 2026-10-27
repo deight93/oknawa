@@ -14,8 +14,8 @@ interface SearchLoadingProps {
 }
 
 const TRANSIT_GENERATING_STEPS = [
-  '후보 역을 고르는 중',
-  '경로와 환승 정보를 계산 중',
+  '만나기 좋은 후보를 고르는 중',
+  '각자의 이동수단으로 시간을 계산 중',
   '추천 결과를 정리 중',
 ];
 

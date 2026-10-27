@@ -30,6 +30,7 @@ import Button from '@/components/Button';
 import SearchLoading from '@/views/search/components/SearchLoading';
 
 import { convertToKoreanTime } from '@/utils/date';
+import { RecommendationOptions } from '@/types/recommendationOptions';
 import {
   DistanceSummaryItem,
   Participant,
@@ -124,7 +125,7 @@ const PREFERENCE_OPTIONS: Record<
     label: '추천순',
     badgeLabel: '추천 1위',
     description:
-      '이동시간, 환승, 도보 부담을 함께 보고 균형 좋은 후보를 우선해요.',
+      '가장 오래 걸리는 시간을 줄이고, 비슷한 후보 중 이동시간 차이가 작은 곳을 우선해요.',
   },
   averageTime: {
     label: '평균 빠른순',
@@ -164,12 +165,15 @@ const SORT_OPTIONS: { label: string; value: ResultSortOption }[] = [
 
 const getPreferenceOption = (
   sortOption: ResultSortOption,
-  isCarResult: boolean,
+  recommendationOptions?: RecommendationOptions,
 ) => {
-  if (isCarResult && sortOption === 'recommended') {
+  if (
+    recommendationOptions?.midpointBasis === 'distance' &&
+    sortOption === 'recommended'
+  ) {
     return {
       ...PREFERENCE_OPTIONS.recommended,
-      description: '이동시간과 위치 균형을 함께 보고 좋은 후보를 우선해요.',
+      description: '위치와 거리 균형을 함께 보고 좋은 후보를 우선해요.',
     };
   }
 
@@ -282,7 +286,10 @@ export default function DistanceSummary({
     .fill(true, 0, vote)
     .fill(false, vote);
   const isCarResult = isCarRecommendation(station.recommendationOptions);
-  const selectedPreference = getPreferenceOption(sortOption, isCarResult);
+  const selectedPreference = getPreferenceOption(
+    sortOption,
+    station.recommendationOptions,
+  );
   const sortOptions = getVisibleSortOptions(
     SORT_OPTIONS,
     station.recommendationOptions,
@@ -477,6 +484,7 @@ export default function DistanceSummary({
                           ),
                           convertToKoreanTime(route.itinerary.walkingTime ?? 0),
                           station.recommendationOptions,
+                          route.travel_mode,
                         )}
                       </ParticipantStats>
                     </ParticipantRow>
