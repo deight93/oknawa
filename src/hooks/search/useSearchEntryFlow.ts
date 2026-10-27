@@ -18,6 +18,7 @@ const toDeparturePointRequestBody = (
 ): SubmitDeparturePointRequestBody => ({
   room_id: roomId,
   name: searchForm.name,
+  travel_mode: searchForm.travelMode ?? null,
   region_name: searchForm.address.regionName,
   full_address: searchForm.address.fullAddress,
   start_x: searchForm.address.longitude,
@@ -26,6 +27,7 @@ const toDeparturePointRequestBody = (
 
 const toSearchStateSnapshot = (searchForm: SearchState): SearchState => ({
   name: searchForm.name,
+  travelMode: searchForm.travelMode,
   address: {
     fullAddress: searchForm.address.fullAddress,
     latitude: searchForm.address.latitude,

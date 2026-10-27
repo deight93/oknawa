@@ -88,6 +88,7 @@ export default class SearchService {
     const { data } = await api.post(`/rest/v1/rpc/location_join_room`, {
       p_room_id: requestBody.room_id,
       p_name: requestBody.name,
+      p_travel_mode: requestBody.travel_mode ?? null,
       p_region_name: requestBody.region_name,
       p_full_address: requestBody.full_address,
       p_start_x: requestBody.start_x,

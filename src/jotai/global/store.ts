@@ -1,5 +1,6 @@
 import { atomWithReset, atomWithStorage, createJSONStorage } from 'jotai/utils';
 import { ReactNode } from 'react';
+import { TravelMode } from '@/types/recommendationOptions';
 
 interface ModalState {
   isOpen: boolean;
@@ -12,6 +13,7 @@ interface ModalState {
 
 export interface SearchState {
   name: string;
+  travelMode?: TravelMode;
   address: {
     fullAddress: string;
     latitude: number;
@@ -66,7 +68,6 @@ export const searchState = atomWithStorage<SearchState[]>(
   'searchList',
   [],
   searchStorage,
-  { getOnInit: true },
 );
 
 export const bottomSheetState = atomWithReset<BottomSheetState>(

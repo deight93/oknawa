@@ -91,8 +91,8 @@ const staticContracts = [
     run: () => {
       assertIncludes(
         'src/views/search/components/RecommendationOptionSelector.tsx',
-        '이동 방식',
-        'search UI must expose travel mode selection',
+        '중간 기준',
+        'search UI must preserve midpoint basis selection',
       );
       assertIncludes(
         'src/types/recommendationOptions.ts',
@@ -110,9 +110,9 @@ const staticContracts = [
         'location-points must use midpoint basis when ranking candidates',
       );
       assertIncludes(
-        'supabase/functions/lib/mapapi.ts',
-        "travelMode === 'DRIVE' ? 'DRIVE' : 'TRANSIT'",
-        'Google route requests must support car routes',
+        'supabase/functions/lib/route-providers.ts',
+        'apis-navi.kakaomobility.com/v1/directions',
+        'car routes must use Kakao directions',
       );
       assertIncludes(
         'supabase/functions/tests/location-points.test.ts',
@@ -326,7 +326,7 @@ const staticContracts = [
     run: () => {
       assertIncludes(
         'supabase/functions/lib/location-points.ts',
-        "return hasNonSeoulGyeonggi ? 'city' : 'local_area';",
+        "return hasNonMetropolitan ? 'city' : 'local_area';",
         'car recommendations must use area/city candidates',
       );
       assertIncludes(
@@ -341,7 +341,7 @@ const staticContracts = [
       );
       assertIncludes(
         'supabase/functions/lib/location-points.ts',
-        "return hasNonSeoulGyeonggi ? 'terminal' : 'station';",
+        "return hasNonMetropolitan ? 'terminal' : 'station';",
         'transit recommendations must keep station/terminal candidates',
       );
       assertIncludes(

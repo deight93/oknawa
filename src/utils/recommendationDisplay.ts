@@ -1,5 +1,8 @@
 import { ResultLocationType, ResultSortOption } from '@/types/location';
-import { RecommendationOptions } from '@/types/recommendationOptions';
+import {
+  RecommendationOptions,
+  TravelMode,
+} from '@/types/recommendationOptions';
 
 export const isCarRecommendation = (
   recommendationOptions?: RecommendationOptions,
@@ -53,12 +56,15 @@ export const getRouteStatText = (
   transferLabel: string,
   walkingTimeLabel: string,
   recommendationOptions?: RecommendationOptions,
+  travelMode?: TravelMode,
 ) => {
-  if (isCarRecommendation(recommendationOptions)) {
-    return totalTimeLabel;
+  const mode = travelMode ?? recommendationOptions?.travelMode;
+  if (mode === 'car') {
+    return travelMode ? `자동차 ${totalTimeLabel}` : totalTimeLabel;
   }
+  if (mode === 'walk') return `도보 ${totalTimeLabel}`;
 
-  return `${totalTimeLabel} · 환승 ${transferLabel} · 도보 ${walkingTimeLabel}`;
+  return `${travelMode ? '대중교통 ' : ''}${totalTimeLabel} · 환승 ${transferLabel} · 도보 ${walkingTimeLabel}`;
 };
 
 export const getVisibleSortOptions = (

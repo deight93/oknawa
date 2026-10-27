@@ -1,394 +1,83 @@
-// @deno-types="npm:@types/mapbox__polyline@1.0.5"
-import polyline from 'npm:@mapbox/polyline@1.2.1';
-import type { SupabaseClient } from 'jsr:@supabase/supabase-js';
-import { getEnv } from './env.ts';
 import type {
+  GroupTravelMode,
   PopularMeetingLocation,
   RouteItinerary,
   RouteParticipant,
   StationItineraryResult,
-  TravelMode,
 } from './location-types.ts';
-import { fetchJson } from './utils.ts';
+import { getParticipantTravelMode } from './location-types.ts';
+import { fetchRouteItinerary } from './route-providers.ts';
 
-interface GoogleRoute {
-  duration?: string;
-  legs?: GoogleRouteLeg[];
-  polyline?: {
-    encodedPolyline?: string;
-  };
-}
-
-interface GoogleRouteLeg {
-  steps?: GoogleRouteLegStep[];
-}
-
-interface GoogleRouteLegStep {
-  distanceMeters?: number;
-  staticDuration?: string;
-  travelMode?: string;
-}
-
-interface GoogleRoutesResponse {
-  routes?: GoogleRoute[];
-}
-
-interface RouteCacheRow {
-  route_key: string;
-  route_payload: RouteItinerary['itinerary'];
-}
-
-interface RouteCacheUpsert {
-  route_key: string;
-  route_payload: RouteItinerary['itinerary'];
-  origin_x: number;
-  origin_y: number;
-  destination_x: number;
-  destination_y: number;
-  travel_mode: RouteTravelMode;
-  expires_at: string;
-  updated_at: string;
-}
-
-type RouteTravelMode = 'TRANSIT' | 'DRIVE';
-
-interface RouteRequest {
-  routeKey: string;
-  travelMode: RouteTravelMode;
-  stationIndex: number;
-  participantIndex: number;
-  station: PopularMeetingLocation;
-  participant: RouteParticipant;
-}
-
-interface RouteResult {
-  stationIndex: number;
-  participantIndex: number;
-  route: RouteItinerary;
-}
-
-const ROUTE_CACHE_TTL_DAYS = 30;
 const ROUTE_CONCURRENCY_LIMIT = 4;
-const ROUTE_KEY_VERSION = 'v1';
 
-export async function callGoogleMapItineraries(
-  supabase: SupabaseClient,
+export async function callRouteItineraries(
   participants: RouteParticipant[],
   stations: PopularMeetingLocation[],
-  travelMode: TravelMode = 'transit',
+  fallbackMode: GroupTravelMode = 'transit',
 ): Promise<StationItineraryResult[]> {
-  const GOOGLE_API_KEY = getEnv('GOOGLE_API_KEY');
-  const GOOGLE_API_URL = getEnv('GOOGLE_API_URL');
-
-  const headers = {
-    'Content-Type': 'application/json',
-    'X-Goog-Api-Key': GOOGLE_API_KEY,
-    'X-Goog-FieldMask':
-      'routes.duration,routes.legs.steps.distanceMeters,routes.legs.steps.staticDuration,routes.legs.steps.travelMode,routes.polyline.encodedPolyline',
-  };
-
-  const routeRequests = buildRouteRequests(participants, stations, travelMode);
-  const routeCacheMap = await fetchRouteCacheMap(
-    supabase,
-    routeRequests.map(request => request.routeKey),
-  );
-  const cacheUpserts: RouteCacheUpsert[] = [];
-  const routeResults = await mapWithConcurrency(
-    routeRequests,
-    ROUTE_CONCURRENCY_LIMIT,
-    async request => {
-      const cachedItinerary = routeCacheMap.get(request.routeKey);
-      if (cachedItinerary) {
-        return toRouteResult(request, cachedItinerary);
-      }
-
-      const itinerary = await fetchGoogleRouteItinerarySafely(
-        request.participant,
-        request.station,
-        request.travelMode,
-        headers,
-        GOOGLE_API_URL,
-      );
-      if (!itinerary) return null;
-
-      cacheUpserts.push(toRouteCacheUpsert(request, itinerary));
-      return toRouteResult(request, itinerary);
-    },
-  );
-  const resultList = routeResults.filter(
-    (result): result is RouteResult => result !== null,
-  );
-
-  if (cacheUpserts.length > 0) {
-    await upsertRouteCache(supabase, cacheUpserts);
-  }
-
-  return stations.map((station, stationIndex) => {
-    const itineraryList = resultList
-      .filter(result => result.stationIndex === stationIndex)
-      .sort((a, b) => a.participantIndex - b.participantIndex)
-      .map(result => result.route);
-
-    return {
-      station_name: station.name,
-      result_type: station.type,
-      address_name: station.address,
-      end_x: Number(station.location_x),
-      end_y: Number(station.location_y),
-      itinerary: itineraryList,
-      place_quality: station.place_quality,
-      distance_score: station.distance_score,
-    };
-  });
-}
-
-function parseDuration(durationStr: string): number {
-  return parseInt(durationStr.replace('s', ''));
-}
-
-function summarizeRouteMetrics(route: GoogleRoute) {
-  const steps = route.legs?.flatMap(leg => leg.steps ?? []) ?? [];
-  const transitStepCount = steps.filter(
-    step => step.travelMode === 'TRANSIT',
-  ).length;
-  const walkingSteps = steps.filter(step => step.travelMode === 'WALK');
-  const walkingTime = walkingSteps.reduce(
-    (sum, step) => sum + parseDuration(step.staticDuration ?? '0s'),
-    0,
-  );
-  const walkingDistance = walkingSteps.reduce(
-    (sum, step) => sum + (step.distanceMeters ?? 0),
-    0,
-  );
-
-  return {
-    transferCount: Math.max(transitStepCount - 1, 0),
-    walkingDistance,
-    walkingTime,
-  };
-}
-
-function buildRouteRequests(
-  participants: RouteParticipant[],
-  stations: PopularMeetingLocation[],
-  travelMode: TravelMode,
-): RouteRequest[] {
-  const routeTravelMode = toRouteTravelMode(travelMode);
-
-  return stations.flatMap((station, stationIndex) =>
-    participants.map((participant, participantIndex) => ({
-      routeKey: buildRouteCacheKey(participant, station, routeTravelMode),
-      travelMode: routeTravelMode,
-      stationIndex,
-      participantIndex,
+  const departureTime = new Date().toISOString();
+  // Compare fresh estimates. Reuse only identical requests within this search,
+  // never a transit timetable or drive time from the legacy 30-day cache.
+  const pending = new Map<
+    string,
+    Promise<RouteItinerary['itinerary'] | null>
+  >();
+  const requests = stations.flatMap(station =>
+    participants.map(participant => ({
       station,
       participant,
+      mode: getParticipantTravelMode(participant, fallbackMode),
     })),
   );
-}
-
-async function fetchRouteCacheMap(
-  supabase: SupabaseClient,
-  routeKeys: string[],
-): Promise<Map<string, RouteItinerary['itinerary']>> {
-  if (routeKeys.length === 0) return new Map();
-
-  const { data, error } = await supabase
-    .from('route_itinerary_cache')
-    .select('route_key, route_payload')
-    .in('route_key', Array.from(new Set(routeKeys)))
-    .gt('expires_at', new Date().toISOString());
-
-  if (error) {
-    console.error('route cache select error:', error.message);
-    return new Map();
-  }
-
-  return new Map(
-    ((data ?? []) as RouteCacheRow[]).map(row => [
-      row.route_key,
-      row.route_payload,
-    ]),
+  const results: Array<RouteItinerary | null> = new Array(requests.length).fill(
+    null,
   );
-}
-
-async function upsertRouteCache(
-  supabase: SupabaseClient,
-  cacheUpserts: RouteCacheUpsert[],
-) {
-  const uniqueCacheUpserts = Array.from(
-    new Map(cacheUpserts.map(cache => [cache.route_key, cache])).values(),
-  );
-  const { error } = await supabase
-    .from('route_itinerary_cache')
-    .upsert(uniqueCacheUpserts, { onConflict: 'route_key' });
-
-  if (error) {
-    console.error('route cache upsert error:', error.message);
-  }
-}
-
-async function fetchGoogleRouteItinerary(
-  participant: RouteParticipant,
-  station: PopularMeetingLocation,
-  travelMode: RouteTravelMode,
-  headers: Record<string, string>,
-  googleApiUrl: string,
-): Promise<RouteItinerary['itinerary'] | null> {
-  const origin = {
-    location: {
-      latLng: {
-        latitude: participant.start_y,
-        longitude: participant.start_x,
-      },
-    },
-  };
-
-  const destination = {
-    location: {
-      latLng: {
-        latitude: Number(station.location_y),
-        longitude: Number(station.location_x),
-      },
-    },
-  };
-
-  const payload: Record<string, unknown> = {
-    origin,
-    destination,
-    travelMode: travelMode === 'DRIVE' ? 'DRIVE' : 'TRANSIT',
-    languageCode: 'ko-KR',
-  };
-
-  const json = await fetchJson<GoogleRoutesResponse>(
-    `${googleApiUrl}/directions/v2:computeRoutes`,
-    {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(payload),
-      errorMessage: 'Google Routes API 조회 실패',
-    },
-  );
-
-  const route = json.routes?.[0];
-  const polylineEncoded = route?.polyline?.encodedPolyline;
-  if (!route?.duration || !polylineEncoded) return null;
-
-  const durationSeconds = parseDuration(route.duration);
-  const routeMetrics = summarizeRouteMetrics(route);
-  const decodedPolyline = polyline.decode(polylineEncoded);
-  const totalPolyline = decodedPolyline.map(([lat, lng]) => ({ lat, lng }));
-
-  return {
-    totalTime: durationSeconds,
-    transferCount: routeMetrics.transferCount,
-    walkingDistance: routeMetrics.walkingDistance,
-    walkingTime: routeMetrics.walkingTime,
-    total_polyline: totalPolyline,
-  };
-}
-
-async function fetchGoogleRouteItinerarySafely(
-  participant: RouteParticipant,
-  station: PopularMeetingLocation,
-  travelMode: RouteTravelMode,
-  headers: Record<string, string>,
-  googleApiUrl: string,
-): Promise<RouteItinerary['itinerary'] | null> {
-  try {
-    return await fetchGoogleRouteItinerary(
-      participant,
-      station,
-      travelMode,
-      headers,
-      googleApiUrl,
-    );
-  } catch (error) {
-    console.error('Google route request failed:', error);
-    return null;
-  }
-}
-
-function toRouteResult(
-  request: RouteRequest,
-  itinerary: RouteItinerary['itinerary'],
-): RouteResult {
-  return {
-    stationIndex: request.stationIndex,
-    participantIndex: request.participantIndex,
-    route: {
-      name: request.participant.name,
-      region_name: request.participant.region_name,
-      itinerary,
-    },
-  };
-}
-
-function toRouteCacheUpsert(
-  request: RouteRequest,
-  itinerary: RouteItinerary['itinerary'],
-): RouteCacheUpsert {
-  const now = new Date();
-  const expiresAt = new Date(now);
-  expiresAt.setDate(expiresAt.getDate() + ROUTE_CACHE_TTL_DAYS);
-
-  return {
-    route_key: request.routeKey,
-    route_payload: itinerary,
-    origin_x: request.participant.start_x,
-    origin_y: request.participant.start_y,
-    destination_x: Number(request.station.location_x),
-    destination_y: Number(request.station.location_y),
-    travel_mode: request.travelMode,
-    expires_at: expiresAt.toISOString(),
-    updated_at: now.toISOString(),
-  };
-}
-
-async function mapWithConcurrency<T, U>(
-  items: T[],
-  concurrencyLimit: number,
-  mapper: (item: T) => Promise<U>,
-): Promise<U[]> {
-  const results: U[] = new Array(items.length);
-  let currentIndex = 0;
-
+  let next = 0;
   async function worker() {
-    while (currentIndex < items.length) {
-      const index = currentIndex;
-      currentIndex += 1;
-      results[index] = await mapper(items[index]);
+    while (next < requests.length) {
+      const index = next++;
+      const { participant, station, mode } = requests[index];
+      const key = JSON.stringify([
+        mode,
+        participant.start_x,
+        participant.start_y,
+        Number(station.location_x),
+        Number(station.location_y),
+      ]);
+      let route = pending.get(key);
+      if (!route) {
+        route = fetchRouteItinerary(participant, station, mode, departureTime);
+        pending.set(key, route);
+      }
+      const itinerary = await route;
+      if (itinerary)
+        results[index] = {
+          name: participant.name,
+          region_name: participant.region_name,
+          travel_mode: mode,
+          itinerary,
+        };
     }
   }
-
   await Promise.all(
-    Array.from({ length: Math.min(concurrencyLimit, items.length) }, () =>
-      worker(),
+    Array.from(
+      { length: Math.min(ROUTE_CONCURRENCY_LIMIT, requests.length) },
+      () => worker(),
     ),
   );
-
-  return results;
-}
-
-function buildRouteCacheKey(
-  participant: RouteParticipant,
-  station: PopularMeetingLocation,
-  travelMode: RouteTravelMode,
-): string {
-  return [
-    ROUTE_KEY_VERSION,
-    travelMode.toLowerCase(),
-    normalizeCoordinate(participant.start_x),
-    normalizeCoordinate(participant.start_y),
-    normalizeCoordinate(station.location_x),
-    normalizeCoordinate(station.location_y),
-  ].join(':');
-}
-
-function toRouteTravelMode(travelMode: TravelMode): RouteTravelMode {
-  return travelMode === 'car' ? 'DRIVE' : 'TRANSIT';
-}
-
-function normalizeCoordinate(value: number | string): string {
-  return Number(value).toFixed(5);
+  return stations.map((station, stationIndex) => ({
+    station_name: station.name,
+    result_type: station.type,
+    address_name: station.address,
+    end_x: Number(station.location_x),
+    end_y: Number(station.location_y),
+    itinerary: results
+      .slice(
+        stationIndex * participants.length,
+        (stationIndex + 1) * participants.length,
+      )
+      .filter((route): route is RouteItinerary => route !== null),
+    place_quality: station.place_quality,
+    distance_score: station.distance_score,
+  }));
 }

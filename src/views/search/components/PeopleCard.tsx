@@ -2,6 +2,8 @@ import { MinusIcon } from '@/assets/icons/Minus';
 import { Crown } from 'lucide-react';
 import Avatar, { AVATAR_COLORS } from '@/components/Avatar';
 import styled from 'styled-components';
+import { TRAVEL_MODE_OPTIONS, TravelMode } from '@/types/recommendationOptions';
+import TravelModeSelector from './TravelModeSelector';
 
 interface PeopleCardProps {
   name: string;
@@ -9,6 +11,8 @@ interface PeopleCardProps {
   onDeleteIconClick?: () => void;
   index?: number;
   type?: 'individual' | 'together';
+  travelMode?: TravelMode;
+  onTravelModeChange?: (mode: TravelMode) => void;
 }
 
 export default function PeopleCard({
@@ -17,6 +21,8 @@ export default function PeopleCard({
   onDeleteIconClick,
   index,
   type = 'individual',
+  travelMode,
+  onTravelModeChange,
 }: PeopleCardProps) {
   const avatarColor = AVATAR_COLORS[index ?? 0] ?? 'var(--primary)';
 
@@ -32,6 +38,23 @@ export default function PeopleCard({
             {name}
           </Name>
           <Place>{place}</Place>
+          {onTravelModeChange ? (
+            <TravelModeSelector
+              value={travelMode ?? 'transit'}
+              onChange={onTravelModeChange}
+              label={`${name} 이동수단`}
+            />
+          ) : (
+            travelMode && (
+              <Place>
+                {
+                  TRAVEL_MODE_OPTIONS.find(
+                    option => option.value === travelMode,
+                  )?.label
+                }
+              </Place>
+            )
+          )}
         </div>
       </Wrapper>
       {onDeleteIconClick && (
