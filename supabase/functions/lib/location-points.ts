@@ -18,7 +18,7 @@ import {
   isRouteParticipantList,
   isTravelMode,
 } from './location-types.ts';
-import { callGoogleMapItineraries } from './mapapi.ts';
+import { callRouteItineraries } from './mapapi.ts';
 import { attachPlaceQualities } from './place-quality.ts';
 import { responseApiError, responseJson } from './utils.ts';
 
@@ -221,13 +221,10 @@ export async function buildStationItineraries(
     rankedLocationDataList,
     meetingPurpose,
   );
-  const stationInfoList = await callGoogleMapItineraries(
-    supabase,
+  const stationInfoList = await callRouteItineraries(
     participants,
     qualityAdjustedLocationDataList,
-    recommendationOptions.travelMode === 'mixed'
-      ? 'transit'
-      : recommendationOptions.travelMode,
+    recommendationOptions.travelMode,
   );
   const bestStationInfoList = selectBestStationItineraries(
     stationInfoList,
