@@ -56,4 +56,6 @@
 - [x] Add migration with nullable constrained participant.travel_mode, new defaulted RPC argument, existing privilege protection, and legacy call compatibility.
 - [x] Run `pnpm test:app`, `pnpm agent:harness:quick`, `pnpm lint`, `pnpm build`, all Edge tests/checks. Expected: pass.
 - [x] Inspect the running input flow at mobile width with isolated fixture data; verify result layout files remain unchanged apart from text/metadata use. Commit this task.
-- [ ] Request whole-branch review, address substantive findings with regression tests, push feature branch, create and attach PR. Report checks and remaining external-service limitations.
+- [x] Request whole-branch review and address findings with regression tests. The legacy room group-mode fallback now matches the cards and carried search state.
+
+Delivery: push the feature branch, create and attach the requested PR, and report checks and remaining external-service limitations.

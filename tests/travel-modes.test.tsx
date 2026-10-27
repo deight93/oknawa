@@ -14,6 +14,10 @@ import type { SearchState } from '../src/jotai/global/store';
 import type { StationInfo } from '../src/types/location';
 import { getRouteStatText } from '../src/utils/recommendationDisplay';
 import PeopleCard from '../src/views/search/components/PeopleCard';
+import SearchCompleteListWithTogetherView from '../src/views/search/SearchCompleteListWithTogether';
+import { roomState } from '../src/jotai/global/room';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AppRouterContext } from 'next/dist/shared/lib/app-router-context.shared-runtime';
 
 const previousStorage = Object.getOwnPropertyDescriptor(
   globalThis,
@@ -220,4 +224,83 @@ test('mixed results show mode-appropriate route text in existing summary rows', 
     ),
     '도보 15분',
   );
+});
+
+test('legacy room cards use the polled group mode while explicit participant modes take precedence', () => {
+  const roomId = '11111111-1111-4111-8111-111111111111';
+  const previousLocalStorage = Object.getOwnPropertyDescriptor(
+    globalThis,
+    'localStorage',
+  );
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: {
+      getItem: (key: string) =>
+        key === 'room' ? JSON.stringify({ roomId, hostId: '' }) : null,
+      setItem: () => {},
+      removeItem: () => {},
+    },
+  });
+  const client = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, staleTime: Infinity, gcTime: Infinity },
+    },
+  });
+  const store = createStore();
+  store.set(roomState, { roomId, hostId: '' });
+  client.setQueryData(['inputStatusList', roomId], {
+    room_id: roomId,
+    recommendation_options: { travelMode: 'car', midpointBasis: 'time' },
+    participant: [
+      {
+        name: '기존 참가자',
+        region_name: '강남역',
+        start_x: 127,
+        start_y: 37.5,
+        travel_mode: null,
+      },
+      {
+        name: '도보 참가자',
+        region_name: '강남역',
+        start_x: 127,
+        start_y: 37.5,
+        travel_mode: 'walk',
+      },
+    ],
+  });
+  let renderer!: ReactTestRenderer;
+  try {
+    act(() => {
+      renderer = create(
+        <AppRouterContext.Provider
+          value={{
+            back() {},
+            forward() {},
+            refresh() {},
+            push() {},
+            replace() {},
+            prefetch: async () => {},
+          }}
+        >
+          <QueryClientProvider client={client}>
+            <Provider store={store}>
+              <SearchCompleteListWithTogetherView />
+            </Provider>
+          </QueryClientProvider>
+        </AppRouterContext.Provider>,
+      );
+    });
+    assert.deepEqual(
+      renderer.root
+        .findAllByType(PeopleCard)
+        .map(card => card.props.travelMode),
+      ['car', 'walk'],
+    );
+  } finally {
+    if (renderer) act(() => renderer.unmount());
+    client.clear();
+    if (previousLocalStorage)
+      Object.defineProperty(globalThis, 'localStorage', previousLocalStorage);
+    else Reflect.deleteProperty(globalThis, 'localStorage');
+  }
 });

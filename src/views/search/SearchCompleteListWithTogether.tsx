@@ -72,6 +72,9 @@ export default function SearchCompleteListWithTogetherView() {
   const roomRecommendationOptions =
     toRecommendationOptions(roomStatus?.recommendation_options) ??
     recommendationOptions;
+  const roomTravelMode = isTravelMode(roomRecommendationOptions.travelMode)
+    ? roomRecommendationOptions.travelMode
+    : 'transit';
   const shouldShowLoading = isLoading || isRoomGenerating;
 
   useEffect(() => {
@@ -86,7 +89,7 @@ export default function SearchCompleteListWithTogetherView() {
 
   const toSearchState = (participant: Participant): SearchState => ({
     name: participant.name,
-    travelMode: participant.travel_mode ?? undefined,
+    travelMode: participant.travel_mode ?? roomTravelMode,
     address: {
       fullAddress: participant.full_address ?? participant.region_name,
       latitude: participant.start_y,
@@ -186,7 +189,7 @@ export default function SearchCompleteListWithTogetherView() {
                 place={participant.region_name}
                 index={index}
                 type="together"
-                travelMode={participant.travel_mode ?? 'transit'}
+                travelMode={participant.travel_mode ?? roomTravelMode}
               />
             );
           })}
