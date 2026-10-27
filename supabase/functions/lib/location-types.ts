@@ -1,5 +1,10 @@
-export type PopularLocationType = 'station' | 'terminal' | 'local_area' | 'city';
-export type TravelMode = 'transit' | 'car';
+export type PopularLocationType =
+  | 'station'
+  | 'terminal'
+  | 'local_area'
+  | 'city';
+export type TravelMode = 'transit' | 'car' | 'walk';
+export type GroupTravelMode = TravelMode | 'mixed';
 export type MidpointBasis = 'time' | 'distance';
 export type MeetingPurpose =
   | 'meal'
@@ -15,6 +20,7 @@ export interface RouteParticipant {
   full_address: string;
   start_x: number;
   start_y: number;
+  travel_mode?: TravelMode | null;
 }
 
 export interface LocationPointsRequestBody {
@@ -25,7 +31,7 @@ export interface LocationPointsRequestBody {
 }
 
 export interface RecommendationOptions {
-  travelMode: TravelMode;
+  travelMode: GroupTravelMode;
   midpointBasis: MidpointBasis;
 }
 
@@ -59,6 +65,7 @@ export interface PolylinePoint {
 export interface RouteItinerary {
   name: string;
   region_name: string;
+  travel_mode?: TravelMode;
   itinerary: {
     totalTime: number;
     transferCount?: number;
@@ -138,7 +145,11 @@ export function isRouteParticipantList(
         typeof participant.start_x === 'number' &&
         Number.isFinite(participant.start_x) &&
         typeof participant.start_y === 'number' &&
-        Number.isFinite(participant.start_y),
+        Number.isFinite(participant.start_y) &&
+        Math.abs(participant.start_x) <= 180 &&
+        Math.abs(participant.start_y) <= 90 &&
+        (participant.travel_mode == null ||
+          isTravelMode(participant.travel_mode)),
     )
   );
 }
@@ -155,7 +166,16 @@ export function isMeetingPurpose(value: unknown): value is MeetingPurpose {
 }
 
 export function isTravelMode(value: unknown): value is TravelMode {
-  return value === 'transit' || value === 'car';
+  return value === 'transit' || value === 'car' || value === 'walk';
+}
+
+export function getParticipantTravelMode(
+  participant: Pick<RouteParticipant, 'travel_mode'>,
+  fallback: GroupTravelMode = 'transit',
+): TravelMode {
+  return (
+    participant.travel_mode ?? (fallback === 'mixed' ? 'transit' : fallback)
+  );
 }
 
 export function isMidpointBasis(value: unknown): value is MidpointBasis {

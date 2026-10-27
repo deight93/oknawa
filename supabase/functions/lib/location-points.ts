@@ -1,12 +1,9 @@
 import type { SupabaseClient } from 'jsr:@supabase/supabase-js';
-import {
-  getCenterCoordinates,
-  getScoredMeetingLocationCandidates,
-} from './distance.ts';
+import { selectRouteCandidates } from './distance.ts';
 import type {
   LocationPointsRequestBody,
-  MidpointBasis,
   MeetingPurpose,
+  MidpointBasis,
   PopularLocationType,
   PopularMeetingLocation,
   RecommendationOptions,
@@ -15,6 +12,7 @@ import type {
   StationItineraryResult,
 } from './location-types.ts';
 import {
+  getParticipantTravelMode,
   isMeetingPurpose,
   isMidpointBasis,
   isRouteParticipantList,
@@ -40,73 +38,11 @@ const CANDIDATE_POOL_MULTIPLIER = 2;
 const MAX_CANDIDATE_POOL_SIZE = 12;
 const CAR_TIME_CANDIDATE_POOL_MULTIPLIER = 4;
 const MAX_CAR_TIME_CANDIDATE_POOL_SIZE = 20;
-const MISSING_PARTICIPANT_TIME_PENALTY_SECONDS = 7200;
-const MISSING_PARTICIPANT_DISTANCE_PENALTY_METERS = 100000;
+const FAIRNESS_WINDOW_SECONDS = 300;
 const CAR_DISTANCE_TIME_SPREAD_PENALTY_METERS_PER_SECOND = 3;
 const DEFAULT_RECOMMENDATION_OPTIONS: RecommendationOptions = {
   travelMode: 'transit',
   midpointBasis: 'time',
-};
-
-const RECOMMEND_SCORE_WEIGHTS: Record<
-  MeetingPurpose | 'default',
-  {
-    averageTravelTime: number;
-    maxTravelTime: number;
-    placeQualityBenefit: number;
-    transferPenalty: number;
-    walkingTimePenalty: number;
-  }
-> = {
-  default: {
-    averageTravelTime: 1,
-    maxTravelTime: 0.35,
-    placeQualityBenefit: 420,
-    transferPenalty: 600,
-    walkingTimePenalty: 0.45,
-  },
-  meal: {
-    averageTravelTime: 1,
-    maxTravelTime: 0.35,
-    placeQualityBenefit: 600,
-    transferPenalty: 600,
-    walkingTimePenalty: 0.45,
-  },
-  cafe: {
-    averageTravelTime: 0.95,
-    maxTravelTime: 0.35,
-    placeQualityBenefit: 600,
-    transferPenalty: 600,
-    walkingTimePenalty: 0.6,
-  },
-  drink: {
-    averageTravelTime: 1,
-    maxTravelTime: 0.4,
-    placeQualityBenefit: 600,
-    transferPenalty: 750,
-    walkingTimePenalty: 0.65,
-  },
-  study: {
-    averageTravelTime: 0.9,
-    maxTravelTime: 0.55,
-    placeQualityBenefit: 480,
-    transferPenalty: 650,
-    walkingTimePenalty: 0.45,
-  },
-  date: {
-    averageTravelTime: 0.85,
-    maxTravelTime: 0.45,
-    placeQualityBenefit: 540,
-    transferPenalty: 650,
-    walkingTimePenalty: 0.7,
-  },
-  meeting: {
-    averageTravelTime: 1,
-    maxTravelTime: 0.55,
-    placeQualityBenefit: 420,
-    transferPenalty: 700,
-    walkingTimePenalty: 0.4,
-  },
 };
 
 export type StepResult<T> =
@@ -151,11 +87,20 @@ export async function parseLocationPointsRequest(
     : DEFAULT_RECOMMENDATION_OPTIONS.midpointBasis;
 
   return ok({
-    participants,
+    participants: participants.map(participant => ({
+      ...participant,
+      travel_mode: getParticipantTravelMode(participant, travelMode),
+    })),
     priority,
     meetingPurpose,
     recommendationOptions: {
-      travelMode,
+      travelMode: participants.every(
+        participant =>
+          getParticipantTravelMode(participant, travelMode) ===
+          getParticipantTravelMode(participants[0], travelMode),
+      )
+        ? getParticipantTravelMode(participants[0], travelMode)
+        : 'mixed',
       midpointBasis,
     },
   });
@@ -165,15 +110,23 @@ export function resolveRecommendType(
   participants: RouteParticipant[],
   recommendationOptions: RecommendationOptions = DEFAULT_RECOMMENDATION_OPTIONS,
 ): PopularLocationType {
-  const hasNonSeoulGyeonggi = participants.some(
-    participant => !isSeoulOrGyeonggi(participant.full_address),
+  const hasNonMetropolitan = participants.some(
+    participant => !isMetropolitanAddress(participant.full_address),
   );
 
-  if (recommendationOptions.travelMode === 'car') {
-    return hasNonSeoulGyeonggi ? 'city' : 'local_area';
+  if (
+    participants.every(
+      participant =>
+        getParticipantTravelMode(
+          participant,
+          recommendationOptions.travelMode,
+        ) === 'car',
+    )
+  ) {
+    return hasNonMetropolitan ? 'city' : 'local_area';
   }
 
-  return hasNonSeoulGyeonggi ? 'terminal' : 'station';
+  return hasNonMetropolitan ? 'terminal' : 'station';
 }
 
 export async function fetchPopularMeetingLocations(
@@ -208,8 +161,24 @@ export async function fetchCandidateMeetingLocations(
   preferredType: PopularLocationType,
 ): Promise<StepResult<PopularMeetingLocation[]>> {
   const fallbackTypes = getCandidateFallbackTypes(preferredType);
+  const metropolitanTypes: PopularLocationType[] =
+    preferredType === 'station'
+      ? ['station', 'local_area']
+      : preferredType === 'local_area'
+        ? ['local_area', 'station']
+        : [];
+  if (metropolitanTypes.length) {
+    const pools = await Promise.all(
+      metropolitanTypes.map(type =>
+        fetchPopularMeetingLocations(supabase, type),
+      ),
+    );
+    const combined = pools.flatMap(pool => (pool.ok ? pool.data : []));
+    if (combined.length) return ok(combined);
+  }
 
   for (const candidateType of [preferredType, ...fallbackTypes]) {
+    if (metropolitanTypes.includes(candidateType)) continue;
     const locations = await fetchPopularMeetingLocations(
       supabase,
       candidateType,
@@ -236,30 +205,17 @@ export async function buildStationItineraries(
   meetingPurpose?: MeetingPurpose,
   recommendationOptions: RecommendationOptions = DEFAULT_RECOMMENDATION_OPTIONS,
 ): Promise<StepResult<StationItineraryResult[]>> {
-  const centerCoordinates = getCenterCoordinates(participants);
   const candidatePoolSize = getCandidatePoolSize(
     priority,
     locations.length,
     recommendationOptions,
   );
-  const centerLocationDataList = getScoredMeetingLocationCandidates(
-    centerCoordinates,
+  const rankedLocationDataList = selectRouteCandidates(
     participants,
     locations,
+    candidatePoolSize,
+    recommendationOptions,
   );
-  const rankedLocationDataList = centerLocationDataList
-    .sort(
-      (a, b) =>
-        a.score - b.score ||
-        a.maxParticipantDistanceMeters - b.maxParticipantDistanceMeters ||
-        a.centerDistanceMeters - b.centerDistanceMeters ||
-        a.station.name.localeCompare(b.station.name),
-    )
-    .slice(0, candidatePoolSize)
-    .map(item => ({
-      ...item.station,
-      distance_score: item.score,
-    }));
   const qualityAdjustedLocationDataList = await attachPlaceQualities(
     supabase,
     rankedLocationDataList,
@@ -269,7 +225,9 @@ export async function buildStationItineraries(
     supabase,
     participants,
     qualityAdjustedLocationDataList,
-    recommendationOptions.travelMode,
+    recommendationOptions.travelMode === 'mixed'
+      ? 'transit'
+      : recommendationOptions.travelMode,
   );
   const bestStationInfoList = selectBestStationItineraries(
     stationInfoList,
@@ -428,8 +386,8 @@ export async function runLocationPointsFlow(
   return locationResult;
 }
 
-function isSeoulOrGyeonggi(fullAddress: string): boolean {
-  return fullAddress.includes('서울') || fullAddress.includes('경기');
+function isMetropolitanAddress(fullAddress: string): boolean {
+  return /^(서울|경기|인천)/.test(fullAddress.trim());
 }
 
 function getCandidateFallbackTypes(
@@ -464,10 +422,7 @@ export function getCandidatePoolSize(
 
   return Math.min(
     locationCount,
-    Math.max(
-      priority,
-      Math.min(priority * multiplier, maxCandidatePoolSize),
-    ),
+    Math.max(priority, Math.min(priority * multiplier, maxCandidatePoolSize)),
   );
 }
 
@@ -475,81 +430,86 @@ export function selectBestStationItineraries(
   stationInfoList: StationItineraryResult[],
   participantCount: number,
   priority: number,
-  meetingPurpose?: MeetingPurpose,
+  _meetingPurpose?: MeetingPurpose,
   recommendationOptions: RecommendationOptions = DEFAULT_RECOMMENDATION_OPTIONS,
 ): StationItineraryResult[] {
-  return stationInfoList
-    .filter(station => station.itinerary.length === participantCount)
-    .map(station => ({
-      ...station,
-      recommend_score: getStationItineraryScore(
-        station,
-        participantCount,
-        meetingPurpose,
-        recommendationOptions,
+  if (participantCount < 1) return [];
+  const complete = stationInfoList.filter(
+    station =>
+      station.itinerary.length === participantCount &&
+      station.itinerary.every(
+        route =>
+          Number.isFinite(route.itinerary.totalTime) &&
+          route.itinerary.totalTime >= 0,
       ),
-    }))
-    .sort(
-      (a, b) =>
-        (a.recommend_score ?? Number.POSITIVE_INFINITY) -
-          (b.recommend_score ?? Number.POSITIVE_INFINITY) ||
-        a.station_name.localeCompare(b.station_name),
-    )
-    .slice(0, priority);
-}
-
-function getStationItineraryScore(
-  station: StationItineraryResult,
-  participantCount: number,
-  meetingPurpose?: MeetingPurpose,
-  recommendationOptions: RecommendationOptions = DEFAULT_RECOMMENDATION_OPTIONS,
-): number {
-  const metrics = getStationRouteMetrics(station, participantCount);
-
-  if (recommendationOptions.travelMode === 'car') {
-    return getCarItineraryScore(station, metrics, recommendationOptions);
-  }
-
-  if (recommendationOptions.midpointBasis === 'distance') {
-    return getDistanceBasisScore(station, metrics);
-  }
-
-  return getTransitTimeBasisScore(station, metrics, meetingPurpose);
-}
-
-function getTransitTimeBasisScore(
-  station: StationItineraryResult,
-  metrics: StationRouteMetrics,
-  meetingPurpose?: MeetingPurpose,
-): number {
-  const weights = RECOMMEND_SCORE_WEIGHTS[meetingPurpose ?? 'default'];
-  const placeQualityBenefit =
-    (station.place_quality?.score ?? 0) * weights.placeQualityBenefit;
-
-  return (
-    metrics.averageTravelTime * weights.averageTravelTime +
-    metrics.maxTravelTime * weights.maxTravelTime +
-    metrics.averageTransferCount * weights.transferPenalty +
-    metrics.averageWalkingTime * weights.walkingTimePenalty +
-    metrics.missingParticipantCount * MISSING_PARTICIPANT_TIME_PENALTY_SECONDS -
-    placeQualityBenefit
   );
-}
-
-function getCarItineraryScore(
-  station: StationItineraryResult,
-  metrics: StationRouteMetrics,
-  recommendationOptions: RecommendationOptions,
-): number {
-  if (recommendationOptions.midpointBasis === 'distance') {
-    return getDistanceBasisScore(station, metrics);
-  }
-
-  return (
-    metrics.averageTravelTime +
-    metrics.maxTravelTime * 0.35 +
-    metrics.missingParticipantCount * MISSING_PARTICIPANT_TIME_PENALTY_SECONDS
+  const candidates =
+    recommendationOptions.midpointBasis === 'distance'
+      ? complete
+      : complete.filter(
+          candidate =>
+            !complete.some(
+              other =>
+                other !== candidate &&
+                other.itinerary.every(
+                  (route, index) =>
+                    route.itinerary.totalTime <=
+                    candidate.itinerary[index].itinerary.totalTime,
+                ) &&
+                other.itinerary.some(
+                  (route, index) =>
+                    route.itinerary.totalTime <
+                    candidate.itinerary[index].itinerary.totalTime,
+                ),
+            ),
+        );
+  const scored = candidates.map(station => ({
+    station,
+    metrics: getStationRouteMetrics(station, recommendationOptions),
+  }));
+  const bestMaxTime = Math.min(
+    ...scored.map(item => item.metrics.maxTravelTime),
   );
+
+  return scored
+    .sort((a, b) => {
+      const stableTie = () =>
+        a.station.station_name.localeCompare(b.station.station_name) ||
+        a.station.end_x - b.station.end_x ||
+        a.station.end_y - b.station.end_y;
+      if (recommendationOptions.midpointBasis === 'distance') {
+        return (
+          getDistanceBasisScore(a.station, a.metrics) -
+            getDistanceBasisScore(b.station, b.metrics) || stableTie()
+        );
+      }
+      // Compare against one group-wide threshold, not a pairwise tolerance:
+      // pairwise "within five minutes" comparisons are not transitive.
+      const aWithin =
+        a.metrics.maxTravelTime <= bestMaxTime + FAIRNESS_WINDOW_SECONDS;
+      const bWithin =
+        b.metrics.maxTravelTime <= bestMaxTime + FAIRNESS_WINDOW_SECONDS;
+      if (aWithin !== bWithin) return aWithin ? -1 : 1;
+      return (
+        (aWithin
+          ? a.metrics.travelTimeSpread - b.metrics.travelTimeSpread ||
+            a.metrics.maxTravelTime - b.metrics.maxTravelTime
+          : a.metrics.maxTravelTime - b.metrics.maxTravelTime ||
+            a.metrics.travelTimeSpread - b.metrics.travelTimeSpread) ||
+        a.metrics.averageTravelTime - b.metrics.averageTravelTime ||
+        a.metrics.averageTransferCount - b.metrics.averageTransferCount ||
+        a.metrics.averageWalkingTime - b.metrics.averageWalkingTime ||
+        (b.station.place_quality?.score ?? 0) -
+          (a.station.place_quality?.score ?? 0) ||
+        stableTie()
+      );
+    })
+    .slice(0, priority)
+    .map(({ station }, index) => ({
+      ...station,
+      // Existing result/share clients sort this numeric field ascending.
+      recommend_score: index,
+    }));
 }
 
 function getDistanceBasisScore(
@@ -559,8 +519,7 @@ function getDistanceBasisScore(
   return (
     (station.distance_score ?? Number.POSITIVE_INFINITY) +
     metrics.travelTimeSpread *
-      CAR_DISTANCE_TIME_SPREAD_PENALTY_METERS_PER_SECOND +
-    metrics.missingParticipantCount * MISSING_PARTICIPANT_DISTANCE_PENALTY_METERS
+      CAR_DISTANCE_TIME_SPREAD_PENALTY_METERS_PER_SECOND
   );
 }
 
@@ -570,12 +529,11 @@ interface StationRouteMetrics {
   averageTransferCount: number;
   averageWalkingTime: number;
   travelTimeSpread: number;
-  missingParticipantCount: number;
 }
 
 function getStationRouteMetrics(
   station: StationItineraryResult,
-  participantCount: number,
+  options: RecommendationOptions,
 ): StationRouteMetrics {
   const routeCount = station.itinerary.length;
   const travelTimes = station.itinerary.map(route => route.itinerary.totalTime);
@@ -585,13 +543,21 @@ function getStationRouteMetrics(
   const minTravelTime = travelTimes.length ? Math.min(...travelTimes) : 0;
   const averageTransferCount = routeCount
     ? station.itinerary.reduce(
-        (sum, route) => sum + (route.itinerary.transferCount ?? 0),
+        (sum, route) =>
+          sum +
+          (getParticipantTravelMode(route, options.travelMode) === 'transit'
+            ? (route.itinerary.transferCount ?? 0)
+            : 0),
         0,
       ) / routeCount
     : 0;
   const averageWalkingTime = routeCount
     ? station.itinerary.reduce(
-        (sum, route) => sum + (route.itinerary.walkingTime ?? 0),
+        (sum, route) =>
+          sum +
+          (getParticipantTravelMode(route, options.travelMode) !== 'car'
+            ? (route.itinerary.walkingTime ?? 0)
+            : 0),
         0,
       ) / routeCount
     : 0;
@@ -602,7 +568,6 @@ function getStationRouteMetrics(
     averageTransferCount,
     averageWalkingTime,
     travelTimeSpread: Math.max(maxTravelTime - minTravelTime, 0),
-    missingParticipantCount: Math.max(participantCount - routeCount, 0),
   };
 }
 

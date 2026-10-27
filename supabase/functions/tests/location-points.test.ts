@@ -10,14 +10,21 @@ import {
   resolveRecommendType,
   selectBestStationItineraries,
 } from '../lib/location-points.ts';
-import { getScoredMeetingLocationCandidates } from '../lib/distance.ts';
+import {
+  getScoredMeetingLocationCandidates,
+  selectRouteCandidates,
+} from '../lib/distance.ts';
 import type {
   PopularLocationType,
   PopularMeetingLocation,
   RouteItinerary,
   StationItineraryResult,
 } from '../lib/location-types.ts';
-import { ExternalApiError, responseApiError, responseError } from '../lib/utils.ts';
+import {
+  ExternalApiError,
+  responseApiError,
+  responseError,
+} from '../lib/utils.ts';
 
 const createParticipant = (fullAddress: string) => ({
   name: '테스터',
@@ -131,9 +138,14 @@ function getTopCandidateNames(
 }
 
 Deno.test('responseApiError keeps a structured error payload', async () => {
-  const response = responseApiError('invalid_request', '잘못된 요청입니다', 400, {
-    field: 'participant',
-  });
+  const response = responseApiError(
+    'invalid_request',
+    '잘못된 요청입니다',
+    400,
+    {
+      field: 'participant',
+    },
+  );
   const body = await response.json();
 
   assertEquals(response.status, 400);
@@ -143,294 +155,348 @@ Deno.test('responseApiError keeps a structured error payload', async () => {
   assertEquals(body.detail.field, 'participant');
 });
 
-Deno.test('responseError maps external API failures to a stable error code', async () => {
-  const response = responseError(
-    new ExternalApiError('외부 API 실패', 503, 'https://example.com', 'down'),
-  );
-  const body = await response.json();
+Deno.test(
+  'responseError maps external API failures to a stable error code',
+  async () => {
+    const response = responseError(
+      new ExternalApiError('외부 API 실패', 503, 'https://example.com', 'down'),
+    );
+    const body = await response.json();
 
-  assertEquals(response.status, 502);
-  assertEquals(body.errorCode, 'external_api_error');
-  assertEquals(body.message, '외부 API 실패');
-  assertEquals(body.detail.status, 503);
-});
+    assertEquals(response.status, 502);
+    assertEquals(body.errorCode, 'external_api_error');
+    assertEquals(body.message, '외부 API 실패');
+    assertEquals(body.detail.status, 503);
+  },
+);
 
-Deno.test('parseLocationPointsRequest validates JSON and participants', async () => {
-  const invalidJson = await parseLocationPointsRequest(
-    new Request('https://example.com/functions/v1/location-points', {
-      method: 'POST',
-      body: '{',
-    }),
-  );
+Deno.test(
+  'parseLocationPointsRequest validates JSON and participants',
+  async () => {
+    const invalidJson = await parseLocationPointsRequest(
+      new Request('https://example.com/functions/v1/location-points', {
+        method: 'POST',
+        body: '{',
+      }),
+    );
 
-  assert(!invalidJson.ok);
-  assertEquals(invalidJson.response.status, 400);
-  assertEquals((await invalidJson.response.json()).errorCode, 'invalid_json_body');
+    assert(!invalidJson.ok);
+    assertEquals(invalidJson.response.status, 400);
+    assertEquals(
+      (await invalidJson.response.json()).errorCode,
+      'invalid_json_body',
+    );
 
-  const valid = await parseLocationPointsRequest(
-    new Request('https://example.com/functions/v1/location-points?priority=99', {
-      method: 'POST',
-      body: JSON.stringify({
-        participant: [
+    const valid = await parseLocationPointsRequest(
+      new Request(
+        'https://example.com/functions/v1/location-points?priority=99',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            participant: [
+              createParticipant('서울특별시 강남구'),
+              createParticipant('경기도 성남시'),
+            ],
+            meetingPurpose: 'cafe',
+            travelMode: 'car',
+            midpointBasis: 'distance',
+          }),
+        },
+      ),
+    );
+
+    assert(valid.ok);
+    assertEquals(valid.data.priority, 10);
+    assertEquals(valid.data.meetingPurpose, 'cafe');
+    assertEquals(valid.data.recommendationOptions.travelMode, 'car');
+    assertEquals(valid.data.recommendationOptions.midpointBasis, 'distance');
+    assertEquals(valid.data.participants.length, 2);
+  },
+);
+
+Deno.test(
+  'parseLocationPointsRequest falls back to default recommendation options',
+  async () => {
+    const valid = await parseLocationPointsRequest(
+      new Request('https://example.com/functions/v1/location-points', {
+        method: 'POST',
+        body: JSON.stringify({
+          participant: [
+            createParticipant('서울특별시 강남구'),
+            createParticipant('경기도 성남시'),
+          ],
+          travelMode: 'bike',
+          midpointBasis: 'price',
+        }),
+      }),
+    );
+
+    assert(valid.ok);
+    assertEquals(valid.data.recommendationOptions.travelMode, 'transit');
+    assertEquals(valid.data.recommendationOptions.midpointBasis, 'time');
+  },
+);
+
+Deno.test(
+  'resolveRecommendType uses stations for Seoul/Gyeonggi and terminals otherwise',
+  () => {
+    assertEquals(
+      resolveRecommendType([
+        createParticipant('서울특별시 강남구'),
+        createParticipant('경기도 성남시'),
+      ]),
+      'station',
+    );
+    assertEquals(
+      resolveRecommendType([
+        createParticipant('서울특별시 강남구'),
+        createParticipant('부산광역시 해운대구'),
+      ]),
+      'terminal',
+    );
+  },
+);
+
+Deno.test(
+  'resolveRecommendType uses area and city candidates for car recommendations',
+  () => {
+    assertEquals(
+      resolveRecommendType(
+        [
           createParticipant('서울특별시 강남구'),
           createParticipant('경기도 성남시'),
         ],
-        meetingPurpose: 'cafe',
+        { travelMode: 'car', midpointBasis: 'time' },
+      ),
+      'local_area',
+    );
+    assertEquals(
+      resolveRecommendType(
+        [
+          createParticipant('서울특별시 강남구'),
+          createParticipant('부산광역시 해운대구'),
+        ],
+        { travelMode: 'car', midpointBasis: 'distance' },
+      ),
+      'city',
+    );
+  },
+);
+
+Deno.test(
+  'car recommendation QA keeps a wider candidate pool for drive-time ranking',
+  () => {
+    assertEquals(
+      getCandidatePoolSize(4, 50, {
+        travelMode: 'transit',
+        midpointBasis: 'time',
+      }),
+      8,
+    );
+    assertEquals(
+      getCandidatePoolSize(4, 50, {
         travelMode: 'car',
         midpointBasis: 'distance',
       }),
-    }),
-  );
+      8,
+    );
+    assertEquals(
+      getCandidatePoolSize(4, 50, { travelMode: 'car', midpointBasis: 'time' }),
+      16,
+    );
+  },
+);
 
-  assert(valid.ok);
-  assertEquals(valid.data.priority, 10);
-  assertEquals(valid.data.meetingPurpose, 'cafe');
-  assertEquals(valid.data.recommendationOptions.travelMode, 'car');
-  assertEquals(valid.data.recommendationOptions.midpointBasis, 'distance');
-  assertEquals(valid.data.participants.length, 2);
-});
-
-Deno.test('parseLocationPointsRequest falls back to default recommendation options', async () => {
-  const valid = await parseLocationPointsRequest(
-    new Request('https://example.com/functions/v1/location-points', {
-      method: 'POST',
-      body: JSON.stringify({
-        participant: [
-          createParticipant('서울특별시 강남구'),
-          createParticipant('경기도 성남시'),
-        ],
-        travelMode: 'bike',
-        midpointBasis: 'price',
+Deno.test(
+  'car recommendation QA covers Seoul/Gyeonggi area candidates',
+  async () => {
+    const localAreaCandidates = await loadCarCandidates('local_area');
+    const topCandidateNames = getTopCandidateNames(
+      localAreaCandidates,
+      [
+        {
+          ...createParticipant('서울특별시 강남구 역삼동'),
+          start_x: 127.0276,
+          start_y: 37.4979,
+        },
+        {
+          ...createParticipant('경기도 수원시 팔달구 매산로1가'),
+          start_x: 127.0002,
+          start_y: 37.2656,
+        },
+      ],
+      getCandidatePoolSize(4, localAreaCandidates.length, {
+        travelMode: 'car',
+        midpointBasis: 'time',
       }),
-    }),
-  );
+    );
 
-  assert(valid.ok);
-  assertEquals(valid.data.recommendationOptions.travelMode, 'transit');
-  assertEquals(valid.data.recommendationOptions.midpointBasis, 'time');
-});
+    assert(localAreaCandidates.length >= 45);
+    assert(
+      topCandidateNames.some(name =>
+        ['판교 상권', '정자 상권', '사당 상권', '교대 상권'].includes(name),
+      ),
+    );
+  },
+);
 
-Deno.test('resolveRecommendType uses stations for Seoul/Gyeonggi and terminals otherwise', () => {
-  assertEquals(
-    resolveRecommendType([
-      createParticipant('서울특별시 강남구'),
-      createParticipant('경기도 성남시'),
-    ]),
-    'station',
-  );
-  assertEquals(
-    resolveRecommendType([
-      createParticipant('서울특별시 강남구'),
-      createParticipant('부산광역시 해운대구'),
-    ]),
-    'terminal',
-  );
-});
+Deno.test(
+  'car recommendation QA covers external city hub candidates',
+  async () => {
+    const cityCandidates = await loadCarCandidates('city');
+    const topCandidateNames = getTopCandidateNames(
+      cityCandidates,
+      [
+        {
+          ...createParticipant('서울특별시 중구 봉래동2가'),
+          start_x: 126.9707,
+          start_y: 37.5547,
+        },
+        {
+          ...createParticipant('부산광역시 동구 초량동'),
+          start_x: 129.0397,
+          start_y: 35.1151,
+        },
+      ],
+      getCandidatePoolSize(4, cityCandidates.length, {
+        travelMode: 'car',
+        midpointBasis: 'time',
+      }),
+    );
 
-Deno.test('resolveRecommendType uses area and city candidates for car recommendations', () => {
-  assertEquals(
-    resolveRecommendType(
+    assert(cityCandidates.length >= 35);
+    assert(
+      topCandidateNames.some(name =>
+        ['대전광역시', '대구광역시', '청주시', '천안시'].includes(name),
+      ),
+    );
+  },
+);
+
+Deno.test(
+  'fetchCandidateMeetingLocations falls back to the other candidate type',
+  async () => {
+    const supabase = createSupabaseMock({
+      terminal: [],
+      station: [
+        {
+          name: '강남역',
+          type: 'station',
+          url: 'https://place.map.kakao.com/1',
+          address: '서울 강남구',
+          location_x: 127.0276,
+          location_y: 37.4979,
+        },
+      ],
+    });
+
+    const result = await fetchCandidateMeetingLocations(
+      supabase as never,
+      'terminal',
+    );
+
+    assert(result.ok);
+    assertEquals(result.data[0].name, '강남역');
+  },
+);
+
+Deno.test(
+  'fetchCandidateMeetingLocations falls back from car area to station candidates',
+  async () => {
+    const supabase = createSupabaseMock({
+      local_area: [],
+      station: [
+        {
+          name: '강남역',
+          type: 'station',
+          url: 'https://place.map.kakao.com/1',
+          address: '서울 강남구',
+          location_x: 127.0276,
+          location_y: 37.4979,
+        },
+      ],
+    });
+
+    const result = await fetchCandidateMeetingLocations(
+      supabase as never,
+      'local_area',
+    );
+
+    assert(result.ok);
+    assertEquals(result.data[0].name, '강남역');
+  },
+);
+
+Deno.test(
+  'buildStationInfoInserts preserves recommendation result type in request info',
+  () => {
+    const inserts = buildStationInfoInserts(
+      '00000000-0000-0000-0000-000000000000',
       [
         createParticipant('서울특별시 강남구'),
         createParticipant('경기도 성남시'),
       ],
-      { travelMode: 'car', midpointBasis: 'time' },
-    ),
-    'local_area',
-  );
-  assertEquals(
-    resolveRecommendType(
       [
-        createParticipant('서울특별시 강남구'),
-        createParticipant('부산광역시 해운대구'),
+        {
+          ...createStationResult('판교 상권', [
+            createRoute(1200, 0, 0),
+            createRoute(1300, 0, 0),
+          ]),
+          result_type: 'local_area',
+        },
       ],
-      { travelMode: 'car', midpointBasis: 'distance' },
-    ),
-    'city',
-  );
-});
+      undefined,
+      { travelMode: 'car', midpointBasis: 'time' },
+    );
 
-Deno.test('car recommendation QA keeps a wider candidate pool for drive-time ranking', () => {
-  assertEquals(
-    getCandidatePoolSize(4, 50, { travelMode: 'transit', midpointBasis: 'time' }),
-    8,
-  );
-  assertEquals(
-    getCandidatePoolSize(4, 50, { travelMode: 'car', midpointBasis: 'distance' }),
-    8,
-  );
-  assertEquals(
-    getCandidatePoolSize(4, 50, { travelMode: 'car', midpointBasis: 'time' }),
-    16,
-  );
-});
+    assertEquals(inserts[0].request_info.resultType, 'local_area');
+    assertEquals(
+      inserts[0].request_info.recommendationOptions?.travelMode,
+      'car',
+    );
+  },
+);
 
-Deno.test('car recommendation QA covers Seoul/Gyeonggi area candidates', async () => {
-  const localAreaCandidates = await loadCarCandidates('local_area');
-  const topCandidateNames = getTopCandidateNames(
-    localAreaCandidates,
-    [
-      {
-        ...createParticipant('서울특별시 강남구 역삼동'),
-        start_x: 127.0276,
-        start_y: 37.4979,
-      },
-      {
-        ...createParticipant('경기도 수원시 팔달구 매산로1가'),
-        start_x: 127.0002,
-        start_y: 37.2656,
-      },
-    ],
-    getCandidatePoolSize(4, localAreaCandidates.length, {
-      travelMode: 'car',
-      midpointBasis: 'time',
-    }),
-  );
-
-  assert(localAreaCandidates.length >= 45);
-  assert(
-    topCandidateNames.some(name =>
-      ['판교 상권', '정자 상권', '사당 상권', '교대 상권'].includes(name),
-    ),
-  );
-});
-
-Deno.test('car recommendation QA covers external city hub candidates', async () => {
-  const cityCandidates = await loadCarCandidates('city');
-  const topCandidateNames = getTopCandidateNames(
-    cityCandidates,
-    [
-      {
-        ...createParticipant('서울특별시 중구 봉래동2가'),
-        start_x: 126.9707,
-        start_y: 37.5547,
-      },
-      {
-        ...createParticipant('부산광역시 동구 초량동'),
-        start_x: 129.0397,
-        start_y: 35.1151,
-      },
-    ],
-    getCandidatePoolSize(4, cityCandidates.length, {
-      travelMode: 'car',
-      midpointBasis: 'time',
-    }),
-  );
-
-  assert(cityCandidates.length >= 35);
-  assert(
-    topCandidateNames.some(name =>
-      ['대전광역시', '대구광역시', '청주시', '천안시'].includes(name),
-    ),
-  );
-});
-
-Deno.test('fetchCandidateMeetingLocations falls back to the other candidate type', async () => {
-  const supabase = createSupabaseMock({
-    terminal: [],
-    station: [
-      {
-        name: '강남역',
-        type: 'station',
-        url: 'https://place.map.kakao.com/1',
-        address: '서울 강남구',
-        location_x: 127.0276,
-        location_y: 37.4979,
-      },
-    ],
-  });
-
-  const result = await fetchCandidateMeetingLocations(
-    supabase as never,
-    'terminal',
-  );
-
-  assert(result.ok);
-  assertEquals(result.data[0].name, '강남역');
-});
-
-Deno.test('fetchCandidateMeetingLocations falls back from car area to station candidates', async () => {
-  const supabase = createSupabaseMock({
-    local_area: [],
-    station: [
-      {
-        name: '강남역',
-        type: 'station',
-        url: 'https://place.map.kakao.com/1',
-        address: '서울 강남구',
-        location_x: 127.0276,
-        location_y: 37.4979,
-      },
-    ],
-  });
-
-  const result = await fetchCandidateMeetingLocations(
-    supabase as never,
-    'local_area',
-  );
-
-  assert(result.ok);
-  assertEquals(result.data[0].name, '강남역');
-});
-
-Deno.test('buildStationInfoInserts preserves recommendation result type in request info', () => {
-  const inserts = buildStationInfoInserts(
-    '00000000-0000-0000-0000-000000000000',
-    [
-      createParticipant('서울특별시 강남구'),
-      createParticipant('경기도 성남시'),
-    ],
-    [
-      {
-        ...createStationResult('판교 상권', [
-          createRoute(1200, 0, 0),
-          createRoute(1300, 0, 0),
+Deno.test(
+  'selectBestStationItineraries breaks equal-time ties with fewer transfers and shorter walking time',
+  () => {
+    const result = selectBestStationItineraries(
+      [
+        createStationResult('빠르지만 번거로운 역', [
+          createRoute(1200, 1, 120),
+          createRoute(1200, 1, 120),
         ]),
-        result_type: 'local_area',
-      },
-    ],
-    undefined,
-    { travelMode: 'car', midpointBasis: 'time' },
-  );
+        createStationResult('조금 느려도 편한 역', [
+          createRoute(1200, 0, 80),
+          createRoute(1200, 0, 80),
+        ]),
+      ],
+      2,
+      2,
+    );
 
-  assertEquals(inserts[0].request_info.resultType, 'local_area');
-  assertEquals(inserts[0].request_info.recommendationOptions?.travelMode, 'car');
-});
+    assertEquals(result[0].station_name, '조금 느려도 편한 역');
+  },
+);
 
-Deno.test('selectBestStationItineraries rewards fewer transfers and shorter walking time', () => {
-  const result = selectBestStationItineraries(
-    [
-      createStationResult('빠르지만 번거로운 역', [
-        createRoute(1200, 1, 120),
-        createRoute(1200, 1, 120),
-      ]),
-      createStationResult('조금 느려도 편한 역', [
-        createRoute(1250, 0, 80),
-        createRoute(1250, 0, 80),
-      ]),
-    ],
-    2,
-    2,
-  );
+Deno.test(
+  'selectBestStationItineraries penalizes candidates missing participant routes',
+  () => {
+    const result = selectBestStationItineraries(
+      [
+        createStationResult('일부만 빠른 역', [createRoute(300, 0, 20)]),
+        createStationResult('모두 갈 수 있는 역', [
+          createRoute(1200, 0, 80),
+          createRoute(1200, 0, 80),
+        ]),
+      ],
+      2,
+      2,
+    );
 
-  assertEquals(result[0].station_name, '조금 느려도 편한 역');
-});
-
-Deno.test('selectBestStationItineraries penalizes candidates missing participant routes', () => {
-  const result = selectBestStationItineraries(
-    [
-      createStationResult('일부만 빠른 역', [createRoute(300, 0, 20)]),
-      createStationResult('모두 갈 수 있는 역', [
-        createRoute(1200, 0, 80),
-        createRoute(1200, 0, 80),
-      ]),
-    ],
-    2,
-    2,
-  );
-
-  assertEquals(result[0].station_name, '모두 갈 수 있는 역');
-});
+    assertEquals(result[0].station_name, '모두 갈 수 있는 역');
+  },
+);
 
 Deno.test('selectBestStationItineraries can rank by distance score', () => {
   const nearButSlower = {
@@ -459,50 +525,307 @@ Deno.test('selectBestStationItineraries can rank by distance score', () => {
   assertEquals(result[0].station_name, '거리상 가까운 역');
 });
 
-Deno.test('selectBestStationItineraries ranks car time by drive travel time without transit penalties', () => {
-  const fasterWithTransitNoise = createStationResult('자동차로 빠른 지역', [
-    createRoute(900, 5, 2000),
-    createRoute(900, 5, 2000),
-  ]);
-  const slowerWithoutTransitNoise = createStationResult('자동차로 느린 지역', [
-    createRoute(1200, 0, 0),
-    createRoute(1200, 0, 0),
-  ]);
+Deno.test(
+  'selectBestStationItineraries ranks car time by drive travel time without transit penalties',
+  () => {
+    const fasterWithTransitNoise = createStationResult('자동차로 빠른 지역', [
+      createRoute(900, 5, 2000),
+      createRoute(900, 5, 2000),
+    ]);
+    const slowerWithoutTransitNoise = createStationResult(
+      '자동차로 느린 지역',
+      [createRoute(1200, 0, 0), createRoute(1200, 0, 0)],
+    );
 
-  const result = selectBestStationItineraries(
-    [slowerWithoutTransitNoise, fasterWithTransitNoise],
-    2,
-    2,
-    undefined,
-    { travelMode: 'car', midpointBasis: 'time' },
-  );
+    const result = selectBestStationItineraries(
+      [slowerWithoutTransitNoise, fasterWithTransitNoise],
+      2,
+      2,
+      undefined,
+      { travelMode: 'car', midpointBasis: 'time' },
+    );
 
-  assertEquals(result[0].station_name, '자동차로 빠른 지역');
-});
+    assertEquals(result[0].station_name, '자동차로 빠른 지역');
+  },
+);
 
-Deno.test('selectBestStationItineraries keeps car distance ranking but lightly penalizes severe time imbalance', () => {
-  const balancedLocation = {
-    ...createStationResult('조금 멀어도 균형 좋은 지역', [
-      createRoute(1000, 0, 0),
-      createRoute(1000, 0, 0),
-    ]),
-    distance_score: 5000,
-  };
-  const imbalancedLocation = {
-    ...createStationResult('가깝지만 치우친 지역', [
-      createRoute(100, 0, 0),
-      createRoute(2000, 0, 0),
-    ]),
-    distance_score: 1000,
-  };
+Deno.test(
+  'selectBestStationItineraries keeps car distance ranking but lightly penalizes severe time imbalance',
+  () => {
+    const balancedLocation = {
+      ...createStationResult('조금 멀어도 균형 좋은 지역', [
+        createRoute(1000, 0, 0),
+        createRoute(1000, 0, 0),
+      ]),
+      distance_score: 5000,
+    };
+    const imbalancedLocation = {
+      ...createStationResult('가깝지만 치우친 지역', [
+        createRoute(100, 0, 0),
+        createRoute(2000, 0, 0),
+      ]),
+      distance_score: 1000,
+    };
 
-  const result = selectBestStationItineraries(
-    [imbalancedLocation, balancedLocation],
-    2,
-    2,
-    undefined,
-    { travelMode: 'car', midpointBasis: 'distance' },
-  );
+    const result = selectBestStationItineraries(
+      [imbalancedLocation, balancedLocation],
+      2,
+      2,
+      undefined,
+      { travelMode: 'car', midpointBasis: 'distance' },
+    );
 
-  assertEquals(result[0].station_name, '조금 멀어도 균형 좋은 지역');
-});
+    assertEquals(result[0].station_name, '조금 멀어도 균형 좋은 지역');
+  },
+);
+
+Deno.test(
+  'fair ranking protects the slowest participant even when the average increases',
+  () => {
+    const quickAverage = createStationResult(
+      '평균만 빠른 곳',
+      [600, 600, 4200].map(t => createRoute(t)),
+    );
+    quickAverage.place_quality = {
+      radius: 500,
+      foodCount: 100,
+      cafeCount: 100,
+      drinkCount: 100,
+      score: 1,
+    };
+    const fair = createStationResult(
+      '공평한 곳',
+      [2520, 2520, 2520].map(t => createRoute(t)),
+    );
+    const ranked = selectBestStationItineraries(
+      [quickAverage, fair],
+      3,
+      4,
+      'cafe',
+    );
+    assertEquals(ranked[0].station_name, '공평한 곳');
+  },
+);
+
+Deno.test(
+  'fair ranking removes dominated travel times rather than slowing everyone for equality',
+  () => {
+    const faster = createStationResult(
+      '모두 빠른 곳',
+      [600, 900, 1200].map(t => createRoute(t, 2, 200)),
+    );
+    const equalButSlower = createStationResult(
+      '모두 느린 곳',
+      [1800, 1800, 1800].map(t => createRoute(t)),
+    );
+    assertEquals(
+      selectBestStationItineraries([equalButSlower, faster], 3, 4).map(
+        s => s.station_name,
+      ),
+      ['모두 빠른 곳'],
+    );
+  },
+);
+
+Deno.test(
+  'fair ranking uses an inclusive five-minute window and a stable total order',
+  () => {
+    const fastestWorst = createStationResult(
+      '최장 40분',
+      [600, 1800, 2400].map(t => createRoute(t)),
+    );
+    const within = createStationResult(
+      '최장 45분',
+      [2100, 1740, 2700].map(t => createRoute(t)),
+    );
+    for (const candidates of [
+      [fastestWorst, within],
+      [within, fastestWorst],
+    ]) {
+      const ranked = selectBestStationItineraries(candidates, 3, 4);
+      assertEquals(
+        ranked.map(s => s.station_name),
+        ['최장 45분', '최장 40분'],
+      );
+      assert(
+        (ranked[0].recommend_score ?? Infinity) <
+          (ranked[1].recommend_score ?? -Infinity),
+      );
+    }
+    const outside = createStationResult(
+      '5분 1초 초과',
+      [2100, 1740, 2701].map(t => createRoute(t)),
+    );
+    assertEquals(
+      selectBestStationItineraries([outside, fastestWorst], 3, 4)[0]
+        .station_name,
+      '최장 40분',
+    );
+  },
+);
+
+Deno.test(
+  'fair ranking excludes nonfinite and negative route durations',
+  () => {
+    const valid = createStationResult('정상', [
+      createRoute(600),
+      createRoute(900),
+    ]);
+    const invalid = [NaN, Infinity, -1].map((t, i) =>
+      createStationResult(`오류${i}`, [createRoute(t), createRoute(500)]),
+    );
+    assertEquals(
+      selectBestStationItineraries([...invalid, valid], 2, 4).map(
+        s => s.station_name,
+      ),
+      ['정상'],
+    );
+  },
+);
+
+Deno.test(
+  'Incheon participates in the same metropolitan station search',
+  () => {
+    assertEquals(
+      resolveRecommendType([
+        createParticipant('인천광역시 부평구'),
+        createParticipant('서울특별시 강남구'),
+      ]),
+      'station',
+    );
+  },
+);
+
+Deno.test(
+  'individual transport modes override the legacy default and reject unsupported choices',
+  async () => {
+    const request = (travel_mode: string) =>
+      new Request('https://example.com/location-points', {
+        method: 'POST',
+        body: JSON.stringify({
+          travelMode: 'car',
+          participant: [
+            { ...createParticipant('서울특별시'), travel_mode },
+            createParticipant('경기도'),
+          ],
+        }),
+      });
+    const mixed = await parseLocationPointsRequest(request('walk'));
+    assert(mixed.ok);
+    assertEquals(
+      mixed.data.participants.map(p => Reflect.get(p, 'travel_mode')),
+      ['walk', 'car'],
+    );
+    assertEquals(mixed.data.recommendationOptions.travelMode, 'mixed');
+    const invalid = await parseLocationPointsRequest(request('bike'));
+    assert(!invalid.ok);
+    assertEquals(invalid.response.status, 400);
+  },
+);
+
+Deno.test(
+  'candidate selection includes distinct areas and a walking origin within the request budget',
+  () => {
+    const participants = [
+      {
+        ...createParticipant('서울'),
+        start_x: 126.8,
+        travel_mode: 'car' as const,
+      },
+      {
+        ...createParticipant('서울'),
+        start_x: 127.2,
+        travel_mode: 'walk' as const,
+      },
+    ];
+    const location = (name: string, x: number): PopularMeetingLocation => ({
+      name,
+      address: '서울',
+      type: 'station',
+      location_x: x,
+      location_y: 37.4979,
+    });
+    const places = [
+      ...Array.from({ length: 12 }, (_, i) =>
+        location(`중심${i}`, 127 + i * 0.0001),
+      ),
+      location('서쪽 권역', 126.96),
+      location('동쪽 권역', 127.04),
+      location('도보 출발지 주변', 127.199),
+    ];
+    const options = {
+      travelMode: 'mixed' as const,
+      midpointBasis: 'time' as const,
+    };
+    const selected = selectRouteCandidates(participants, places, 4, options);
+    assertEquals(selected.length, 4);
+    assert(selected.some(p => p.name === '도보 출발지 주변'));
+    assert(
+      selected.some(p => p.name === '서쪽 권역' || p.name === '동쪽 권역'),
+    );
+    assertEquals(
+      selectRouteCandidates(
+        participants.toReversed(),
+        places.toReversed(),
+        4,
+        options,
+      ).map(p => p.name),
+      selected.map(p => p.name),
+    );
+  },
+);
+
+Deno.test(
+  'candidate selection filters invalid coordinates and deduplicates route destinations',
+  () => {
+    const good: PopularMeetingLocation = {
+      name: '역',
+      type: 'station',
+      address: '서울',
+      location_x: 127,
+      location_y: 37.5,
+    };
+    const selected = selectRouteCandidates(
+      [createParticipant('서울')],
+      [
+        good,
+        { ...good, name: '중복역' },
+        { ...good, location_x: 'NaN' },
+        {
+          ...good,
+          location_y: 91,
+        },
+      ],
+      8,
+      { travelMode: 'transit', midpointBasis: 'time' },
+    );
+    assertEquals(selected.length, 1);
+    assertEquals(selected[0].location_x, 127);
+  },
+);
+
+Deno.test(
+  'metropolitan candidates combine stations and meeting areas before route pruning',
+  async () => {
+    const base = { address: '서울', location_x: 127, location_y: 37.5 };
+    const result = await fetchCandidateMeetingLocations(
+      createSupabaseMock({
+        station: [{ ...base, type: 'station', name: '환승역' }],
+        local_area: [
+          {
+            ...base,
+            type: 'local_area',
+            name: '모임 지역',
+            location_x: 127.1,
+          },
+        ],
+      }) as never,
+      'station',
+    );
+    assert(result.ok);
+    assertEquals(
+      result.data.map(p => p.name),
+      ['환승역', '모임 지역'],
+    );
+  },
+);
