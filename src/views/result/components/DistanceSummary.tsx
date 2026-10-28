@@ -3,6 +3,9 @@
 import { useRouter } from 'next/navigation';
 
 import { useState } from 'react';
+import { ChevronDown as DisclosureChevron } from 'lucide-react';
+import Avatar, { AVATAR_COLORS } from '@/components/Avatar';
+import { TRAVEL_MODE_OPTIONS } from '@/types/recommendationOptions';
 
 import { modalState } from '@/jotai/global/store';
 
@@ -85,7 +88,6 @@ import {
   DetailSection,
   DetailSectionTitle,
   DetailToggleButton,
-  DetailToggleWrapper,
   CompareCard,
   CompareBadgeList,
   CompareHeader,
@@ -97,9 +99,6 @@ import {
   CompareStationName,
   CompareTitle,
   PreferenceDescription,
-  PreferenceHeader,
-  PreferencePanel,
-  PreferenceTitle,
   QualityMetric,
   QualityMetricLabel,
   QualityMetricValue,
@@ -114,6 +113,12 @@ import {
   ParticipantName,
   ParticipantRow,
   ParticipantStats,
+  ParticipantIdentity,
+  ParticipantMode,
+  ParticipantTime,
+  ParticipantSectionHeader,
+  ComparisonToggle,
+  CompareSelectButton,
 } from '../style';
 import styled from 'styled-components';
 
@@ -254,6 +259,7 @@ export default function DistanceSummary({
 
   const [isExpandTail, setExpandTail] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isComparisonOpen, setIsComparisonOpen] = useState(false);
   const [openedCompareShareKey, setOpenedCompareShareKey] = useState<
     string | null
   >(null);
@@ -298,10 +304,6 @@ export default function DistanceSummary({
     station.recommendationOptions,
     station.resultType,
   );
-  const visiblePreferences = getVisiblePreferences(
-    station.preferenceMatches,
-    2,
-  );
 
   const toggleCompareDetail = (shareKey: string) => {
     setOpenedCompareShareKey(currentShareKey =>
@@ -312,20 +314,45 @@ export default function DistanceSummary({
   return (
     <Container>
       <Header>
-        <HomeButton onClick={clickHome}>
+        <HomeButton
+          type="button"
+          aria-label="홈으로 돌아가기"
+          onClick={clickHome}
+        >
           <HomeIcon />
         </HomeButton>
-        <SharingButton onClick={copyInvitationLink}>
+        <SharingButton type="button" onClick={copyInvitationLink}>
           <ShareIcon />
           초대하기
         </SharingButton>
       </Header>
       {isExpandTail ? (
-        <ExpandBody>
-          <ContentWrapper>
-            <TitleWrapper>
-              <Label>{resultTitleLabel}</Label>
-              <StationName>{stationName}</StationName>
+        <>
+          <ExpandBody id="expanded-result">
+            <ContentWrapper>
+              <TitleWrapper>
+                <Label>{resultTitleLabel}</Label>
+                <StationName>{stationName}</StationName>
+              </TitleWrapper>
+              <IndicatorWrapper>
+                <ChevronButton
+                  type="button"
+                  aria-label="이전 후보"
+                  onClick={onPrev}
+                >
+                  <ChevronLeft />
+                </ChevronButton>
+                <Indicator>
+                  {stationIndex}/{stationLength}
+                </Indicator>
+                <ChevronButton
+                  type="button"
+                  aria-label="다음 후보"
+                  onClick={onNext}
+                >
+                  <ChevronRight />
+                </ChevronButton>
+              </IndicatorWrapper>
               <AverageArrivalTime>
                 도착하는데 평균{' '}
                 <ArrivalTime>
@@ -333,284 +360,332 @@ export default function DistanceSummary({
                 </ArrivalTime>{' '}
                 걸려요!
               </AverageArrivalTime>
-            </TitleWrapper>
-            <IndicatorWrapper>
-              <ChevronButton onClick={onPrev}>
-                <ChevronLeft />
-              </ChevronButton>
-              <Indicator>
-                {stationIndex}/{stationLength}
-              </Indicator>
-              <ChevronButton onClick={onNext}>
-                <ChevronRight />
-              </ChevronButton>
-            </IndicatorWrapper>
-          </ContentWrapper>
-          <SortWrapper>
-            {sortOptions.map(option => (
-              <SortButton
-                key={option.value}
-                type="button"
-                $isActive={sortOption === option.value}
-                onClick={() => onSortChange(option.value)}
-              >
-                {option.label}
-              </SortButton>
-            ))}
-          </SortWrapper>
-          <PreferencePanel>
-            <PreferenceHeader>
-              <PreferenceTitle>{selectedPreference.label}</PreferenceTitle>
-              <ConditionBadge>{selectedPreference.label}</ConditionBadge>
-            </PreferenceHeader>
+            </ContentWrapper>
+            <SortWrapper role="group" aria-label="추천 결과 정렬">
+              {sortOptions.map(option => (
+                <SortButton
+                  key={option.value}
+                  type="button"
+                  $isActive={sortOption === option.value}
+                  aria-pressed={sortOption === option.value}
+                  onClick={() => onSortChange(option.value)}
+                >
+                  {option.label}
+                </SortButton>
+              ))}
+            </SortWrapper>
             <PreferenceDescription>
               {selectedPreference.description}
             </PreferenceDescription>
-            <ConditionBadgeList>
-              {visiblePreferences.map(preference => (
-                <ConditionBadge key={preference}>
-                  {PREFERENCE_OPTIONS[preference].badgeLabel}
-                </ConditionBadge>
-              ))}
-            </ConditionBadgeList>
-          </PreferencePanel>
-          <SummaryMetrics>
-            <SummaryMetric>
-              <SummaryMetricLabel>평균</SummaryMetricLabel>
-              <SummaryMetricValue>
-                {convertToKoreanTime(station.averageTravelTime)}
-              </SummaryMetricValue>
-            </SummaryMetric>
-            <SummaryMetric>
-              <SummaryMetricLabel>최장</SummaryMetricLabel>
-              <SummaryMetricValue>
-                {convertToKoreanTime(station.maxTravelTime)}
-              </SummaryMetricValue>
-            </SummaryMetric>
-            <SummaryMetric>
-              <SummaryMetricLabel>득표</SummaryMetricLabel>
-              <SummaryMetricValue>{vote}표</SummaryMetricValue>
-            </SummaryMetric>
-          </SummaryMetrics>
-          <DetailToggleWrapper>
-            <DetailToggleButton
-              type="button"
-              onClick={() => setIsDetailOpen(isOpen => !isOpen)}
-            >
-              {isDetailOpen ? '접기' : '자세히 보기'}
-            </DetailToggleButton>
-          </DetailToggleWrapper>
-          {isDetailOpen && (
-            <DetailPanel>
-              <DetailSection>
-                <DetailSectionTitle>추천 기준</DetailSectionTitle>
-                <QualityMetrics>
-                  {isCarResult ? (
-                    <>
-                      <QualityMetric>
-                        <QualityMetricLabel>평균 이동</QualityMetricLabel>
-                        <QualityMetricValue>
-                          {convertToKoreanTime(station.averageTravelTime)}
-                        </QualityMetricValue>
-                      </QualityMetric>
-                      <QualityMetric>
-                        <QualityMetricLabel>최장 이동</QualityMetricLabel>
-                        <QualityMetricValue>
-                          {convertToKoreanTime(station.maxTravelTime)}
-                        </QualityMetricValue>
-                      </QualityMetric>
-                    </>
-                  ) : (
-                    <>
-                      <QualityMetric>
-                        <QualityMetricLabel>평균 환승</QualityMetricLabel>
-                        <QualityMetricValue>
-                          {formatQualityValue(station, () =>
-                            formatTransferCount(station.averageTransferCount),
-                          )}
-                        </QualityMetricValue>
-                      </QualityMetric>
-                      <QualityMetric>
-                        <QualityMetricLabel>최대 환승</QualityMetricLabel>
-                        <QualityMetricValue>
-                          {formatQualityValue(station, () =>
-                            formatTransferCount(station.maxTransferCount),
-                          )}
-                        </QualityMetricValue>
-                      </QualityMetric>
-                      <QualityMetric>
-                        <QualityMetricLabel>평균 도보</QualityMetricLabel>
-                        <QualityMetricValue>
-                          {formatQualityValue(station, () =>
-                            convertToKoreanTime(station.averageWalkingTime),
-                          )}
-                        </QualityMetricValue>
-                      </QualityMetric>
-                      <QualityMetric>
-                        <QualityMetricLabel>도보 거리</QualityMetricLabel>
-                        <QualityMetricValue>
-                          {formatQualityValue(station, () =>
-                            formatWalkingDistance(
-                              station.averageWalkingDistance,
-                            ),
-                          )}
-                        </QualityMetricValue>
-                      </QualityMetric>
-                    </>
-                  )}
-                </QualityMetrics>
-              </DetailSection>
-              <DetailSection>
-                <DetailSectionTitle>선호 조건</DetailSectionTitle>
-                <ConditionBadgeList>
-                  {station.preferenceMatches.map(preference => (
-                    <ConditionBadge key={preference}>
-                      {PREFERENCE_OPTIONS[preference].badgeLabel}
-                    </ConditionBadge>
-                  ))}
-                </ConditionBadgeList>
-              </DetailSection>
-              <DetailSection>
-                <DetailSectionTitle>참가자별 이동</DetailSectionTitle>
-                <ParticipantList>
-                  {station.itinerary.map(route => (
-                    <ParticipantRow key={`${route.name}-${route.region_name}`}>
-                      <ParticipantName>{route.name}</ParticipantName>
-                      <ParticipantStats>
-                        {getRouteStatText(
-                          convertToKoreanTime(route.itinerary.totalTime),
-                          formatTransferCount(
-                            route.itinerary.transferCount ?? 0,
-                          ),
-                          convertToKoreanTime(route.itinerary.walkingTime ?? 0),
-                          station.recommendationOptions,
-                          route.travel_mode,
-                        )}
-                      </ParticipantStats>
-                    </ParticipantRow>
-                  ))}
-                </ParticipantList>
-              </DetailSection>
-            </DetailPanel>
-          )}
-          {isDetailOpen && stations.length > 1 && (
-            <>
-              <CompareHeader>
-                <CompareTitle>후보 비교</CompareTitle>
-              </CompareHeader>
-              <Label>후보별 평균, 최장, 득표를 바로 비교해요.</Label>
-              <CompareList>
-                {stations.map((candidate, index) => {
-                  const candidateVisiblePreferences = getVisiblePreferences(
-                    candidate.preferenceMatches,
-                    2,
-                  );
-                  const isCompareDetailOpen =
-                    openedCompareShareKey === candidate.shareKey;
-
+            <SummaryMetrics>
+              <SummaryMetric>
+                <SummaryMetricLabel>평균</SummaryMetricLabel>
+                <SummaryMetricValue>
+                  {convertToKoreanTime(station.averageTravelTime)}
+                </SummaryMetricValue>
+              </SummaryMetric>
+              <SummaryMetric>
+                <SummaryMetricLabel>최장</SummaryMetricLabel>
+                <SummaryMetricValue>
+                  {convertToKoreanTime(station.maxTravelTime)}
+                </SummaryMetricValue>
+              </SummaryMetric>
+              <SummaryMetric>
+                <SummaryMetricLabel>득표</SummaryMetricLabel>
+                <SummaryMetricValue>{vote}표</SummaryMetricValue>
+              </SummaryMetric>
+            </SummaryMetrics>
+            <DetailSection>
+              <ParticipantSectionHeader>
+                <DetailSectionTitle>참가자별 이동 시간</DetailSectionTitle>
+                <DetailToggleButton
+                  type="button"
+                  aria-expanded={isDetailOpen}
+                  aria-controls="route-details"
+                  onClick={() => setIsDetailOpen(isOpen => !isOpen)}
+                >
+                  {isDetailOpen ? '상세 접기' : '이동 상세'}
+                </DetailToggleButton>
+              </ParticipantSectionHeader>
+              <ParticipantList aria-label="참가자별 이동 시간">
+                {station.itinerary.map((route, index) => {
+                  const travelMode =
+                    route.travel_mode ??
+                    station.recommendationOptions?.travelMode;
+                  const modeLabel =
+                    TRAVEL_MODE_OPTIONS.find(
+                      option => option.value === travelMode,
+                    )?.label ?? '대중교통';
                   return (
-                    <CompareCard
-                      key={candidate.shareKey}
-                      role="button"
-                      tabIndex={0}
-                      $isActive={index === currentIndex}
-                      onClick={() => onSelectStation(index)}
-                      onKeyDown={event => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault();
-                          onSelectStation(index);
-                        }
-                      }}
+                    <ParticipantRow
+                      key={`${route.name}-${route.region_name}-${index}`}
                     >
-                      <CompareStationName>
-                        {index + 1}. {candidate.stationName}
-                      </CompareStationName>
-                      <CompareBadgeList>
-                        {candidateVisiblePreferences.map(preference => (
-                          <ConditionBadge key={preference}>
-                            {PREFERENCE_OPTIONS[preference].badgeLabel}
-                          </ConditionBadge>
-                        ))}
-                      </CompareBadgeList>
-                      <CompareMetrics>
-                        <CompareMetric>
-                          <CompareMetricLabel>평균</CompareMetricLabel>
-                          <CompareMetricValue>
-                            {convertToKoreanTime(candidate.averageTravelTime)}
-                          </CompareMetricValue>
-                        </CompareMetric>
-                        <CompareMetric>
-                          <CompareMetricLabel>최장</CompareMetricLabel>
-                          <CompareMetricValue>
-                            {convertToKoreanTime(candidate.maxTravelTime)}
-                          </CompareMetricValue>
-                        </CompareMetric>
-                        <CompareMetric>
-                          <CompareMetricLabel>득표</CompareMetricLabel>
-                          <CompareMetricValue>
-                            {candidate.vote}표
-                          </CompareMetricValue>
-                        </CompareMetric>
-                      </CompareMetrics>
-                      <DetailToggleButton
-                        type="button"
-                        onClick={event => {
-                          event.stopPropagation();
-                          toggleCompareDetail(candidate.shareKey);
-                        }}
-                        onKeyDown={event => {
-                          event.stopPropagation();
-                        }}
-                      >
-                        {isCompareDetailOpen ? '근거 접기' : '근거 보기'}
-                      </DetailToggleButton>
-                      {isCompareDetailOpen && (
-                        <QualityMetrics>
-                          {isCarRecommendation(
-                            candidate.recommendationOptions,
-                          ) ? (
-                            <QualityMetric>
-                              <QualityMetricLabel>최장 이동</QualityMetricLabel>
-                              <QualityMetricValue>
-                                {convertToKoreanTime(candidate.maxTravelTime)}
-                              </QualityMetricValue>
-                            </QualityMetric>
-                          ) : (
-                            <>
-                              <QualityMetric>
-                                <QualityMetricLabel>
-                                  평균 환승
-                                </QualityMetricLabel>
-                                <QualityMetricValue>
-                                  {formatQualityValue(candidate, () =>
-                                    formatTransferCount(
-                                      candidate.averageTransferCount,
-                                    ),
-                                  )}
-                                </QualityMetricValue>
-                              </QualityMetric>
-                              <QualityMetric>
-                                <QualityMetricLabel>
-                                  평균 도보
-                                </QualityMetricLabel>
-                                <QualityMetricValue>
-                                  {formatQualityValue(candidate, () =>
-                                    convertToKoreanTime(
-                                      candidate.averageWalkingTime,
-                                    ),
-                                  )}
-                                </QualityMetricValue>
-                              </QualityMetric>
-                            </>
-                          )}
-                        </QualityMetrics>
-                      )}
-                    </CompareCard>
+                      <ParticipantIdentity>
+                        <span aria-hidden="true">
+                          <Avatar
+                            name={route.name}
+                            color={AVATAR_COLORS[index % AVATAR_COLORS.length]}
+                          />
+                        </span>
+                        <ParticipantName>{route.name}</ParticipantName>
+                      </ParticipantIdentity>
+                      <ParticipantMode>{modeLabel}</ParticipantMode>
+                      <ParticipantTime>
+                        {convertToKoreanTime(route.itinerary.totalTime)}
+                      </ParticipantTime>
+                    </ParticipantRow>
                   );
                 })}
-              </CompareList>
-            </>
-          )}
+              </ParticipantList>
+            </DetailSection>
+            {isDetailOpen && (
+              <DetailPanel id="route-details">
+                <DetailSection>
+                  <DetailSectionTitle>추천 기준</DetailSectionTitle>
+                  <QualityMetrics>
+                    {isCarResult ? (
+                      <>
+                        <QualityMetric>
+                          <QualityMetricLabel>평균 이동</QualityMetricLabel>
+                          <QualityMetricValue>
+                            {convertToKoreanTime(station.averageTravelTime)}
+                          </QualityMetricValue>
+                        </QualityMetric>
+                        <QualityMetric>
+                          <QualityMetricLabel>최장 이동</QualityMetricLabel>
+                          <QualityMetricValue>
+                            {convertToKoreanTime(station.maxTravelTime)}
+                          </QualityMetricValue>
+                        </QualityMetric>
+                      </>
+                    ) : (
+                      <>
+                        <QualityMetric>
+                          <QualityMetricLabel>평균 환승</QualityMetricLabel>
+                          <QualityMetricValue>
+                            {formatQualityValue(station, () =>
+                              formatTransferCount(station.averageTransferCount),
+                            )}
+                          </QualityMetricValue>
+                        </QualityMetric>
+                        <QualityMetric>
+                          <QualityMetricLabel>최대 환승</QualityMetricLabel>
+                          <QualityMetricValue>
+                            {formatQualityValue(station, () =>
+                              formatTransferCount(station.maxTransferCount),
+                            )}
+                          </QualityMetricValue>
+                        </QualityMetric>
+                        <QualityMetric>
+                          <QualityMetricLabel>평균 도보</QualityMetricLabel>
+                          <QualityMetricValue>
+                            {formatQualityValue(station, () =>
+                              convertToKoreanTime(station.averageWalkingTime),
+                            )}
+                          </QualityMetricValue>
+                        </QualityMetric>
+                        <QualityMetric>
+                          <QualityMetricLabel>도보 거리</QualityMetricLabel>
+                          <QualityMetricValue>
+                            {formatQualityValue(station, () =>
+                              formatWalkingDistance(
+                                station.averageWalkingDistance,
+                              ),
+                            )}
+                          </QualityMetricValue>
+                        </QualityMetric>
+                      </>
+                    )}
+                  </QualityMetrics>
+                </DetailSection>
+                <DetailSection>
+                  <DetailSectionTitle>선호 조건</DetailSectionTitle>
+                  <ConditionBadgeList>
+                    {station.preferenceMatches.map(preference => (
+                      <ConditionBadge key={preference}>
+                        {PREFERENCE_OPTIONS[preference].badgeLabel}
+                      </ConditionBadge>
+                    ))}
+                  </ConditionBadgeList>
+                </DetailSection>
+                <DetailSection>
+                  <DetailSectionTitle>참가자별 이동</DetailSectionTitle>
+                  <RouteDetailList>
+                    {station.itinerary.map(route => (
+                      <RouteDetailRow
+                        key={`${route.name}-${route.region_name}`}
+                      >
+                        <ParticipantName>{route.name}</ParticipantName>
+                        <ParticipantStats>
+                          {getRouteStatText(
+                            convertToKoreanTime(route.itinerary.totalTime),
+                            formatTransferCount(
+                              route.itinerary.transferCount ?? 0,
+                            ),
+                            convertToKoreanTime(
+                              route.itinerary.walkingTime ?? 0,
+                            ),
+                            station.recommendationOptions,
+                            route.travel_mode,
+                          )}
+                        </ParticipantStats>
+                      </RouteDetailRow>
+                    ))}
+                  </RouteDetailList>
+                </DetailSection>
+              </DetailPanel>
+            )}
+            {stations.length > 1 && (
+              <ComparisonToggle
+                type="button"
+                aria-expanded={isComparisonOpen}
+                aria-controls="candidate-comparison"
+                onClick={() => setIsComparisonOpen(isOpen => !isOpen)}
+              >
+                후보 {stations.length}곳 비교하기
+                <DisclosureChevron
+                  size={20}
+                  aria-hidden="true"
+                  style={{
+                    transform: isComparisonOpen
+                      ? 'rotate(180deg)'
+                      : 'rotate(-90deg)',
+                  }}
+                />
+              </ComparisonToggle>
+            )}
+            {isComparisonOpen && stations.length > 1 && (
+              <>
+                <CompareHeader>
+                  <CompareTitle>후보 비교</CompareTitle>
+                </CompareHeader>
+                <Label>후보별 평균, 최장, 득표를 바로 비교해요.</Label>
+                <CompareList id="candidate-comparison">
+                  {stations.map((candidate, index) => {
+                    const candidateVisiblePreferences = getVisiblePreferences(
+                      candidate.preferenceMatches,
+                      2,
+                    );
+                    const isCompareDetailOpen =
+                      openedCompareShareKey === candidate.shareKey;
+
+                    return (
+                      <CompareCard
+                        key={candidate.shareKey}
+                        $isActive={index === currentIndex}
+                      >
+                        <CompareSelectButton
+                          type="button"
+                          aria-label={`${candidate.stationName} 후보 선택`}
+                          aria-pressed={index === currentIndex}
+                          onClick={() => onSelectStation(index)}
+                        >
+                          <CompareStationName>
+                            {index + 1}. {candidate.stationName}
+                          </CompareStationName>
+                          <CompareBadgeList>
+                            {candidateVisiblePreferences.map(preference => (
+                              <ConditionBadge key={preference}>
+                                {PREFERENCE_OPTIONS[preference].badgeLabel}
+                              </ConditionBadge>
+                            ))}
+                          </CompareBadgeList>
+                          <CompareMetrics>
+                            <CompareMetric>
+                              <CompareMetricLabel>평균</CompareMetricLabel>
+                              <CompareMetricValue>
+                                {convertToKoreanTime(
+                                  candidate.averageTravelTime,
+                                )}
+                              </CompareMetricValue>
+                            </CompareMetric>
+                            <CompareMetric>
+                              <CompareMetricLabel>최장</CompareMetricLabel>
+                              <CompareMetricValue>
+                                {convertToKoreanTime(candidate.maxTravelTime)}
+                              </CompareMetricValue>
+                            </CompareMetric>
+                            <CompareMetric>
+                              <CompareMetricLabel>득표</CompareMetricLabel>
+                              <CompareMetricValue>
+                                {candidate.vote}표
+                              </CompareMetricValue>
+                            </CompareMetric>
+                          </CompareMetrics>
+                        </CompareSelectButton>
+                        <DetailToggleButton
+                          type="button"
+                          aria-expanded={isCompareDetailOpen}
+                          onClick={() =>
+                            toggleCompareDetail(candidate.shareKey)
+                          }
+                        >
+                          {isCompareDetailOpen ? '근거 접기' : '근거 보기'}
+                        </DetailToggleButton>
+                        {isCompareDetailOpen && (
+                          <QualityMetrics>
+                            {isCarRecommendation(
+                              candidate.recommendationOptions,
+                            ) ? (
+                              <QualityMetric>
+                                <QualityMetricLabel>
+                                  최장 이동
+                                </QualityMetricLabel>
+                                <QualityMetricValue>
+                                  {convertToKoreanTime(candidate.maxTravelTime)}
+                                </QualityMetricValue>
+                              </QualityMetric>
+                            ) : (
+                              <>
+                                <QualityMetric>
+                                  <QualityMetricLabel>
+                                    평균 환승
+                                  </QualityMetricLabel>
+                                  <QualityMetricValue>
+                                    {formatQualityValue(candidate, () =>
+                                      formatTransferCount(
+                                        candidate.averageTransferCount,
+                                      ),
+                                    )}
+                                  </QualityMetricValue>
+                                </QualityMetric>
+                                <QualityMetric>
+                                  <QualityMetricLabel>
+                                    평균 도보
+                                  </QualityMetricLabel>
+                                  <QualityMetricValue>
+                                    {formatQualityValue(candidate, () =>
+                                      convertToKoreanTime(
+                                        candidate.averageWalkingTime,
+                                      ),
+                                    )}
+                                  </QualityMetricValue>
+                                </QualityMetric>
+                              </>
+                            )}
+                          </QualityMetrics>
+                        )}
+                      </CompareCard>
+                    );
+                  })}
+                </CompareList>
+              </>
+            )}
+
+            {canManage && (
+              <HostControlPanel>
+                <HostControlTitle>방장 관리</HostControlTitle>
+                <HostControlButtonWrapper>
+                  <Button
+                    label="재투표 시작"
+                    size="small"
+                    onClick={requestResetVote}
+                    $widthFull
+                  />
+                </HostControlButtonWrapper>
+              </HostControlPanel>
+            )}
+          </ExpandBody>
           <PreffertWrapper>
             <VoteWrapper>
               <VoteTitle>
@@ -629,7 +704,7 @@ export default function DistanceSummary({
               <LikeButtonWithVote
                 label={'좋아요'}
                 onClick={requestVote}
-                isVote={isVote}
+                $isVote={isVote}
               >
                 {isVote ? <LikeIconActive /> : <LikeIconInactive />}
               </LikeButtonWithVote>
@@ -638,25 +713,16 @@ export default function DistanceSummary({
               )}
             </ButtonWrapper>
           </PreffertWrapper>
-          {canManage && (
-            <HostControlPanel>
-              <HostControlTitle>방장 관리</HostControlTitle>
-              <HostControlButtonWrapper>
-                <Button
-                  label="재투표 시작"
-                  size="small"
-                  onClick={requestResetVote}
-                  $widthFull
-                />
-              </HostControlButtonWrapper>
-            </HostControlPanel>
-          )}
-        </ExpandBody>
+        </>
       ) : (
         <FoldBody>
           <ContentWrapper $isExpand={isExpandTail}>
             <LeftWrapper>
-              <ChevronWrapper onClick={onPrev}>
+              <ChevronWrapper
+                type="button"
+                aria-label="이전 후보"
+                onClick={onPrev}
+              >
                 <ChevronLeft />
               </ChevronWrapper>
               <TitleWrapper>
@@ -680,16 +746,29 @@ export default function DistanceSummary({
             </LeftWrapper>
             <RightWrapper>
               <ButtonWrapper>
-                <LikeButton onClick={requestVote}>
+                <LikeButton
+                  type="button"
+                  aria-label="좋아요"
+                  aria-pressed={isVote}
+                  onClick={requestVote}
+                >
                   {isVote ? <LikeIconActive /> : <LikeIconInactive />}
                 </LikeButton>
                 {canConfirm && (
-                  <ConfirmButton onClick={requestConfirm}>
+                  <ConfirmButton
+                    type="button"
+                    aria-label="확정하기"
+                    onClick={requestConfirm}
+                  >
                     <Check />
                   </ConfirmButton>
                 )}
               </ButtonWrapper>
-              <ChevronWrapper onClick={onNext}>
+              <ChevronWrapper
+                type="button"
+                aria-label="다음 후보"
+                onClick={onNext}
+              >
                 <ChevronRight />
               </ChevronWrapper>
             </RightWrapper>
@@ -698,7 +777,12 @@ export default function DistanceSummary({
       )}
 
       <TailWrapper>
-        <Tail onClick={clickTail}>
+        <Tail
+          type="button"
+          aria-label={isExpandTail ? '결과 패널 접기' : '결과 패널 펼치기'}
+          aria-expanded={isExpandTail}
+          onClick={clickTail}
+        >
           {isExpandTail ? <ChevronBottom /> : <ChevronTop />}
         </Tail>
       </TailWrapper>
@@ -707,8 +791,25 @@ export default function DistanceSummary({
   );
 }
 
-const LikeButtonWithVote = styled(Button)<{ isVote: boolean }>`
-  border: ${({ isVote }) =>
-    isVote ? '1px solid var(--primary)' : '1px solid var(--text-subtle)'};
-  color: ${({ isVote }) => (isVote ? ' var(--primary)' : 'var(--text-subtle)')};
+const LikeButtonWithVote = styled(Button)<{ $isVote: boolean }>`
+  border: ${({ $isVote }) =>
+    $isVote ? '1px solid var(--primary)' : '1px solid var(--text-subtle)'};
+  color: ${({ $isVote }) =>
+    $isVote ? 'var(--result-accent)' : 'var(--result-muted)'};
+`;
+
+const RouteDetailList = styled.div`
+  display: flex;
+  flex-direction: column;
+`;
+
+const RouteDetailRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  &:last-child {
+    border-bottom: 0;
+  }
 `;
