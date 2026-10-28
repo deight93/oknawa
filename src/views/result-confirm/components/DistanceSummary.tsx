@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { Check } from 'lucide-react';
 
 import useModal from '@/hooks/common/useModal';
 import useHostControlFlow from '@/hooks/result/useHostControlFlow';
@@ -29,6 +30,8 @@ import {
   StationName,
   TitleWrapper,
   RetrySelectButton,
+  ConfirmedLabel,
+  SummaryRow,
 } from '../style';
 
 interface DistanceSummaryProps {
@@ -80,10 +83,10 @@ export default function DistanceSummary({
   return (
     <Container>
       <Header>
-        <HomeButton onClick={clickHome}>
+        <HomeButton type="button" aria-label="홈으로 이동" onClick={clickHome}>
           <HomeIcon />
         </HomeButton>
-        <SharingButton onClick={handleKakaoSharingBtnClick}>
+        <SharingButton type="button" onClick={handleKakaoSharingBtnClick}>
           <ShareIcon />
           공유하기
         </SharingButton>
@@ -91,17 +94,25 @@ export default function DistanceSummary({
       <ExpandBody>
         <ContentWrapper>
           <TitleWrapper>
+            <ConfirmedLabel>
+              <span aria-hidden="true">
+                <Check size={13} strokeWidth={3} />
+              </span>
+              장소 확정
+            </ConfirmedLabel>
             <StationName>{title}</StationName>
+          </TitleWrapper>
+          <SummaryRow>
             <AverageArrivalTime>
               도착하는데 평균{' '}
               <ArrivalTime>{averageTravelTimeLabel}</ArrivalTime> 걸려요!
             </AverageArrivalTime>
-          </TitleWrapper>
-          {canManage && (
-            <RetrySelectButton type="button" onClick={requestResetVote}>
-              다시 고르기
-            </RetrySelectButton>
-          )}
+            {canManage && (
+              <RetrySelectButton type="button" onClick={requestResetVote}>
+                다시 고르기
+              </RetrySelectButton>
+            )}
+          </SummaryRow>
         </ContentWrapper>
       </ExpandBody>
     </Container>
