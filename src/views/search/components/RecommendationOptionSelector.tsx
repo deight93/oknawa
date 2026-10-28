@@ -25,6 +25,7 @@ export default function RecommendationOptionSelector({
             <OptionButton
               key={option.value}
               type="button"
+              aria-pressed={value.midpointBasis === option.value}
               $isActive={value.midpointBasis === option.value}
               onClick={() =>
                 onChange({ ...value, midpointBasis: option.value })
@@ -55,21 +56,21 @@ const OptionGroup = styled.div`
   gap: 8px;
 `;
 
-const Title = styled.p`
+const Title = styled.h2`
   color: var(--text-primary);
-  font-size: 15px;
-  font-weight: 800;
+  font-size: 16px;
+  font-weight: 700;
 `;
 
 const OptionList = styled.div`
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
-  overflow-x: auto;
 `;
 
 const OptionButton = styled.button<{ $isActive: boolean }>`
   min-width: fit-content;
-  min-height: 32px;
+  min-height: 40px;
   padding: 0 12px;
   border: 1px solid
     ${({ $isActive }) =>
@@ -78,8 +79,23 @@ const OptionButton = styled.button<{ $isActive: boolean }>`
   background-color: ${({ $isActive }) =>
     $isActive ? 'var(--primary-soft)' : 'var(--surface-muted)'};
   color: ${({ $isActive }) =>
-    $isActive ? 'var(--primary)' : 'var(--text-muted)'};
-  font-size: 13px;
-  font-weight: 800;
+    $isActive ? 'var(--primary)' : 'var(--text-secondary)'};
+  font-size: 14px;
+  font-weight: 600;
   white-space: nowrap;
+  cursor: pointer;
+  &:hover {
+    border-color: var(--primary);
+  }
+  &:focus-visible {
+    outline: 2px solid
+      color-mix(in srgb, var(--primary) 65%, var(--text-primary));
+    outline-offset: 3px;
+  }
+  .light & {
+    color: ${({ $isActive }) =>
+      $isActive
+        ? 'color-mix(in srgb, var(--primary) 40%, var(--text-primary))'
+        : 'var(--text-secondary)'};
+  }
 `;
