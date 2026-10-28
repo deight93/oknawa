@@ -25,6 +25,7 @@ export default function MeetingPurposeSelector({
       <OptionList>
         <OptionButton
           type="button"
+          aria-pressed={!value}
           $isActive={!value}
           onClick={() => onChange(undefined)}
         >
@@ -34,6 +35,7 @@ export default function MeetingPurposeSelector({
           <OptionButton
             key={option.value}
             type="button"
+            aria-pressed={value === option.value}
             $isActive={value === option.value}
             onClick={() => onChange(option.value)}
           >
@@ -61,27 +63,30 @@ const Header = styled.div`
   gap: 4px;
 `;
 
-const Title = styled.p`
+const Title = styled.h2`
   color: var(--text-primary);
-  font-size: 15px;
-  font-weight: 800;
+  font-size: 16px;
+  font-weight: 700;
 `;
 
 const Description = styled.p`
-  color: var(--text-subtle);
-  font-size: 12px;
-  font-weight: 600;
+  color: color-mix(in srgb, var(--text-muted) 75%, var(--text-primary));
+  font-size: 13px;
+  line-height: 1.5;
 `;
 
 const OptionList = styled.div`
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
-  overflow-x: auto;
+  @media (max-width: 359px) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 `;
 
 const OptionButton = styled.button<{ $isActive: boolean }>`
-  min-width: fit-content;
-  min-height: 32px;
+  min-width: 0;
+  min-height: 40px;
   padding: 0 12px;
   border: 1px solid
     ${({ $isActive }) =>
@@ -90,8 +95,23 @@ const OptionButton = styled.button<{ $isActive: boolean }>`
   background-color: ${({ $isActive }) =>
     $isActive ? 'var(--primary-soft)' : 'var(--surface-muted)'};
   color: ${({ $isActive }) =>
-    $isActive ? 'var(--primary)' : 'var(--text-muted)'};
-  font-size: 13px;
-  font-weight: 800;
+    $isActive ? 'var(--primary)' : 'var(--text-secondary)'};
+  font-size: 14px;
+  font-weight: 600;
   white-space: nowrap;
+  cursor: pointer;
+  &:hover {
+    border-color: var(--primary);
+  }
+  &:focus-visible {
+    outline: 2px solid
+      color-mix(in srgb, var(--primary) 65%, var(--text-primary));
+    outline-offset: 3px;
+  }
+  .light & {
+    color: ${({ $isActive }) =>
+      $isActive
+        ? 'color-mix(in srgb, var(--primary) 40%, var(--text-primary))'
+        : 'var(--text-secondary)'};
+  }
 `;

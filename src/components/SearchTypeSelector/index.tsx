@@ -1,5 +1,5 @@
 import styled from 'styled-components';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { ReactNode } from 'react';
 
 interface SearchTypeSelectorProps {
@@ -11,54 +11,61 @@ export default function SearchTypeSelector({
   type,
   icon,
 }: SearchTypeSelectorProps) {
-  const router = useRouter();
-
   const titleText = type === 'individual' ? '직접' : '함께';
   const description =
     type === 'individual'
       ? '모든 구성원의\n출발지를 입력해요'
-      : '각각 자신의 \n출발지를 입력해요';
-
-  const handleButtonClick = () => {
-    if (type === 'individual') {
-      return router.push('/search/individual');
-    }
-
-    return router.push('/search/together');
-  };
+      : '각각 자신의\n출발지를 입력해요';
 
   return (
-    <Container onClick={handleButtonClick}>
-      <AvatarBox>{icon}</AvatarBox>
-      <Title>{`${titleText} \n입력하기`}</Title>
+    <Container href={`/search/${type}`}>
+      <AvatarBox aria-hidden="true">{icon}</AvatarBox>
+      <Title>{`${titleText}\n입력하기`}</Title>
       <Description>{description}</Description>
     </Container>
   );
 }
 
-const Container = styled.div`
+const Container = styled(Link)`
+  display: block;
+  min-width: 0;
   background-color: var(--surface-strong);
+  color: var(--text-primary);
   padding: 16px 22px;
   border-radius: 9px;
+  text-decoration: none;
   white-space: pre-line;
+  word-break: keep-all;
   cursor: pointer;
 
   &:hover {
     background-color: var(--surface-muted);
   }
+
+  &:focus-visible {
+    outline: 2px solid var(--text-primary);
+    outline-offset: 4px;
+  }
+
+  @media (max-width: 359px) {
+    padding-inline: 14px;
+  }
 `;
 
-const Title = styled.h1`
+const Title = styled.span`
+  display: block;
   margin-bottom: 10px;
   font-size: 20px;
   font-weight: 600;
 `;
 
-const Description = styled.h3`
+const Description = styled.span`
+  display: block;
   font-size: 15px;
   line-height: 20px;
   font-weight: 500;
-  color: var(--text-muted);
+  color: var(--text-secondary);
+  color: color-mix(in srgb, var(--text-muted) 85%, var(--text-primary));
 `;
 
 const AvatarBox = styled.div`
