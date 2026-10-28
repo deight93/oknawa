@@ -37,7 +37,7 @@ export const getConfirmTitle = (
   _recommendationOptions?: RecommendationOptions,
   _resultType?: ResultLocationType,
 ) => {
-  return `${name}을 추천해요`;
+  return `${name}에서 만나요`;
 };
 
 export const getLocationDisplayName = (

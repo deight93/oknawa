@@ -32,23 +32,19 @@ export default function ResultConfirmBody({
     isLoading,
   } = useConfirmedResult(queryShareKey);
 
-  const { station_name, itinerary, request_info, end_x, end_y } = resultConfirm;
+  const { itinerary, request_info, end_x, end_y } = resultConfirm;
   const shouldShowHotPlaceButton = !isCarRecommendation(recommendationOptions);
 
   const handleHotplaceBtnClick = () => {
     setBottomSheet(prevState => ({
       ...prevState,
       isOpen: true,
-      title: (
-        <>
-          <span style={{ fontWeight: '800' }}>{stationName}</span>의
-          <div>핫플레이스를 추천해요!</div>
-        </>
-      ),
+      title: <NearbyTitle>{stationName} 주변 장소</NearbyTitle>,
       contents: (
         <HotPlaceModal x={resultConfirm.end_x} y={resultConfirm.end_y} />
       ),
       height: 60,
+      isFullContents: false,
     }));
   };
 
@@ -94,10 +90,10 @@ export default function ResultConfirmBody({
             radius="full"
             size="lg"
             color="success"
-            variant="shadow"
+            variant="solid"
             onClick={handleHotplaceBtnClick}
           >
-            {stationName} 핫플레이스는 어디?
+            {stationName} 주변 장소 보기
           </FloatingButton>
         )}
       </Container>
@@ -109,15 +105,39 @@ const Container = styled.main`
   position: relative;
   width: 100%;
   height: 100vh;
+  height: 100dvh;
 `;
 
 const FloatingButton = styled(Button)`
   position: fixed;
-  bottom: 24px;
+  bottom: max(24px, env(safe-area-inset-bottom));
   left: 50%;
   transform: translateX(-50%);
   font-weight: 600;
+  max-width: calc(min(100vw, 500px) - 40px);
+  min-height: 48px;
+  height: auto;
+  padding: 12px 24px;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.45;
+  background-color: var(--primary);
+  color: var(--button-text-on-primary);
+  box-shadow: none;
   z-index: 2;
+
+  &:focus-visible {
+    outline: 2px solid var(--text-primary);
+    outline-offset: 4px;
+  }
+`;
+
+const NearbyTitle = styled.h2`
+  font-size: 22px;
+  line-height: 1.35;
+  font-weight: 700;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 `;
 
 const EmptyContainer = styled.main`

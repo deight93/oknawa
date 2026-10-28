@@ -8,75 +8,126 @@ interface disabledProps {
 }
 
 export const Container = styled.div`
+  --confirm-accent: var(--primary);
+  .light & {
+    --confirm-accent: color-mix(
+      in srgb,
+      var(--primary) 45%,
+      var(--text-primary)
+    );
+  }
+  button:focus-visible {
+    outline: 2px solid var(--confirm-accent);
+    outline-offset: 3px;
+  }
   position: absolute;
   background-color: var(--surface);
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  z-index: 99999999;
+  gap: 12px;
+  z-index: 3;
 `;
 
 export const Header = styled.div`
   display: flex;
   flex-direction: row;
   justify-content: space-between;
-  padding: 72px 20px 0 8px;
+  padding: 64px 20px 0 12px;
 `;
 
 export const HomeButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
+  color: var(--text-primary);
+  border-radius: 8px;
+  svg path {
+    fill: currentColor;
+  }
 `;
 
 export const SharingButton = styled.button`
   display: flex;
-  gap: 4px;
+  gap: 6px;
   align-items: center;
+  min-height: 44px;
   font-size: 16px;
   color: var(--text-secondary);
+  border-radius: 8px;
+  svg path {
+    fill: currentColor;
+  }
 `;
 
 export const ExpandBody = styled.div`
   display: flex;
   flex-direction: column;
   padding: 0 20px 20px;
-  gap: 20px;
+  gap: 12px;
 `;
 
 export const ContentWrapper = styled.div<ExpandProps>`
   display: flex;
   width: 100%;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: flex-end;
-  gap: 16px;
+  flex-direction: column;
+  gap: 6px;
 `;
 
 export const TitleWrapper = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 8px;
 `;
 
-export const StationName = styled.p<ExpandProps>`
-  display: flex;
-  justify-content: space-between;
+export const StationName = styled.h1<ExpandProps>`
   font-size: ${({ $isExpand }) => ($isExpand ? '24px' : '18px')};
   font-weight: ${({ $isExpand }) => ($isExpand ? '700' : '600')};
+  line-height: 1.35;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 `;
 
 export const AverageArrivalTime = styled.p`
-  font-size: 18px;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  word-break: keep-all;
+`;
+
+export const ConfirmedLabel = styled.p`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--confirm-accent);
+  span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: var(--button-text-on-primary);
+  }
+`;
+
+export const SummaryRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
 `;
 
 export const RetrySelectButton = styled.button`
   flex: 0 0 auto;
   min-width: 88px;
-  height: 34px;
+  min-height: 40px;
   padding: 0 14px;
   border: 1px solid var(--border-strong);
   border-radius: 999px;
@@ -95,7 +146,7 @@ export const RetrySelectButton = styled.button`
 
 export const ArrivalTime = styled.span<ExpandProps>`
   color: ${({ $isExpand }) =>
-    $isExpand ? 'var(--primary)' : 'var(--text-secondary)'};
+    $isExpand ? 'var(--confirm-accent)' : 'var(--text-secondary)'};
   font-weight: ${({ $isExpand }) => ($isExpand ? '700' : '500')};
   font-size: ${({ $isExpand }) => ($isExpand ? '18px' : ' 14px')};
 `;
