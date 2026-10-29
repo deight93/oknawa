@@ -1,5 +1,5 @@
 import { useRouter } from 'next/navigation';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { useAtom } from 'jotai';
 
@@ -55,6 +55,17 @@ export default function useSearchEntryFlow(
   const { setModalContents } = useModal();
   const inFlight = useRef(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const formVersion = useRef(0);
+
+  useEffect(() => {
+    const currentFormVersion = formVersion.current;
+    inFlight.current = false;
+    setIsSubmitting(false);
+    return () => {
+      // A response belongs only to the form/invitation that submitted it.
+      formVersion.current = currentFormVersion + 1;
+    };
+  }, [type, shareRoomId]);
 
   const isIndividualView = type === 'individual';
   const searchCount = searchList.length;
@@ -77,6 +88,7 @@ export default function useSearchEntryFlow(
     if (inFlight.current) return;
     inFlight.current = true;
     setIsSubmitting(true);
+    const submittedVersion = formVersion.current;
     try {
       assertBrowserStorageWritable('local');
       const targetRoomId =
@@ -85,10 +97,12 @@ export default function useSearchEntryFlow(
         await submitDeparturePoint({
           requestBody: toDeparturePointRequestBody(targetRoomId, searchForm),
         });
+        if (submittedVersion !== formVersion.current) return;
         if (shareRoomId)
           setStorageRoomData({ roomId: shareRoomId, hostId: '' });
       } else {
         const data = await makeRoom(searchForm);
+        if (submittedVersion !== formVersion.current) return;
         setStorageRoomData({
           roomId: data?.room_id ?? '',
           hostId: data?.room_host_id ?? '',
@@ -97,6 +111,7 @@ export default function useSearchEntryFlow(
       // Keep the lock until navigation unmounts this form, including the response gap.
       router.push('/search/list-together');
     } catch (error) {
+      if (submittedVersion !== formVersion.current) return;
       inFlight.current = false;
       setIsSubmitting(false);
       setModalContents({

@@ -123,14 +123,15 @@ async function mountRoom(
   let resetCount = 0;
   let entry!: ReturnType<typeof useSearchEntryFlow>,
     renderer!: ReactTestRenderer;
+  let setShareRoomId!: React.Dispatch<React.SetStateAction<string | null>>;
   function Probe() {
-    entry = useSearchEntryFlow(
-      options.type ?? 'together',
+    const [shareRoomId, changeRoom] = React.useState(
       options.shareRoomId ?? null,
-      () => {
-        resetCount++;
-      },
     );
+    setShareRoomId = changeRoom;
+    entry = useSearchEntryFlow(options.type ?? 'together', shareRoomId, () => {
+      resetCount++;
+    });
     return options.view ? <SearchCompleteListWithTogetherView /> : null;
   }
   await act(async () => {
@@ -167,6 +168,7 @@ async function mountRoom(
     client,
     status,
     memory,
+    changeRoom: (id: string) => act(() => setShareRoomId(id)),
     get resetCount() {
       return resetCount;
     },
@@ -183,6 +185,91 @@ async function mountRoom(
     },
   };
 }
+
+for (const joining of [false, true]) {
+  for (const fails of [false, true]) {
+    test(`leaving pending ${joining ? 'join' : 'create'} ignores a late ${fails ? 'error' : 'response'}`, async () => {
+      let release!: () => void;
+      let started = false;
+      const pending = new Promise<void>(resolve => {
+        release = resolve;
+      });
+      const mounted = await mountRoom({
+        shareRoomId: joining ? otherRoomId : undefined,
+        adapter: async config => {
+          started = true;
+          await pending;
+          if (fails) throw new Error('Late registration failure');
+          return {
+            data: { room_id: otherRoomId, room_host_id: 'late-host' },
+            status: 200,
+            statusText: 'OK',
+            headers: {},
+            config,
+          };
+        },
+      });
+      try {
+        act(() => mounted.entry.submitSearch(form));
+        await until(() => started);
+        act(() => mounted.renderer.unmount());
+        mounted.store.set(roomState, {
+          roomId: mapId,
+          hostId: 'next-room-host',
+        });
+        await act(async () => {
+          release();
+          await wait(20);
+        });
+        assert.deepEqual(mounted.navigation, []);
+        assert.deepEqual(mounted.store.get(roomState), {
+          roomId: mapId,
+          hostId: 'next-room-host',
+        });
+        assert.equal(mounted.store.get(modalState).isOpen, false);
+      } finally {
+        release();
+        mounted.close();
+      }
+    });
+  }
+}
+
+test('changing the invitation on a mounted form ignores the old request and permits the new one', async () => {
+  const releases: Array<() => void> = [];
+  const mounted = await mountRoom({
+    shareRoomId: roomId,
+    adapter: async config => {
+      await new Promise<void>(resolve => {
+        releases.push(resolve);
+      });
+      return { data: {}, status: 200, statusText: 'OK', headers: {}, config };
+    },
+  });
+  try {
+    act(() => mounted.entry.submitSearch(form));
+    await until(() => releases.length === 1);
+    mounted.changeRoom(otherRoomId);
+    assert.equal(mounted.entry.isSubmitting, false);
+    act(() => mounted.entry.submitSearch({ ...form, name: '새 친구' }));
+    await until(() => releases.length === 2);
+    await act(async () => {
+      releases[0]();
+      await wait(20);
+    });
+    assert.deepEqual(mounted.navigation, []);
+    assert.equal(mounted.entry.isSubmitting, true);
+    await act(async () => {
+      releases[1]();
+      await wait(20);
+    });
+    assert.deepEqual(mounted.navigation, ['/search/list-together']);
+    assert.equal(mounted.store.get(roomState).roomId, otherRoomId);
+  } finally {
+    releases.forEach(release => release());
+    mounted.close();
+  }
+});
 
 test('individual entry still accepts the next friend after resetting the first entry', async () => {
   const mounted = await mountRoom({ type: 'individual' });
