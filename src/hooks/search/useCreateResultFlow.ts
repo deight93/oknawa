@@ -73,6 +73,8 @@ export default function useCreateResultFlow() {
       setSearchState(participants);
       setResult(mapData);
       clearLegacyVoteState();
+      // The current page can stay interactive while App Router loads the result.
+      // Keep success locked until unmount; only failures may retry on this page.
       router.push(`/result?mapId=${created.map_id}`);
     } catch (error) {
       logApiError('createResult', error);
@@ -91,7 +93,6 @@ export default function useCreateResultFlow() {
           '추천을 완료하지 못했습니다. 다시 시도해주세요.',
         ),
       });
-    } finally {
       inFlight.current = false;
       setIsLoading(false);
     }

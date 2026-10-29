@@ -56,10 +56,12 @@ export default function useSearchEntryFlow(
   const inFlight = useRef(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const formVersion = useRef(0);
+  const submittedIndividualStep = useRef<number | null>(null);
 
   useEffect(() => {
     const currentFormVersion = formVersion.current;
     inFlight.current = false;
+    submittedIndividualStep.current = null;
     setIsSubmitting(false);
     return () => {
       // A response belongs only to the form/invitation that submitted it.
@@ -71,12 +73,19 @@ export default function useSearchEntryFlow(
   const searchCount = searchList.length;
 
   const submitIndividualSearch = (searchForm: SearchState) => {
+    // Validations started on the same input step may finish after its reset.
+    if (inFlight.current || submittedIndividualStep.current === searchCount)
+      return;
+    submittedIndividualStep.current = searchCount;
+
     setSearchList(prevState => [
       ...prevState,
       toSearchStateSnapshot(searchForm),
     ]);
 
     if (searchCount >= 1) {
+      inFlight.current = true;
+      setIsSubmitting(true);
       router.push('/search/list');
       return;
     }

@@ -9,6 +9,7 @@ import { AppRouterContext } from 'next/dist/shared/lib/app-router-context.shared
 import { AxiosError, type AxiosAdapter } from 'axios';
 import { api, edgeApi } from '../src/api/client';
 import useSearchEntryFlow from '../src/hooks/search/useSearchEntryFlow';
+import useSearchForm from '../src/hooks/form/search/useSearchForm';
 import { roomState } from '../src/jotai/global/room';
 import { modalState, searchState } from '../src/jotai/global/store';
 import SearchCompleteListWithTogetherView from '../src/views/search/SearchCompleteListWithTogether';
@@ -123,14 +124,17 @@ async function mountRoom(
   let resetCount = 0;
   let entry!: ReturnType<typeof useSearchEntryFlow>,
     renderer!: ReactTestRenderer;
+  let searchForm!: ReturnType<typeof useSearchForm>;
   let setShareRoomId!: React.Dispatch<React.SetStateAction<string | null>>;
   function Probe() {
+    searchForm = useSearchForm();
     const [shareRoomId, changeRoom] = React.useState(
       options.shareRoomId ?? null,
     );
     setShareRoomId = changeRoom;
     entry = useSearchEntryFlow(options.type ?? 'together', shareRoomId, () => {
       resetCount++;
+      searchForm.reset();
     });
     return options.view ? <SearchCompleteListWithTogetherView /> : null;
   }
@@ -162,6 +166,9 @@ async function mountRoom(
     get entry() {
       return entry;
     },
+    get searchForm() {
+      return searchForm;
+    },
     renderer,
     navigation,
     store,
@@ -185,6 +192,92 @@ async function mountRoom(
     },
   };
 }
+
+test('an individual input step accepts only one of repeated or delayed validated submissions', async () => {
+  const mounted = await mountRoom({ type: 'individual' });
+  try {
+    const submitFirst = mounted.entry.submitSearch;
+    act(() => {
+      submitFirst(form);
+      submitFirst(form);
+    });
+    assert.equal(mounted.store.get(searchState).length, 1);
+    assert.equal(mounted.resetCount, 1);
+    assert.deepEqual(mounted.navigation, []);
+    act(() => submitFirst(form));
+    assert.equal(mounted.store.get(searchState).length, 1);
+    assert.equal(mounted.resetCount, 1);
+  } finally {
+    mounted.close();
+  }
+});
+
+test('individual registration stays locked while navigation to the list is pending', async () => {
+  const mounted = await mountRoom({ type: 'individual' });
+  try {
+    act(() => mounted.entry.submitSearch(form));
+    const friend = { ...form, name: '친구' };
+    act(() => {
+      mounted.entry.submitSearch(friend);
+      mounted.entry.submitSearch(friend);
+    });
+    act(() => mounted.entry.submitSearch(friend));
+    assert.deepEqual(
+      mounted.store.get(searchState).map(person => person.name),
+      ['방장', '친구'],
+    );
+    assert.deepEqual(mounted.navigation, ['/search/list']);
+    assert.equal(mounted.entry.isSubmitting, true);
+  } finally {
+    mounted.close();
+  }
+});
+
+test('concurrent form validation adds one person, then allows an intentionally identical next person', async () => {
+  const mounted = await mountRoom({ type: 'individual' });
+  const fill = () => {
+    mounted.searchForm.setValue('name', '같은 이름');
+    mounted.searchForm.setValue('address', form.address);
+    mounted.searchForm.setValue('travelMode', 'walk');
+  };
+  try {
+    act(fill);
+    const submitFirst = mounted.searchForm.handleSubmit(
+      mounted.entry.submitSearch,
+    );
+    await act(async () => {
+      await Promise.all([submitFirst(), submitFirst()]);
+    });
+    assert.equal(mounted.store.get(searchState).length, 1);
+    assert.equal(mounted.searchForm.getValues('name'), '');
+    assert.equal(mounted.searchForm.getValues('travelMode'), 'transit');
+    await act(async () => {
+      await mounted.searchForm.handleSubmit(mounted.entry.submitSearch)();
+    });
+    assert.equal(mounted.store.get(searchState).length, 1);
+    assert.equal(mounted.resetCount, 1);
+    act(fill);
+    const submitNext = mounted.searchForm.handleSubmit(
+      mounted.entry.submitSearch,
+    );
+    await act(async () => {
+      await Promise.all([submitNext(), submitNext()]);
+    });
+    assert.equal(mounted.store.get(searchState).length, 2);
+    assert.deepEqual(
+      mounted.store
+        .get(searchState)
+        .map(person => ({ name: person.name, mode: person.travelMode })),
+      [
+        { name: '같은 이름', mode: 'walk' },
+        { name: '같은 이름', mode: 'walk' },
+      ],
+    );
+    assert.deepEqual(mounted.navigation, ['/search/list']);
+  } finally {
+    mounted.close();
+  }
+});
 
 for (const joining of [false, true]) {
   for (const fails of [false, true]) {

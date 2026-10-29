@@ -233,18 +233,106 @@ test('preparation and publication keep loading active and reject repeated clicks
     assert.deepEqual(mounted.navigation, []);
     published.resolve();
     await until(() => mounted.navigation.length > 0);
+    await act(async () => {
+      await mounted.current.requestResult(searchList, undefined, options);
+    });
+    assert.equal(prepareCalls, 1);
     assert.deepEqual(mounted.navigation, [`/result?mapId=${mapId}`]);
     assert.equal(
       mounted.requests.filter(url => url.endsWith('location-points')).length,
       1,
     );
-    assert.equal(mounted.current.isLoading, false);
+    assert.equal(mounted.current.isLoading, true);
   } finally {
     prepared.resolve();
     published.resolve();
     mounted.close();
   }
 });
+
+test('a completed individual recommendation cannot be generated again before navigation unmounts the page', async () => {
+  const mounted = await mountHook(useCreateResultFlow);
+  try {
+    await act(async () => {
+      await mounted.current.requestResult(searchList);
+    });
+    await act(async () => {
+      await mounted.current.requestResult(searchList);
+    });
+    assert.equal(
+      mounted.requests.filter(url => url.endsWith('location-points')).length,
+      1,
+    );
+    assert.deepEqual(mounted.navigation, [`/result?mapId=${mapId}`]);
+    assert.equal(mounted.current.isLoading, true);
+  } finally {
+    mounted.close();
+  }
+});
+
+for (const failure of ['prepare', 'generate', 'fetch', 'publish'] as const) {
+  test(`recommendation ${failure} failure unlocks retry, and a successful retry stays locked`, async () => {
+    let failing = true,
+      generations = 0,
+      errorCalls = 0;
+    const mounted = await mountHook(useCreateResultFlow, {
+      adapter: async config => {
+        const generating = config.url?.endsWith('location-points');
+        if (generating) generations++;
+        if (
+          failing &&
+          ((failure === 'generate' && generating) ||
+            (failure === 'fetch' && !generating))
+        )
+          throw new Error('Controlled API failure');
+        return {
+          data: generating
+            ? { map_id: mapId, map_host_id: 'creator-only' }
+            : result,
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+          config,
+        };
+      },
+    });
+    const options = {
+      beforeCreate: () => {
+        if (failing && failure === 'prepare')
+          throw new Error('Controlled preparation failure');
+      },
+      onReady: () => {
+        if (failing && failure === 'publish')
+          throw new Error('Controlled publication failure');
+      },
+      onError: () => {
+        errorCalls++;
+      },
+    };
+    try {
+      await act(async () => {
+        await mounted.current.requestResult(searchList, undefined, options);
+      });
+      assert.equal(mounted.current.isLoading, false);
+      assert.equal(mounted.store.get(modalState).isOpen, true);
+      assert.deepEqual(mounted.navigation, []);
+      assert.equal(errorCalls, failure === 'prepare' ? 0 : 1);
+      failing = false;
+      await act(async () => {
+        await mounted.current.requestResult(searchList, undefined, options);
+      });
+      assert.deepEqual(mounted.navigation, [`/result?mapId=${mapId}`]);
+      assert.equal(mounted.current.isLoading, true);
+      const afterRetry = generations;
+      await act(async () => {
+        await mounted.current.requestResult(searchList, undefined, options);
+      });
+      assert.equal(generations, afterRetry);
+    } finally {
+      mounted.close();
+    }
+  });
+}
 
 test('failed preparation never marks another running recommendation as failed', async () => {
   const mounted = await mountHook(useCreateResultFlow);
