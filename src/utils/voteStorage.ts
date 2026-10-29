@@ -1,5 +1,9 @@
+import { createSafeJSONStorage } from './browserStorage';
+
 const LEGACY_VOTE_STORAGE_KEY = 'isVote';
 const VOTE_STORAGE_PREFIX = 'isVote:';
+const storage = createSafeJSONStorage<boolean>(() => localStorage);
+const knownKeys = new Set<string>();
 
 const canUseLocalStorage = () => typeof window !== 'undefined';
 
@@ -11,7 +15,7 @@ export const clearLegacyVoteState = () => {
     return;
   }
 
-  localStorage.removeItem(LEGACY_VOTE_STORAGE_KEY);
+  storage.removeItem(LEGACY_VOTE_STORAGE_KEY);
 };
 
 export const hasVotedForMap = (
@@ -22,9 +26,9 @@ export const hasVotedForMap = (
     return false;
   }
 
-  return (
-    localStorage.getItem(getVoteStorageKey(mapId, voteRound ?? 1)) === 'true'
-  );
+  const key = getVoteStorageKey(mapId, voteRound ?? 1);
+  knownKeys.add(key);
+  return storage.getItem(key, false) === true;
 };
 
 export const setVotedForMap = (mapId: string, voteRound = 1) => {
@@ -32,7 +36,9 @@ export const setVotedForMap = (mapId: string, voteRound = 1) => {
     return;
   }
 
-  localStorage.setItem(getVoteStorageKey(mapId, voteRound), 'true');
+  const key = getVoteStorageKey(mapId, voteRound);
+  knownKeys.add(key);
+  storage.setItem(key, true);
   clearLegacyVoteState();
 };
 
@@ -45,7 +51,7 @@ export const clearVotedForMap = (
   }
 
   if (mapId) {
-    localStorage.removeItem(getVoteStorageKey(mapId, voteRound ?? 1));
+    storage.removeItem(getVoteStorageKey(mapId, voteRound ?? 1));
   }
 
   clearLegacyVoteState();
@@ -58,9 +64,18 @@ export const clearVoteStateForMap = (mapId?: string | null) => {
 
   const mapVoteStoragePrefix = `${VOTE_STORAGE_PREFIX}${mapId}:`;
 
-  Object.keys(localStorage)
+  let keys: string[] = [];
+  try {
+    keys = Object.keys(localStorage);
+  } catch {
+    /* Storage access may be blocked. */
+  }
+  Array.from(new Set([...keys, ...Array.from(knownKeys)]))
     .filter(key => key.startsWith(mapVoteStoragePrefix))
-    .forEach(key => localStorage.removeItem(key));
+    .forEach(key => {
+      storage.removeItem(key);
+      knownKeys.delete(key);
+    });
 
   clearLegacyVoteState();
 };

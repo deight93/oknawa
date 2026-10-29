@@ -36,10 +36,10 @@ test('saved departures hydrate after the initial render and retain each travel m
     const store = createStore();
     assert.deepEqual(store.get(searchState), []);
     let rendered: unknown;
-    function Probe() {
+    const Probe = () => {
       rendered = useAtomValue(searchState);
       return null;
-    }
+    };
     let tree!: ReturnType<typeof create>;
     act(() => {
       tree = create(

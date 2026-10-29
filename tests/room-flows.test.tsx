@@ -58,6 +58,7 @@ async function mountRoom(
     view?: boolean;
     adapter?: AxiosAdapter;
     status?: string;
+    type?: 'individual' | 'together';
   } = {},
 ) {
   const memory = new Map<string, string>([
@@ -119,13 +120,16 @@ async function mountRoom(
   };
   client.setQueryData(['inputStatusList', roomId], status);
   const navigation: string[] = [];
+  let resetCount = 0;
   let entry!: ReturnType<typeof useSearchEntryFlow>,
     renderer!: ReactTestRenderer;
   function Probe() {
     entry = useSearchEntryFlow(
-      'together',
+      options.type ?? 'together',
       options.shareRoomId ?? null,
-      () => {},
+      () => {
+        resetCount++;
+      },
     );
     return options.view ? <SearchCompleteListWithTogetherView /> : null;
   }
@@ -163,6 +167,9 @@ async function mountRoom(
     client,
     status,
     memory,
+    get resetCount() {
+      return resetCount;
+    },
     close() {
       act(() => renderer.unmount());
       client.clear();
@@ -177,6 +184,28 @@ async function mountRoom(
   };
 }
 
+test('individual entry still accepts the next friend after resetting the first entry', async () => {
+  const mounted = await mountRoom({ type: 'individual' });
+  try {
+    act(() => mounted.entry.submitSearch(form));
+    assert.equal(mounted.resetCount, 1);
+    assert.equal(mounted.entry.isSubmitting, false);
+    assert.equal(mounted.entry.searchCount, 1);
+    const friend = { ...form, name: '다음 친구', travelMode: 'walk' as const };
+    act(() => mounted.entry.submitSearch(friend));
+    assert.deepEqual(
+      mounted.store.get(searchState),
+      [form, friend].map(person => ({
+        ...person,
+        travelMode: 'travelMode' in person ? person.travelMode : undefined,
+      })),
+    );
+    assert.deepEqual(mounted.navigation, ['/search/list']);
+  } finally {
+    mounted.close();
+  }
+});
+
 test('using a host’s own invitation link preserves the existing host capability', async () => {
   const mounted = await mountRoom({ shareRoomId: roomId });
   try {
@@ -184,6 +213,78 @@ test('using a host’s own invitation link preserves the existing host capabilit
     await until(() => mounted.navigation.length > 0);
     assert.equal(mounted.store.get(roomState).hostId, hostId);
     assert.equal(mounted.store.get(roomState).roomId, roomId);
+  } finally {
+    mounted.close();
+  }
+});
+
+for (const shareRoomId of [undefined, otherRoomId]) {
+  test(`${shareRoomId ? 'joining' : 'creating'} a room sends one request through double submit and the navigation gap`, async () => {
+    let release!: () => void;
+    const response = new Promise<void>(resolve => {
+      release = resolve;
+    });
+    const requests: string[] = [];
+    const mounted = await mountRoom({
+      shareRoomId,
+      adapter: async config => {
+        requests.push(config.url ?? '');
+        await response;
+        return {
+          data: { room_id: otherRoomId, room_host_id: 'new-creator' },
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+          config,
+        };
+      },
+    });
+    try {
+      act(() => {
+        mounted.entry.submitSearch(form);
+        mounted.entry.submitSearch(form);
+      });
+      await until(() => requests.length > 0);
+      assert.equal(requests.length, 1);
+      assert.equal(mounted.entry.isSubmitting, true);
+      release();
+      await until(() => mounted.navigation.length > 0);
+      act(() => mounted.entry.submitSearch(form));
+      await act(async () => {
+        await wait(10);
+      });
+      assert.equal(requests.length, 1);
+      assert.equal(mounted.navigation.length, 1);
+    } finally {
+      release();
+      mounted.close();
+    }
+  });
+}
+
+test('a failed registration unlocks retry and displays the existing error modal', async () => {
+  let requests = 0;
+  const mounted = await mountRoom({
+    adapter: async config => {
+      requests++;
+      if (requests === 1) throw new Error('등록 실패');
+      return {
+        data: { room_id: otherRoomId, room_host_id: 'new-creator' },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config,
+      };
+    },
+  });
+  try {
+    act(() => mounted.entry.submitSearch(form));
+    await until(() => mounted.client.isMutating() === 0);
+    assert.equal(mounted.entry.isSubmitting, false);
+    assert.equal(mounted.store.get(modalState).isOpen, true);
+    act(() => mounted.entry.submitSearch(form));
+    await until(() => mounted.navigation.length > 0);
+    assert.equal(requests, 2);
   } finally {
     mounted.close();
   }

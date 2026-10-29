@@ -39,11 +39,8 @@ export default function SearchView({ type, shareRoomId }: SearchViewProps) {
 
   const { register, setValue, setFocus, handleSubmit, watch, reset } =
     useSearchForm();
-  const { isIndividualView, searchCount, submitSearch } = useSearchEntryFlow(
-    type,
-    shareRoomId,
-    reset,
-  );
+  const { isIndividualView, searchCount, submitSearch, isSubmitting } =
+    useSearchEntryFlow(type, shareRoomId, reset);
 
   const handleSearchAddressBtnClick = () => {
     setBottomSheet(prevState => ({
@@ -173,8 +170,16 @@ export default function SearchView({ type, shareRoomId }: SearchViewProps) {
             }
           />
         </Section>
-        <SubmitButton disabled={isButtonDisabled} type="submit">
-          {isIndividualView ? buttonText : '등록하기'}
+        <SubmitButton
+          disabled={isButtonDisabled || isSubmitting}
+          aria-busy={isSubmitting}
+          type="submit"
+        >
+          {isSubmitting
+            ? '등록 중…'
+            : isIndividualView
+              ? buttonText
+              : '등록하기'}
         </SubmitButton>
       </Wrapper>
     </Container>

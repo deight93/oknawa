@@ -1,4 +1,5 @@
-import { atomWithStorage, createJSONStorage } from 'jotai/utils';
+import { createSafeJSONStorage } from '@/utils/browserStorage';
+import { atomWithStorage } from 'jotai/utils';
 
 export interface MapIdState {
   mapId: string;
@@ -13,5 +14,5 @@ const initialState: MapIdState = {
 export const mapIdState = atomWithStorage<MapIdState>(
   'mapIdInfo',
   initialState,
-  createJSONStorage(() => sessionStorage),
+  createSafeJSONStorage<MapIdState>(() => sessionStorage),
 );

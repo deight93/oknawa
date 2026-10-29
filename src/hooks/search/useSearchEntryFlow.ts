@@ -1,4 +1,5 @@
 import { useRouter } from 'next/navigation';
+import { useRef, useState } from 'react';
 
 import { useAtom } from 'jotai';
 
@@ -9,6 +10,9 @@ import {
 import { roomState } from '@/jotai/global/room';
 import { SearchState, searchState } from '@/jotai/global/store';
 import { SubmitDeparturePointRequestBody } from '@/services/search/types';
+import useModal from '@/hooks/common/useModal';
+import { getApiErrorMessage } from '@/api/errors';
+import { assertBrowserStorageWritable } from '@/utils/browserStorage';
 
 type SearchViewType = 'individual' | 'together';
 
@@ -45,8 +49,12 @@ export default function useSearchEntryFlow(
   const [searchList, setSearchList] = useAtom(searchState);
   const [storageRoomData, setStorageRoomData] = useAtom(roomState);
 
-  const { mutate: makeRoom } = useMakeRoomMutation();
-  const { mutate: submitDeparturePoint } = useSubmitDeparturePointMutation();
+  const { mutateAsync: makeRoom } = useMakeRoomMutation();
+  const { mutateAsync: submitDeparturePoint } =
+    useSubmitDeparturePointMutation();
+  const { setModalContents } = useModal();
+  const inFlight = useRef(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isIndividualView = type === 'individual';
   const searchCount = searchList.length;
@@ -65,49 +73,40 @@ export default function useSearchEntryFlow(
     resetForm();
   };
 
-  const submitDeparturePointToRoom = (
-    roomId: string,
-    searchForm: SearchState,
-  ) => {
-    submitDeparturePoint(
-      {
-        requestBody: toDeparturePointRequestBody(roomId, searchForm),
-      },
-      {
-        onSuccess: () => {
-          if (shareRoomId) {
-            setStorageRoomData({ roomId: shareRoomId, hostId: '' });
-          }
-          router.push('/search/list-together');
-        },
-      },
-    );
-  };
-
-  const createRoom = (searchForm: SearchState) => {
-    makeRoom(searchForm, {
-      onSuccess: data => {
+  const submitTogetherSearch = async (searchForm: SearchState) => {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setIsSubmitting(true);
+    try {
+      assertBrowserStorageWritable('local');
+      const targetRoomId =
+        shareRoomId || (searchCount > 0 ? storageRoomData.roomId : '');
+      if (targetRoomId) {
+        await submitDeparturePoint({
+          requestBody: toDeparturePointRequestBody(targetRoomId, searchForm),
+        });
+        if (shareRoomId)
+          setStorageRoomData({ roomId: shareRoomId, hostId: '' });
+      } else {
+        const data = await makeRoom(searchForm);
         setStorageRoomData({
           roomId: data?.room_id ?? '',
           hostId: data?.room_host_id ?? '',
         });
-        router.push('/search/list-together');
-      },
-    });
-  };
-
-  const submitTogetherSearch = (searchForm: SearchState) => {
-    if (shareRoomId) {
-      submitDeparturePointToRoom(shareRoomId, searchForm);
-      return;
+      }
+      // Keep the lock until navigation unmounts this form, including the response gap.
+      router.push('/search/list-together');
+    } catch (error) {
+      inFlight.current = false;
+      setIsSubmitting(false);
+      setModalContents({
+        buttonLabel: '확인',
+        contents: getApiErrorMessage(
+          error,
+          '출발지를 등록하지 못했습니다. 다시 시도해주세요.',
+        ),
+      });
     }
-
-    if (storageRoomData.roomId && searchCount > 0) {
-      submitDeparturePointToRoom(storageRoomData.roomId, searchForm);
-      return;
-    }
-
-    createRoom(searchForm);
   };
 
   const submitSearch = (searchForm: SearchState) => {
@@ -116,12 +115,13 @@ export default function useSearchEntryFlow(
       return;
     }
 
-    submitTogetherSearch(searchForm);
+    void submitTogetherSearch(searchForm);
   };
 
   return {
     isIndividualView,
     searchCount,
+    isSubmitting,
     submitSearch,
   };
 }

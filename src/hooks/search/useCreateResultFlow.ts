@@ -15,6 +15,7 @@ import { CreatedResult } from '@/services/search/types';
 import { MeetingPurpose } from '@/types/meetingPurpose';
 import { RecommendationOptions } from '@/types/recommendationOptions';
 import { clearLegacyVoteState } from '@/utils/voteStorage';
+import { assertBrowserStorageWritable } from '@/utils/browserStorage';
 
 export type CreateResultLoadingPhase = 'generating' | 'fetching';
 
@@ -51,6 +52,7 @@ export default function useCreateResultFlow() {
     let prepared = false;
 
     try {
+      assertBrowserStorageWritable('session');
       const preparedSearchList = await options?.beforeCreate?.();
       const participants = preparedSearchList ?? searchList;
       prepared = true;
