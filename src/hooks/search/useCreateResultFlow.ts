@@ -19,7 +19,7 @@ import { clearLegacyVoteState } from '@/utils/voteStorage';
 export type CreateResultLoadingPhase = 'generating' | 'fetching';
 
 interface RequestResultOptions {
-  beforeCreate?: () => Promise<void> | void;
+  beforeCreate?: () => Promise<SearchState[] | void> | SearchState[] | void;
   onCreated?: (data: CreatedResult) => void;
   onReady?: (data: CreatedResult) => Promise<void> | void;
   onError?: (error: unknown) => Promise<void> | void;
@@ -51,10 +51,11 @@ export default function useCreateResultFlow() {
     let prepared = false;
 
     try {
-      await options?.beforeCreate?.();
+      const preparedSearchList = await options?.beforeCreate?.();
+      const participants = preparedSearchList ?? searchList;
       prepared = true;
       const created = await createResult({
-        searchForm: searchList,
+        searchForm: participants,
         meetingPurpose,
         recommendationOptions,
       });
@@ -67,7 +68,7 @@ export default function useCreateResultFlow() {
         throw new Error('추천 결과를 불러오지 못했습니다. 다시 시도해주세요.');
       await options?.onReady?.(created);
 
-      setSearchState(searchList);
+      setSearchState(participants);
       setResult(mapData);
       clearLegacyVoteState();
       router.push(`/result?mapId=${created.map_id}`);

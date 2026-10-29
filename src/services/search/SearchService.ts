@@ -4,6 +4,7 @@ import SearchForm from '@/model/search/SearchForm';
 
 import {
   CreatedResult,
+  RoomRecommendationRun,
   RoomStatusResponse,
   SubmitDeparturePointRequestBody,
 } from './types';
@@ -104,7 +105,7 @@ export default class SearchService {
     meetingPurpose?: MeetingPurpose,
     recommendationOptions?: RecommendationOptions,
   ) {
-    const { data } = await api.post(
+    const { data } = await api.post<RoomRecommendationRun>(
       '/rest/v1/rpc/location_room_recommend_start',
       {
         p_room_id: roomId,
@@ -114,6 +115,11 @@ export default class SearchService {
       },
     );
 
+    if (!data?.recommendation_run_id || !Array.isArray(data.participant)) {
+      throw new Error(
+        '추천 준비를 완료하지 못했어요. 잠시 후 화면을 새로고침하고 다시 시도해주세요.',
+      );
+    }
     return data;
   }
 
@@ -121,6 +127,7 @@ export default class SearchService {
     roomId: string,
     roomHostId: string,
     mapId: string,
+    runId: string,
   ) {
     const { data } = await api.post(
       '/rest/v1/rpc/location_room_recommend_complete',
@@ -128,18 +135,24 @@ export default class SearchService {
         p_room_id: roomId,
         p_room_host_id: roomHostId,
         p_map_id: mapId,
+        p_recommendation_run_id: runId,
       },
     );
 
     return data;
   }
 
-  static async failRoomRecommendation(roomId: string, roomHostId: string) {
+  static async failRoomRecommendation(
+    roomId: string,
+    roomHostId: string,
+    runId: string,
+  ) {
     const { data } = await api.post(
       '/rest/v1/rpc/location_room_recommend_fail',
       {
         p_room_id: roomId,
         p_room_host_id: roomHostId,
+        p_recommendation_run_id: runId,
       },
     );
 

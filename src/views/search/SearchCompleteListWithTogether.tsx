@@ -22,9 +22,11 @@ import { Participant } from '@/types/location';
 import useCreateResultFlow from '@/hooks/search/useCreateResultFlow';
 import { MeetingPurpose } from '@/types/meetingPurpose';
 import SearchService from '@/services/search/SearchService';
+import { RoomRecommendationRun } from '@/services/search/types';
 import {
   DEFAULT_RECOMMENDATION_OPTIONS,
   RecommendationOptions,
+  TravelMode,
   isTravelMode,
 } from '@/types/recommendationOptions';
 
@@ -87,9 +89,12 @@ export default function SearchCompleteListWithTogetherView() {
     router.replace(`/result?mapId=${resultMapId}`);
   }, [resultMapId, router, setStorageRoomData]);
 
-  const toSearchState = (participant: Participant): SearchState => ({
+  const toSearchState = (
+    participant: Participant,
+    fallbackMode: TravelMode,
+  ): SearchState => ({
     name: participant.name,
-    travelMode: participant.travel_mode ?? roomTravelMode,
+    travelMode: participant.travel_mode ?? fallbackMode,
     address: {
       fullAddress: participant.full_address ?? participant.region_name,
       latitude: participant.start_y,
@@ -113,7 +118,11 @@ export default function SearchCompleteListWithTogetherView() {
       return toast.error('방장의 권한입니다.');
     }
 
-    setSearchList(participantList.map(toSearchState));
+    setSearchList(
+      participantList.map(participant =>
+        toSearchState(participant, roomTravelMode),
+      ),
+    );
     router.push('/search/together');
   };
 
@@ -122,8 +131,13 @@ export default function SearchCompleteListWithTogetherView() {
       return toast.error('방장의 권한입니다.');
     }
 
-    const transformedParticipants: SearchState[] =
-      participantList.map(toSearchState);
+    const selectedTravelMode = isTravelMode(recommendationOptions.travelMode)
+      ? recommendationOptions.travelMode
+      : 'transit';
+    const transformedParticipants = participantList.map(participant =>
+      toSearchState(participant, selectedTravelMode),
+    );
+    let run: RoomRecommendationRun | undefined;
 
     setStorageRoomData(prevState => ({
       ...prevState,
@@ -134,29 +148,41 @@ export default function SearchCompleteListWithTogetherView() {
       transformedParticipants,
       meetingPurpose,
       {
-        beforeCreate: () =>
-          SearchService.startRoomRecommendation(
+        beforeCreate: async () => {
+          run = await SearchService.startRoomRecommendation(
             storageRoomData.roomId,
             storageRoomData.hostId,
             meetingPurpose,
             recommendationOptions,
-          ),
+          );
+          return run.participant.map(participant =>
+            toSearchState(participant, selectedTravelMode),
+          );
+        },
         onReady: async data => {
+          if (!run)
+            throw new Error(
+              '추천 실행 정보를 찾을 수 없습니다. 다시 시도해주세요.',
+            );
           await SearchService.completeRoomRecommendation(
             storageRoomData.roomId,
             storageRoomData.hostId,
             data.map_id,
+            run.recommendation_run_id,
           );
           setStorageRoomData(prevState => ({
             ...prevState,
             resultMapId: data.map_id,
           }));
         },
-        onError: () =>
-          SearchService.failRoomRecommendation(
+        onError: async () => {
+          if (!run) return;
+          await SearchService.failRoomRecommendation(
             storageRoomData.roomId,
             storageRoomData.hostId,
-          ),
+            run.recommendation_run_id,
+          );
+        },
       },
       recommendationOptions,
     );
