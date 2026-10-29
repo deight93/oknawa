@@ -149,6 +149,8 @@ export default function Address({ setValue }: AddressProps) {
           '검색 결과가 없습니다. 장소명이나 주소를 다시 입력해주세요.'}
         {status === 'error' &&
           '검색 결과를 불러오지 못했어요. 잠시 후 다시 입력해주세요.'}
+        {status === 'sdk-error' &&
+          '주소 검색을 준비하지 못했어요. 네트워크 연결을 확인하고 화면을 새로고침해주세요.'}
       </SearchStatus>
       <SearchHint id="address-search-hint">
         정확한 출발지를 선택해주세요.

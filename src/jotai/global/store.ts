@@ -1,4 +1,5 @@
-import { atomWithReset, atomWithStorage, createJSONStorage } from 'jotai/utils';
+import { atomWithReset, atomWithStorage } from 'jotai/utils';
+import { createSafeJSONStorage } from '@/utils/browserStorage';
 import { ReactNode } from 'react';
 import { TravelMode } from '@/types/recommendationOptions';
 
@@ -30,12 +31,6 @@ interface BottomSheetState {
   isFullContents: boolean;
 }
 
-interface StringStorage {
-  getItem: (key: string) => string | null;
-  setItem: (key: string, newValue: string) => void;
-  removeItem: (key: string) => void;
-}
-
 const initialState: ModalState = {
   isOpen: false,
   title: '',
@@ -52,14 +47,8 @@ const bottomSheetInitialState: BottomSheetState = {
   isFullContents: false,
 };
 
-const noopStringStorage: StringStorage = {
-  getItem: () => null,
-  setItem: () => {},
-  removeItem: () => {},
-};
-
-const searchStorage = createJSONStorage<SearchState[]>(() =>
-  typeof window === 'undefined' ? noopStringStorage : window.sessionStorage,
+const searchStorage = createSafeJSONStorage<SearchState[]>(
+  () => window.sessionStorage,
 );
 
 export const modalState = atomWithReset<ModalState>(initialState);

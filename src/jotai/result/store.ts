@@ -1,4 +1,5 @@
-import { atomWithStorage, createJSONStorage } from 'jotai/utils';
+import { createSafeJSONStorage } from '@/utils/browserStorage';
+import { atomWithStorage } from 'jotai/utils';
 
 import { LocationResult, RequestInfo } from '@/types/location';
 
@@ -15,7 +16,7 @@ const initialState: LocationResult = {
 export const resultState = atomWithStorage<LocationResult>(
   'result',
   initialState,
-  createJSONStorage(() => sessionStorage),
+  createSafeJSONStorage<LocationResult>(() => sessionStorage),
 );
 
 interface ShareKeyState {
@@ -28,5 +29,5 @@ const initialShareKeyState: ShareKeyState = {
 export const shareKeyState = atomWithStorage<ShareKeyState>(
   'confirmShareKey',
   initialShareKeyState,
-  createJSONStorage(() => sessionStorage),
+  createSafeJSONStorage<ShareKeyState>(() => sessionStorage),
 );

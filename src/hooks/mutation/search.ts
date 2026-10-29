@@ -76,7 +76,6 @@ export const useMakeRoomMutation = () => {
 };
 
 export const useSubmitDeparturePointMutation = () => {
-  const { setModalContents } = useModal();
   return useMutation({
     mutationKey: ['submitDeparturePoint'],
     mutationFn: ({
@@ -86,13 +85,6 @@ export const useSubmitDeparturePointMutation = () => {
     }) => SearchService.submitDeparturePoint(requestBody),
     onError: error => {
       logApiError('submitDeparturePoint', error);
-      setModalContents({
-        buttonLabel: '확인',
-        contents: getApiErrorMessage(
-          error,
-          '출발지를 등록하지 못했습니다. 다시 시도해주세요.',
-        ),
-      });
     },
   });
 };

@@ -1,5 +1,6 @@
+import { createSafeJSONStorage } from '@/utils/browserStorage';
 import { atom } from 'jotai';
-import { atomWithStorage, createJSONStorage } from 'jotai/utils';
+import { atomWithStorage } from 'jotai/utils';
 
 interface InitialState {
   roomId: string;
@@ -15,13 +16,13 @@ const initialState: InitialState = {
 const activeRoomState = atomWithStorage(
   'room',
   initialState,
-  createJSONStorage(() => localStorage),
+  createSafeJSONStorage<InitialState>(() => localStorage),
 );
 
 const roomHostCapabilities = atomWithStorage<Record<string, string>>(
   'roomHostCapabilities',
   {},
-  createJSONStorage(() => localStorage),
+  createSafeJSONStorage<Record<string, string>>(() => localStorage),
 );
 
 // Keep the old active-room storage format, while retaining ownership when a

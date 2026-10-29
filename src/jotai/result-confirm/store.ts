@@ -1,4 +1,5 @@
-import { atomWithStorage, createJSONStorage } from 'jotai/utils';
+import { createSafeJSONStorage } from '@/utils/browserStorage';
+import { atomWithStorage } from 'jotai/utils';
 
 import { StationInfo } from '@/types/location';
 
@@ -16,5 +17,5 @@ const initialState: StationInfo = {
 export const resultConfirmState = atomWithStorage<StationInfo>(
   'result-confirm',
   initialState,
-  createJSONStorage(() => sessionStorage),
+  createSafeJSONStorage<StationInfo>(() => sessionStorage),
 );

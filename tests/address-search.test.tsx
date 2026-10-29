@@ -5,6 +5,8 @@ import { act, create, ReactTestRenderer } from 'react-test-renderer';
 import useKakaoPlaceService from '../src/hooks/common/useKakaoPlaceService';
 import Address from '../src/components/Address';
 import { Provider, createStore } from 'jotai';
+import BaseHead from '../src/app/head';
+import MeetingMap from '../src/components/MeetingMap';
 import type {
   KakaoPlace,
   KakaoPlacesSearchStatus,
@@ -24,6 +26,7 @@ const originalStorage = Object.getOwnPropertyDescriptor(
   'localStorage',
 );
 const originalReact = Object.getOwnPropertyDescriptor(globalThis, 'React');
+const mapsScript = () => BaseHead().props.children[0];
 
 function Probe({ query }: { query: string }) {
   current = useKakaoPlaceService(query);
@@ -66,11 +69,14 @@ beforeEach(() => {
       },
     },
   });
+  mapsScript().props.onLoad?.();
 });
 
-afterEach(() => {
+afterEach(async () => {
   if (tree) act(() => tree?.unmount());
   tree = undefined;
+  mapsScript().props.onError?.();
+  await Promise.resolve();
   if (original) Object.defineProperty(globalThis, 'kakao', original);
   else Reflect.deleteProperty(globalThis, 'kakao');
   if (originalStorage)
@@ -78,6 +84,89 @@ afterEach(() => {
   else Reflect.deleteProperty(globalThis, 'localStorage');
   if (originalReact) Object.defineProperty(globalThis, 'React', originalReact);
   else Reflect.deleteProperty(globalThis, 'React');
+});
+
+test('opening address search before the SDK global exists waits and searches after script load', async () => {
+  const sdk = Object.getOwnPropertyDescriptor(globalThis, 'kakao');
+  Reflect.deleteProperty(globalThis, 'kakao');
+  assert.doesNotThrow(() =>
+    act(() => {
+      tree = create(<Probe query="강남" />);
+    }),
+  );
+  assert.equal(current.status, 'loading');
+  assert.ok(sdk);
+  Object.defineProperty(globalThis, 'kakao', sdk);
+  await act(async () => {
+    mapsScript().props.onLoad?.();
+    ready();
+  });
+  await flushSearch();
+  assert.equal(requests[0]?.query, '강남');
+});
+
+test('SDK script failure is shown even when the failure occurred before search mounted', async () => {
+  Reflect.deleteProperty(globalThis, 'kakao');
+  mapsScript().props.onError?.();
+  await act(async () => {
+    tree = create(<Probe query="강남" />);
+  });
+  assert.equal(current.status, 'sdk-error');
+  assert.equal(requests.length, 0);
+});
+
+test('a hung SDK initialization stops loading and a later query can recover', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  await act(async () => {
+    tree = create(<Probe query="강남" />);
+  });
+  await act(async () => {
+    t.mock.timers.tick(10_001);
+  });
+  assert.equal(current.status, 'sdk-error');
+  await act(async () => {
+    tree?.update(<Probe query="사당" />);
+  });
+  await act(async () => {
+    ready();
+  });
+  await act(async () => {
+    t.mock.timers.tick(101);
+  });
+  assert.equal(requests[0]?.query, '사당');
+  act(() => requests[0].callback([place('사당역')], 'OK'));
+  assert.equal(current.status, 'success');
+});
+
+test('address and map share one SDK initialization and tolerate unmount before it finishes', async () => {
+  let loadCalls = 0;
+  kakao.maps.load = callback => {
+    loadCalls++;
+    ready = callback;
+  };
+  await act(async () => {
+    tree = create(
+      <>
+        <MeetingMap stationName="강남역" endX={null} endY={null} />
+        <Probe query="강남" />
+      </>,
+    );
+  });
+  assert.equal(loadCalls, 1);
+  act(() => tree?.unmount());
+  tree = undefined;
+  await act(async () => ready());
+  await flushSearch();
+  assert.equal(requests.length, 0);
+});
+
+test('an SDK callback without its services library shows an error instead of crashing', async () => {
+  await act(async () => {
+    tree = create(<Probe query="강남" />);
+  });
+  Reflect.deleteProperty(kakao.maps.services, 'Places');
+  await act(async () => ready());
+  assert.equal(current.status, 'sdk-error');
 });
 
 for (const scenario of [
@@ -109,7 +198,7 @@ for (const scenario of [
         </Provider>,
       );
     });
-    act(() => ready());
+    await act(async () => ready());
     act(() =>
       tree?.root
         .findByType('input')
@@ -142,7 +231,7 @@ test('address search waits for the SDK and distinguishes initial, loading and em
   assert.equal(current.status, 'idle');
   act(() => tree?.update(<Probe query="  강남  " />));
   assert.equal(current.status, 'loading');
-  act(() => ready());
+  await act(async () => ready());
   await flushSearch();
   assert.equal(requests[0].query, '강남');
   act(() => requests[0].callback([], 'ZERO_RESULT'));
@@ -153,7 +242,7 @@ test('new address queries ignore older responses and clearing cancels pending re
   act(() => {
     tree = create(<Probe query="강남" />);
   });
-  act(() => ready());
+  await act(async () => ready());
   await flushSearch();
   act(() => tree?.update(<Probe query="사당" />));
   await flushSearch();
@@ -173,7 +262,7 @@ test('rapid typing sends only the final query and clearing before debounce sends
   act(() => {
     tree = create(<Probe query="강" />);
   });
-  act(() => ready());
+  await act(async () => ready());
   act(() => tree?.update(<Probe query="강남" />));
   await flushSearch();
   assert.deepEqual(
@@ -191,7 +280,7 @@ test('a failed search exposes an inline error and a subsequent query can succeed
   act(() => {
     tree = create(<Probe query="강남" />);
   });
-  act(() => ready());
+  await act(async () => ready());
   await flushSearch();
   act(() => requests[0].callback([], 'ERROR'));
   assert.equal(current.status, 'error');

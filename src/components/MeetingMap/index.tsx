@@ -11,9 +11,8 @@ import {
 
 import { ItineraryItem, Participant, PolylinePoint } from '@/types/location';
 import CenterMarker from './CenterMarker';
-
-const KAKAO_APP_KEY = process.env.NEXT_PUBLIC_KAKAOMAP_APP_KEY;
-const KAKAO_MAP_SCRIPT_ID = 'kakao-map-sdk';
+import { waitForKakaoMaps } from '@/utils/kakaoMapsReady';
+import toast from 'react-hot-toast';
 
 interface MeetingMapProps {
   stationName: string;
@@ -148,24 +147,18 @@ export default function MeetingMap({
   }, [center, focusMode, getMapBounds, map]);
 
   useEffect(() => {
-    if (window.kakao?.maps) {
-      window.kakao.maps.load(() => setLoaded(true));
-      return;
-    }
-
-    const existingScript = document.getElementById(KAKAO_MAP_SCRIPT_ID);
-    const handleLoad = () => window.kakao.maps.load(() => setLoaded(true));
-
-    if (existingScript) {
-      existingScript.addEventListener('load', handleLoad);
-      return () => existingScript.removeEventListener('load', handleLoad);
-    }
-
-    const script = document.createElement('script');
-    script.id = KAKAO_MAP_SCRIPT_ID;
-    script.onload = handleLoad;
-    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_APP_KEY}&autoload=false`;
-    document.head.appendChild(script);
+    let active = true;
+    void waitForKakaoMaps()
+      .then(() => {
+        if (active) setLoaded(true);
+      })
+      .catch(() => {
+        if (active)
+          toast.error('지도를 불러오지 못했어요. 화면을 새로고침해주세요.');
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   if (!canRenderMap || !center) {

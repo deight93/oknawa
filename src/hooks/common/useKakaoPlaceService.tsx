@@ -1,30 +1,38 @@
 import { useEffect, useState } from 'react';
 
 import { KakaoPlace } from '@/components/Address/types';
+import { waitForKakaoMaps } from '@/utils/kakaoMapsReady';
 
 type SearchResult = {
-  status: 'idle' | 'loading' | 'success' | 'empty' | 'error';
+  status: 'idle' | 'loading' | 'success' | 'empty' | 'error' | 'sdk-error';
   places: KakaoPlace[];
 };
 
-export default function useKakaoPlaceService(query: string) {
+export default function useKakaoPlaceService(query: string): SearchResult {
   const [result, setResult] = useState<SearchResult>({
     status: 'idle',
     places: [],
   });
   const [kakaoPlaceService, setKakaoPlaceService] =
     useState<kakao.maps.services.Places | null>(null);
+  const [sdkError, setSdkError] = useState(false);
   const searchTerm = query.trim();
 
   useEffect(() => {
+    if (kakaoPlaceService) return;
     let active = true;
-    kakao.maps.load(() => {
-      if (active) setKakaoPlaceService(new kakao.maps.services.Places());
-    });
+    setSdkError(false);
+    void waitForKakaoMaps()
+      .then(() => {
+        if (active) setKakaoPlaceService(new kakao.maps.services.Places());
+      })
+      .catch(() => {
+        if (active) setSdkError(true);
+      });
     return () => {
       active = false;
     };
-  }, []);
+  }, [kakaoPlaceService, searchTerm]);
 
   useEffect(() => {
     if (!searchTerm) {
@@ -60,5 +68,5 @@ export default function useKakaoPlaceService(query: string) {
     };
   }, [searchTerm, kakaoPlaceService]);
 
-  return result;
+  return searchTerm && sdkError ? { status: 'sdk-error', places: [] } : result;
 }
