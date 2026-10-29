@@ -1,0 +1,409 @@
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { setTimeout as wait } from 'node:timers/promises';
+import React from 'react';
+import { act, create, ReactTestRenderer } from 'react-test-renderer';
+import { Provider, createStore } from 'jotai';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AppRouterContext } from 'next/dist/shared/lib/app-router-context.shared-runtime';
+import { AxiosError, type AxiosAdapter } from 'axios';
+import { api, edgeApi } from '../src/api/client';
+import useSearchEntryFlow from '../src/hooks/search/useSearchEntryFlow';
+import { roomState } from '../src/jotai/global/room';
+import { modalState, searchState } from '../src/jotai/global/store';
+import SearchCompleteListWithTogetherView from '../src/views/search/SearchCompleteListWithTogether';
+import SearchLoading from '../src/views/search/components/SearchLoading';
+import RecommendationOptionSelector from '../src/views/search/components/RecommendationOptionSelector';
+import { Button } from '@nextui-org/react';
+import type { Participant } from '../src/types/location';
+
+const roomId = '11111111-1111-4111-8111-111111111111';
+const otherRoomId = '22222222-2222-4222-8222-222222222222';
+const mapId = '33333333-3333-4333-8333-333333333333';
+const runId = '44444444-4444-4444-8444-444444444444';
+const hostId = 'creator-only';
+const form = {
+  name: '방장',
+  address: {
+    fullAddress: '서울 강남구',
+    regionName: '강남역',
+    latitude: 37.5,
+    longitude: 127,
+  },
+};
+const participants: Participant[] = ['방장', '친구', '방금 합류'].map(
+  (name, i) => ({
+    name,
+    region_name: '강남역',
+    full_address: '서울 강남구',
+    start_x: 127 + i / 100,
+    start_y: 37.5,
+    travel_mode: i === 2 ? 'walk' : null,
+  }),
+);
+
+async function until(predicate: () => boolean) {
+  for (let i = 0; i < 100; i++) {
+    if (predicate()) return;
+    await act(async () => {
+      await wait(10);
+    });
+  }
+  assert.fail('Room flow did not reach the expected state');
+}
+
+async function mountRoom(
+  options: {
+    shareRoomId?: string;
+    view?: boolean;
+    adapter?: AxiosAdapter;
+    status?: string;
+  } = {},
+) {
+  const memory = new Map<string, string>([
+    ['room', JSON.stringify({ roomId, hostId })],
+  ]);
+  const storage = {
+    getItem: (key: string) => memory.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      memory.set(key, value);
+    },
+    removeItem: (key: string) => {
+      memory.delete(key);
+    },
+  };
+  const globals = Object.entries({
+    localStorage: storage,
+    sessionStorage: storage,
+    React,
+    HTMLElement: class {},
+    SVGElement: class {},
+    window: {
+      localStorage: storage,
+      sessionStorage: storage,
+      setInterval,
+      clearInterval,
+      setTimeout,
+      clearTimeout,
+    },
+  });
+  const previous = globals.map(([key]) =>
+    Object.getOwnPropertyDescriptor(globalThis, key),
+  );
+  for (const [key, value] of globals)
+    Object.defineProperty(globalThis, key, { configurable: true, value });
+  const originalApi = api.defaults.adapter,
+    originalEdge = edgeApi.defaults.adapter;
+  api.defaults.adapter = edgeApi.defaults.adapter =
+    options.adapter ??
+    (async config => ({
+      data: {},
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config,
+    }));
+  const store = createStore();
+  const client = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, staleTime: Infinity, gcTime: Infinity },
+      mutations: { retry: false, gcTime: Infinity },
+    },
+  });
+  const status = {
+    room_id: roomId,
+    recommendation_status: options.status ?? 'idle',
+    result_map_id: null,
+    recommendation_options: { travelMode: 'transit', midpointBasis: 'time' },
+    participant: participants.slice(0, 2),
+  };
+  client.setQueryData(['inputStatusList', roomId], status);
+  const navigation: string[] = [];
+  let entry!: ReturnType<typeof useSearchEntryFlow>,
+    renderer!: ReactTestRenderer;
+  function Probe() {
+    entry = useSearchEntryFlow(
+      'together',
+      options.shareRoomId ?? null,
+      () => {},
+    );
+    return options.view ? <SearchCompleteListWithTogetherView /> : null;
+  }
+  await act(async () => {
+    renderer = create(
+      <AppRouterContext.Provider
+        value={{
+          back() {},
+          forward() {},
+          refresh() {},
+          prefetch: async () => {},
+          push: url => {
+            navigation.push(url);
+          },
+          replace: url => {
+            navigation.push(url);
+          },
+        }}
+      >
+        <Provider store={store}>
+          <QueryClientProvider client={client}>
+            <Probe />
+          </QueryClientProvider>
+        </Provider>
+      </AppRouterContext.Provider>,
+    );
+  });
+  return {
+    get entry() {
+      return entry;
+    },
+    renderer,
+    navigation,
+    store,
+    client,
+    status,
+    memory,
+    close() {
+      act(() => renderer.unmount());
+      client.clear();
+      api.defaults.adapter = originalApi;
+      edgeApi.defaults.adapter = originalEdge;
+      globals.forEach(([key], i) => {
+        const descriptor = previous[i];
+        if (descriptor) Object.defineProperty(globalThis, key, descriptor);
+        else Reflect.deleteProperty(globalThis, key);
+      });
+    },
+  };
+}
+
+test('using a host’s own invitation link preserves the existing host capability', async () => {
+  const mounted = await mountRoom({ shareRoomId: roomId });
+  try {
+    act(() => mounted.entry.submitSearch(form));
+    await until(() => mounted.navigation.length > 0);
+    assert.equal(mounted.store.get(roomState).hostId, hostId);
+    assert.equal(mounted.store.get(roomState).roomId, roomId);
+  } finally {
+    mounted.close();
+  }
+});
+
+test('visiting another room never grants it the previous host capability and returning restores ownership', async () => {
+  const mounted = await mountRoom({ shareRoomId: otherRoomId });
+  try {
+    act(() => mounted.entry.submitSearch(form));
+    await until(() => mounted.navigation.length > 0);
+    assert.deepEqual(mounted.store.get(roomState), {
+      roomId: otherRoomId,
+      hostId: '',
+    });
+    act(() => mounted.store.set(roomState, { roomId, hostId: '' }));
+    assert.equal(mounted.store.get(roomState).hostId, hostId);
+    // A fresh store mounts the same public atom, as a browser reload does.
+    const reloaded = createStore();
+    const unsubscribe = reloaded.sub(roomState, () => {});
+    try {
+      assert.equal(reloaded.get(roomState).hostId, hostId);
+    } finally {
+      unsubscribe();
+    }
+  } finally {
+    mounted.close();
+  }
+});
+
+test('a rejected late join shows the existing error modal without losing the current room or navigating', async () => {
+  const message =
+    '이미 추천이 시작된 방입니다. 방장에게 새 모임 링크를 요청해주세요.';
+  const mounted = await mountRoom({
+    shareRoomId: otherRoomId,
+    adapter: async config => {
+      throw new AxiosError(
+        'Request failed',
+        'ERR_BAD_REQUEST',
+        config,
+        undefined,
+        {
+          data: { message },
+          status: 400,
+          statusText: 'Bad Request',
+          headers: {},
+          config,
+        },
+      );
+    },
+  });
+  try {
+    act(() => mounted.entry.submitSearch(form));
+    await until(() => mounted.client.isMutating() === 0);
+    assert.equal(mounted.store.get(modalState).isOpen, true);
+    assert.equal(mounted.store.get(modalState).contents, message);
+    assert.deepEqual(mounted.navigation, []);
+    assert.deepEqual(mounted.store.get(roomState), { roomId, hostId });
+  } finally {
+    mounted.close();
+  }
+});
+
+test('reloading while hosting a room retains capabilities for other previously hosted rooms', async () => {
+  const mounted = await mountRoom();
+  try {
+    act(() =>
+      mounted.store.set(roomState, {
+        roomId: otherRoomId,
+        hostId: 'other-creator',
+      }),
+    );
+    const reloaded = createStore();
+    const unsubscribe = reloaded.sub(roomState, () => {});
+    try {
+      reloaded.set(roomState, { roomId: mapId, hostId: '' });
+      assert.equal(reloaded.get(roomState).hostId, '');
+      reloaded.set(roomState, { roomId, hostId: '' });
+      assert.equal(reloaded.get(roomState).hostId, hostId);
+      reloaded.set(roomState, { roomId: otherRoomId, hostId: '' });
+      assert.equal(reloaded.get(roomState).hostId, 'other-creator');
+    } finally {
+      unsubscribe();
+    }
+  } finally {
+    mounted.close();
+  }
+});
+
+test('shared recommendation uses the start snapshot and publishes with that run identifier', async () => {
+  let calculated: { name: string; travel_mode: string }[] = [];
+  let completed: Record<string, unknown> = {};
+  const mounted = await mountRoom({
+    view: true,
+    adapter: async config => {
+      let data: unknown;
+      if (config.url?.endsWith('location_room_recommend_start')) {
+        data = { recommendation_run_id: runId, participant: participants };
+      } else if (config.url?.endsWith('location-points')) {
+        calculated = JSON.parse(config.data).participant;
+        data = { map_id: mapId, map_host_id: 'map-creator' };
+      } else if (config.url?.endsWith('location_result_by_map_id')) {
+        data = {
+          map_id: mapId,
+          station_info: [],
+          request_info: { participant: participants },
+        };
+      } else if (config.url?.endsWith('location_room_recommend_complete')) {
+        completed = JSON.parse(config.data);
+        data = {};
+      } else {
+        throw new Error(`Unexpected request: ${config.url}`);
+      }
+      return { data, status: 200, statusText: 'OK', headers: {}, config };
+    },
+  });
+  try {
+    act(() =>
+      mounted.renderer.root
+        .findByType(RecommendationOptionSelector)
+        .props.onChange({ travelMode: 'car', midpointBasis: 'time' }),
+    );
+    act(() => mounted.renderer.root.findByType(Button).props.onClick());
+    await until(() => mounted.navigation.length > 0);
+    assert.deepEqual(
+      calculated.map(p => p.name),
+      ['방장', '친구', '방금 합류'],
+    );
+    assert.deepEqual(
+      calculated.map(p => p.travel_mode),
+      ['car', 'car', 'walk'],
+    );
+    assert.equal(completed.p_recommendation_run_id, runId);
+    assert.deepEqual(
+      mounted.store.get(searchState).map(p => p.name),
+      ['방장', '친구', '방금 합류'],
+    );
+    assert.equal(mounted.navigation.at(-1), `/result?mapId=${mapId}`);
+  } finally {
+    mounted.close();
+  }
+});
+
+test('a failed room calculation releases only its own run and stays on the list', async () => {
+  let failure: Record<string, unknown> | undefined;
+  const mounted = await mountRoom({
+    view: true,
+    adapter: async config => {
+      if (config.url?.endsWith('location-points'))
+        throw new Error('경로 조회 실패');
+      let data: unknown;
+      if (config.url?.endsWith('location_room_recommend_start')) {
+        data = { recommendation_run_id: runId, participant: participants };
+      } else if (config.url?.endsWith('location_room_recommend_fail')) {
+        failure = JSON.parse(config.data);
+        data = {};
+      } else {
+        throw new Error(`Unexpected request: ${config.url}`);
+      }
+      return { data, status: 200, statusText: 'OK', headers: {}, config };
+    },
+  });
+  try {
+    act(() => mounted.renderer.root.findByType(Button).props.onClick());
+    await until(() => failure !== undefined);
+    assert.equal(failure?.p_recommendation_run_id, runId);
+    assert.equal(failure?.p_room_host_id, hostId);
+    assert.deepEqual(mounted.navigation, []);
+    assert.equal(mounted.store.get(modalState).isOpen, true);
+    assert.equal(mounted.renderer.root.findAllByType(SearchLoading).length, 0);
+  } finally {
+    mounted.close();
+  }
+});
+
+test('an old server response without a snapshot cannot calculate from a stale client list', async () => {
+  const requests: string[] = [];
+  const mounted = await mountRoom({
+    view: true,
+    adapter: async config => {
+      requests.push(config.url ?? '');
+      return {
+        data: { recommendation_status: 'generating' },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config,
+      };
+    },
+  });
+  try {
+    act(() => mounted.renderer.root.findByType(Button).props.onClick());
+    await until(() => mounted.store.get(modalState).isOpen);
+    assert.deepEqual(requests, ['/rest/v1/rpc/location_room_recommend_start']);
+    assert.deepEqual(mounted.navigation, []);
+  } finally {
+    mounted.close();
+  }
+});
+
+test('a recovered room removes the loading overlay and enables the existing host retry button', async () => {
+  const mounted = await mountRoom({ view: true, status: 'generating' });
+  try {
+    assert.equal(mounted.renderer.root.findAllByType(SearchLoading).length, 1);
+    assert.equal(
+      mounted.renderer.root.findByType(Button).props.isDisabled,
+      true,
+    );
+    await act(async () => {
+      mounted.client.setQueryData(['inputStatusList', roomId], {
+        ...mounted.status,
+        recommendation_status: 'failed',
+      });
+      await wait(10);
+    });
+    assert.equal(mounted.renderer.root.findAllByType(SearchLoading).length, 0);
+    assert.equal(
+      mounted.renderer.root.findByType(Button).props.isDisabled,
+      false,
+    );
+  } finally {
+    mounted.close();
+  }
+});

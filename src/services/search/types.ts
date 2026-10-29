@@ -1,4 +1,10 @@
 import { TravelMode } from '@/types/recommendationOptions';
+import { Participant } from '@/types/location';
+
+export interface RoomRecommendationRun {
+  recommendation_run_id: string;
+  participant: Participant[];
+}
 
 export interface CreatedResult {
   map_id: string;
