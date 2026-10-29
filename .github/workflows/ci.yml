@@ -35,6 +35,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Dependency security audit
+        # The unpatched low-severity theme dependency is documented in docs/dependency-security.md.
+        run: pnpm audit --audit-level=moderate
+
       - name: Agent harness contracts
         run: pnpm agent:harness:quick
 
