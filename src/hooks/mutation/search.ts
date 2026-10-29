@@ -1,12 +1,11 @@
 import { useMutation } from '@tanstack/react-query';
 
-import { getApiErrorMessage, logApiError } from '@/api/errors';
+import { logApiError } from '@/api/errors';
 import SearchService from '@/services/search/SearchService';
 import { SubmitDeparturePointRequestBody } from '@/services/search/types';
 
 import { SearchState } from '@/jotai/global/store';
 
-import useModal from '@/hooks/common/useModal';
 import { MeetingPurpose } from '@/types/meetingPurpose';
 import { RecommendationOptions } from '@/types/recommendationOptions';
 
@@ -17,8 +16,6 @@ interface PlaceSearchVariables {
 }
 
 export const usePlaceSearchMutation = () => {
-  const { setModalContents } = useModal();
-
   return useMutation({
     mutationKey: ['placeSearch'],
     mutationFn: ({
@@ -31,16 +28,6 @@ export const usePlaceSearchMutation = () => {
         meetingPurpose,
         recommendationOptions,
       ),
-    onError: error => {
-      logApiError('placeSearch', error);
-      setModalContents({
-        buttonLabel: '확인',
-        contents: getApiErrorMessage(
-          error,
-          '지점을 찾을 수 없습니다.\n다시 검색해주세요.',
-        ),
-      });
-    },
   });
 };
 

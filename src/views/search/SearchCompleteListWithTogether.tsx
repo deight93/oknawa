@@ -60,7 +60,9 @@ export default function SearchCompleteListWithTogetherView() {
   const [meetingPurpose, setMeetingPurpose] = useState<MeetingPurpose>();
   const [recommendationOptions, setRecommendationOptions] =
     useState<RecommendationOptions>(DEFAULT_RECOMMENDATION_OPTIONS);
-  const { requestResult, isLoading, loadingPhase } = useCreateResultFlow();
+  const { requestResult, isLoading, loadingPhase } = useCreateResultFlow(
+    storageRoomData.roomId,
+  );
 
   const { data: roomStatus, participant: participants } =
     useInputStatusListQuery(storageRoomData.roomId || '');
@@ -170,10 +172,6 @@ export default function SearchCompleteListWithTogetherView() {
             data.map_id,
             run.recommendation_run_id,
           );
-          setStorageRoomData(prevState => ({
-            ...prevState,
-            resultMapId: data.map_id,
-          }));
         },
         onError: async () => {
           if (!run) return;

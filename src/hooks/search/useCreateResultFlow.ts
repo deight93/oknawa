@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSetAtom } from 'jotai';
 
@@ -26,7 +26,7 @@ interface RequestResultOptions {
   onError?: (error: unknown) => Promise<void> | void;
 }
 
-export default function useCreateResultFlow() {
+export default function useCreateResultFlow(roomId?: string) {
   const router = useRouter();
   const setResult = useSetAtom(resultState);
   const setSearchState = useSetAtom(searchState);
@@ -35,9 +35,20 @@ export default function useCreateResultFlow() {
   const { mutateAsync: createResult } = usePlaceSearchMutation();
   const { mutateAsync: fetchResult } = usePlaceSearchMapIdMutation();
   const inFlight = useRef(false);
+  const pageVersion = useRef(0);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingPhase, setLoadingPhase] =
     useState<CreateResultLoadingPhase>('generating');
+
+  useEffect(() => {
+    const version = pageVersion.current;
+    inFlight.current = false;
+    setIsLoading(false);
+    setLoadingPhase('generating');
+    return () => {
+      pageVersion.current = version + 1;
+    };
+  }, [roomId]);
 
   const requestResult = async (
     searchList: SearchState[],
@@ -50,25 +61,35 @@ export default function useCreateResultFlow() {
     setIsLoading(true);
     setLoadingPhase('generating');
     let prepared = false;
+    const version = pageVersion.current;
+    const isCurrentPage = () => pageVersion.current === version;
+    const requireCurrentPage = () => {
+      if (!isCurrentPage()) throw new Error('추천 화면을 벗어났습니다.');
+    };
 
     try {
       assertBrowserStorageWritable('session');
       const preparedSearchList = await options?.beforeCreate?.();
       const participants = preparedSearchList ?? searchList;
       prepared = true;
+      requireCurrentPage();
       const created = await createResult({
         searchForm: participants,
         meetingPurpose,
         recommendationOptions,
       });
+      requireCurrentPage();
       setMapIdInfo({ mapId: created.map_id, mapHostId: created.map_host_id });
       options?.onCreated?.(created);
 
       setLoadingPhase('fetching');
       const mapData = await fetchResult(created.map_id);
+      requireCurrentPage();
       if (!mapData)
         throw new Error('추천 결과를 불러오지 못했습니다. 다시 시도해주세요.');
       await options?.onReady?.(created);
+      // Publication may already have completed remotely when this page leaves.
+      if (!isCurrentPage()) return;
 
       setSearchState(participants);
       setResult(mapData);
@@ -77,7 +98,7 @@ export default function useCreateResultFlow() {
       // Keep success locked until unmount; only failures may retry on this page.
       router.push(`/result?mapId=${created.map_id}`);
     } catch (error) {
-      logApiError('createResult', error);
+      if (isCurrentPage()) logApiError('createResult', error);
       // A failed preparation must not mark someone else's active run as failed.
       if (prepared) {
         try {
@@ -86,6 +107,8 @@ export default function useCreateResultFlow() {
           logApiError('createResult:onError', handlerError);
         }
       }
+      // Release an abandoned room run above, but leave the new page untouched.
+      if (!isCurrentPage()) return;
       setModalContents({
         buttonLabel: '확인',
         contents: getApiErrorMessage(

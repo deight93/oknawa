@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { useAtomValue, useSetAtom } from 'jotai';
@@ -23,6 +23,11 @@ const CONFIRM_LOADING_MIN_DURATION_MS = 1200;
 const delay = (duration: number) =>
   new Promise(resolve => window.setTimeout(resolve, duration));
 
+interface VoteScope {
+  mapId: string;
+  voteRound: number;
+}
+
 export default function useVoteFlow(
   shareKey: string,
   queryMapId: string | null,
@@ -41,12 +46,27 @@ export default function useVoteFlow(
     mapIdInfo.mapId === activeMapId ? mapIdInfo.mapHostId : '';
   const [isVote, setIsVote] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
+  const currentScope = useRef<VoteScope | null>(null);
 
   useEffect(() => {
+    currentScope.current = { mapId: activeMapId, voteRound };
     setIsVote(hasVotedForMap(activeMapId, voteRound));
+    setIsConfirming(false);
+    return () => {
+      currentScope.current = null;
+    };
   }, [activeMapId, voteRound]);
 
+  const getCurrentScope = () => {
+    const scope = currentScope.current;
+    return scope?.mapId === activeMapId && scope.voteRound === voteRound
+      ? scope
+      : null;
+  };
+
   const vote = async () => {
+    const scope = getCurrentScope();
+    if (!scope) return;
     resetModal();
 
     if (!activeMapId) {
@@ -65,8 +85,10 @@ export default function useVoteFlow(
         getVoterToken(),
       );
       setVotedForMap(activeMapId, voteRound);
+      if (currentScope.current !== scope) return;
       setIsVote(true);
     } catch (error) {
+      if (currentScope.current !== scope) return;
       logApiError('vote', error);
       setModalContents({
         buttonLabel: '확인',
@@ -78,8 +100,9 @@ export default function useVoteFlow(
     }
   };
 
-  const moveToFinal = async () => {
+  const moveToFinal = async (scope: VoteScope) => {
     const data = await fetchPlaceWithShareKey(shareKey);
+    if (currentScope.current !== scope) return;
 
     if (data) {
       setResultConfirm(data);
@@ -90,6 +113,8 @@ export default function useVoteFlow(
   };
 
   const confirmVote = async () => {
+    const scope = getCurrentScope();
+    if (!scope) return;
     resetModal();
     setIsConfirming(true);
 
@@ -104,12 +129,14 @@ export default function useVoteFlow(
         ),
         delay(CONFIRM_LOADING_MIN_DURATION_MS),
       ]);
+      if (currentScope.current !== scope) return;
 
       await Promise.all([
-        moveToFinal(),
+        moveToFinal(scope),
         delay(CONFIRM_LOADING_MIN_DURATION_MS),
       ]);
     } catch (error) {
+      if (currentScope.current !== scope) return;
       logApiError('voteConfirm', error);
       setModalContents({
         buttonLabel: '확인',
@@ -119,12 +146,12 @@ export default function useVoteFlow(
         ),
       });
     } finally {
-      setIsConfirming(false);
+      if (currentScope.current === scope) setIsConfirming(false);
     }
   };
 
   const requestVote = () => {
-    if (isVote) return;
+    if (isVote || !getCurrentScope()) return;
 
     setModalContents({
       buttonLabel: '취소',
@@ -135,6 +162,7 @@ export default function useVoteFlow(
   };
 
   const requestConfirm = () => {
+    if (!getCurrentScope()) return;
     if (!isVote) {
       setModalContents({
         buttonLabel: '확인',
