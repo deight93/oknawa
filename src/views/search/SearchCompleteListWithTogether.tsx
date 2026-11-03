@@ -9,7 +9,7 @@ import { Link, CirclePlus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Button as FloatingButton } from '@nextui-org/react';
 
-import { ArrowBackIcon } from '@/assets/icons/ArrowBack';
+import PageHeader from '@/components/PageHeader';
 import { SearchState, searchState } from '@/jotai/global/store';
 import { useInputStatusListQuery } from '@/hooks/query/search';
 import PeopleCard from './components/PeopleCard';
@@ -224,13 +224,10 @@ export default function SearchCompleteListWithTogetherView() {
   return (
     <Container>
       <Wrapper>
-        <IconBox onClick={() => router.push('/')}>
-          <ArrowBackIcon />
-        </IconBox>
+        <PageHeader onBack={() => router.push('/')} />
         <Section>
           <TitleBox>
-            <Title>입력이 완료된</Title>
-            <Title>출발지 목록입니다.</Title>
+            <Title>{'입력이 완료된\n출발지 목록입니다.'}</Title>
             <Desc>링크를 공유하고 팀원들을 초대해보세요.</Desc>
           </TitleBox>
         </Section>
@@ -321,8 +318,10 @@ export default function SearchCompleteListWithTogetherView() {
         )}
       </Wrapper>
 
-      <div>
-        <QuitRoom onClick={handleQuiteRoomBtnClick}>방 나가기</QuitRoom>
+      <Footer>
+        <QuitRoom type="button" onClick={handleQuiteRoomBtnClick}>
+          방 나가기
+        </QuitRoom>
         <SubmitButton
           size="lg"
           color="success"
@@ -337,7 +336,7 @@ export default function SearchCompleteListWithTogetherView() {
         >
           {isHost ? '만나기 편한 장소 추천받기' : '방장 추천 대기 중'}
         </SubmitButton>
-      </div>
+      </Footer>
       {shouldShowLoading && (
         <SearchLoading
           phase={loadingPhase}
@@ -352,45 +351,48 @@ const Container = styled.div`
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 35px 19px 20px;
+  padding: max(12px, env(safe-area-inset-top))
+    max(20px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom))
+    max(20px, env(safe-area-inset-left));
   min-height: 100dvh;
 `;
 
 const Wrapper = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 13px;
+  gap: 12px;
 `;
 
 const Section = styled.section`
   display: flex;
   flex-direction: column;
-  gap: 13px;
-  margin-bottom: 20px;
-`;
-
-const IconBox = styled.div`
-  width: 50px;
-  margin-bottom: 20px;
-  cursor: pointer;
+  gap: 12px;
+  margin-bottom: 12px;
 `;
 
 const TitleBox = styled.div`
   display: flex;
   flex-direction: column;
-  align-items: center;
-  margin-bottom: 20px;
+  align-items: flex-start;
+  margin-top: 24px;
 `;
 
 const Title = styled.h1`
   font-size: 28px;
   font-weight: 700;
-  line-height: 43px;
+  line-height: 1.45;
+  white-space: pre-line;
+  @media (max-width: 359px) {
+    font-size: 24px;
+  }
 `;
 
 const Desc = styled.p`
-  margin-top: 5px;
-  color: var(--text-muted);
+  margin-top: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+  word-break: keep-all;
+  color: var(--text-secondary);
 `;
 
 const ButtonWrapper = styled.div`
@@ -400,16 +402,29 @@ const ButtonWrapper = styled.div`
 `;
 
 const SubmitButton = styled(FloatingButton)`
+  min-height: 48px;
+  height: auto;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: var(--primary);
+  color: var(--button-text-on-primary);
   font-weight: 600;
+  white-space: normal;
 `;
 
-const QuitRoom = styled.div`
+const Footer = styled.div`
+  margin-top: 24px;
+`;
+
+const QuitRoom = styled.button`
   display: flex;
-  justify-content: flex-end;
+  margin-left: auto;
+  align-items: center;
+  min-height: 44px;
   cursor: pointer;
-  padding-bottom: 10px;
+  padding: 8px 0;
   font-size: 13px;
-  color: #b91c1c;
+  color: var(--text-secondary);
 
   &:hover {
     opacity: 0.7;

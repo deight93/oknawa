@@ -7,7 +7,6 @@ import { bottomSheetState } from '@/jotai/global/store';
 
 import { CloseIcon } from '@/assets/icons/Close';
 import { media } from '@/styles/commonStyles';
-import ThemeToggle from '@/components/ThemeToggle';
 
 export default function BottomSheet() {
   const [bottomSheet] = useAtom(bottomSheetState);
@@ -98,10 +97,9 @@ export default function BottomSheet() {
         $height={height}
         $isFullContents={isFullContents}
       >
-        {isFullContents && <ThemeToggle />}
-        <TitleBox>
-          <Title id={titleId}>{title}</Title>
-          {!isFullContents && (
+        {!isFullContents && (
+          <TitleBox>
+            <Title id={titleId}>{title}</Title>
             <CloseBtnBox
               type="button"
               aria-label="닫기"
@@ -109,9 +107,9 @@ export default function BottomSheet() {
             >
               <CloseIcon color="currentColor" />
             </CloseBtnBox>
-          )}
-        </TitleBox>
-        <Contents>{contents}</Contents>
+          </TitleBox>
+        )}
+        <Contents $isFullContents={isFullContents}>{contents}</Contents>
       </Wrapper>
     </Container>
   );
@@ -127,7 +125,7 @@ const Container = styled.section`
   align-items: flex-end;
   justify-content: center;
   background-color: var(--overlay-bg);
-  /* Keep the sheet above the existing fixed theme toggle and map panels. */
+  /* Keep dialogs above the map and result panel. */
   z-index: 100000001;
   animation: fadeIn_ani 0.3s both;
 
@@ -146,7 +144,9 @@ const Wrapper = styled.div<{ $height: number; $isFullContents: boolean }>`
   flex-direction: column;
   width: 100%;
   max-width: 500px;
-  padding: 1rem;
+  padding: max(16px, env(safe-area-inset-top))
+    max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-left));
   border-radius: 0.8rem 0.8rem 0 0;
   background-color: ${({ $isFullContents }) =>
     $isFullContents ? 'var(--app-bg)' : 'var(--surface-muted)'};
@@ -203,9 +203,10 @@ const CloseBtnBox = styled.button`
   }
 `;
 
-const Contents = styled.div`
+const Contents = styled.div<{ $isFullContents: boolean }>`
+  flex: 1;
   min-height: 0;
-  overflow-y: auto;
+  overflow-y: ${({ $isFullContents }) => ($isFullContents ? 'hidden' : 'auto')};
   overscroll-behavior: contain;
   scrollbar-width: thin;
   scrollbar-color: var(--border-strong) transparent;

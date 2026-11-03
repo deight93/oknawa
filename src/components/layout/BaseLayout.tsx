@@ -3,7 +3,6 @@ import { Toaster } from 'react-hot-toast';
 
 import ModalBox from '../ModalBox';
 import BottomSheet from '../BottomSheet';
-import ThemeToggle from '../ThemeToggle';
 
 import { flexCenter, media } from '@/styles/commonStyles';
 
@@ -15,7 +14,6 @@ export default function BaseLayout({
   return (
     <Container>
       <Wrapper>
-        <ThemeToggle />
         {children}
         <BottomSheet />
       </Wrapper>

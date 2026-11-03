@@ -5,6 +5,8 @@ import { UseFormSetValue } from 'react-hook-form';
 import { ChevronLeft, CircleX, Clock3, MapPin } from 'lucide-react';
 import { useSetAtom } from 'jotai';
 
+import ThemeToggle from '@/components/ThemeToggle';
+
 import Place from './components/Place';
 import useKakaoPlaceService from '@/hooks/common/useKakaoPlaceService';
 import { KakaoPlace } from './types';
@@ -71,90 +73,95 @@ export default function Address({ setValue }: AddressProps) {
 
   return (
     <Container>
-      <SearchHeader>
-        <BackButton
-          type="button"
-          aria-label="출발지 검색 닫기"
-          onClick={resetBottomSheet}
-        >
-          <ChevronLeft size={26} aria-hidden="true" />
-        </BackButton>
-        <Title>출발지 검색</Title>
-      </SearchHeader>
-      <SearchField>
-        <SearchInput
-          ref={inputRef}
-          type="text"
-          aria-label="출발지 검색"
-          aria-describedby="address-search-hint"
-          autoComplete="off"
-          value={input}
-          placeholder="출발지를 입력해주세요."
-          onChange={event => setInput(event.target.value)}
-          onFocus={() => setIsHistoryOpen(true)}
-          onKeyDown={event => {
-            if (event.key === 'Escape') resetBottomSheet();
-          }}
-        />
-        {input && (
-          <ClearButton
+      <SearchControls>
+        <SearchHeader>
+          <BackButton
             type="button"
-            aria-label="검색어 지우기"
-            onClick={() => {
-              setInput('');
-              inputRef.current?.focus();
-            }}
+            aria-label="출발지 검색 닫기"
+            onClick={resetBottomSheet}
           >
-            <CircleX size={20} aria-hidden="true" />
-          </ClearButton>
+            <ChevronLeft size={26} aria-hidden="true" />
+          </BackButton>
+          <Title>출발지 검색</Title>
+          <ThemeToggle />
+        </SearchHeader>
+        <SearchField>
+          <SearchInput
+            ref={inputRef}
+            type="text"
+            aria-label="출발지 검색"
+            aria-describedby="address-search-hint"
+            autoComplete="off"
+            value={input}
+            placeholder="출발지를 입력해주세요."
+            onChange={event => setInput(event.target.value)}
+            onFocus={() => setIsHistoryOpen(true)}
+            onKeyDown={event => {
+              if (event.key === 'Escape') resetBottomSheet();
+            }}
+          />
+          {input && (
+            <ClearButton
+              type="button"
+              aria-label="검색어 지우기"
+              onClick={() => {
+                setInput('');
+                inputRef.current?.focus();
+              }}
+            >
+              <CircleX size={20} aria-hidden="true" />
+            </ClearButton>
+          )}
+        </SearchField>
+      </SearchControls>
+      <SearchResults>
+        {isHistoryOpen && !input.trim() && recentSearches.length > 0 && (
+          <RecentSearch>
+            <RecentTitle>최근 검색</RecentTitle>
+            <PlacesList aria-label="최근 검색한 출발지">
+              {recentSearches.map((item, index) => (
+                <Place
+                  key={`${item.fullAddress}-${index}`}
+                  onClick={() => selectAddress(item)}
+                >
+                  <Clock3 size={20} aria-hidden="true" />
+                  <PlaceText>
+                    <Place.Title>{item.regionName}</Place.Title>
+                    <Place.SubTitle>{item.fullAddress}</Place.SubTitle>
+                  </PlaceText>
+                </Place>
+              ))}
+            </PlacesList>
+          </RecentSearch>
         )}
-      </SearchField>
-      {isHistoryOpen && !input.trim() && recentSearches.length > 0 && (
-        <RecentSearch>
-          <RecentTitle>최근 검색</RecentTitle>
-          <PlacesList aria-label="최근 검색한 출발지">
-            {recentSearches.map((item, index) => (
-              <Place
-                key={`${item.fullAddress}-${index}`}
-                onClick={() => selectAddress(item)}
-              >
-                <Clock3 size={20} aria-hidden="true" />
+        {status === 'success' && (
+          <PlacesList aria-label="주소 검색 결과">
+            {places.map(place => (
+              <Place key={place.id} onClick={() => handlePlaceItemClick(place)}>
+                <MapPin size={23} aria-hidden="true" />
                 <PlaceText>
-                  <Place.Title>{item.regionName}</Place.Title>
-                  <Place.SubTitle>{item.fullAddress}</Place.SubTitle>
+                  <Place.Title>{place.place_name}</Place.Title>
+                  <Place.SubTitle>
+                    {place.road_address_name || place.address_name}
+                  </Place.SubTitle>
                 </PlaceText>
               </Place>
             ))}
           </PlacesList>
-        </RecentSearch>
-      )}
-      {status === 'success' && (
-        <PlacesList aria-label="주소 검색 결과">
-          {places.map(place => (
-            <Place key={place.id} onClick={() => handlePlaceItemClick(place)}>
-              <MapPin size={23} aria-hidden="true" />
-              <PlaceText>
-                <Place.Title>{place.place_name}</Place.Title>
-                <Place.SubTitle>
-                  {place.road_address_name || place.address_name}
-                </Place.SubTitle>
-              </PlaceText>
-            </Place>
-          ))}
-        </PlacesList>
-      )}
-      <SearchStatus role="status" aria-live="polite">
-        {status === 'loading' && '출발지를 검색하고 있어요.'}
-        {status === 'empty' &&
-          '검색 결과가 없습니다. 장소명이나 주소를 다시 입력해주세요.'}
-        {status === 'error' &&
-          '검색 결과를 불러오지 못했어요. 잠시 후 다시 입력해주세요.'}
-        {status === 'sdk-error' &&
-          '주소 검색을 준비하지 못했어요. 네트워크 연결을 확인하고 화면을 새로고침해주세요.'}
-      </SearchStatus>
-      <SearchHint id="address-search-hint">
-        정확한 출발지를 선택해주세요.
-      </SearchHint>
+        )}
+        <SearchStatus role="status" aria-live="polite">
+          {status === 'loading' && '출발지를 검색하고 있어요.'}
+          {status === 'empty' &&
+            '검색 결과가 없습니다. 장소명이나 주소를 다시 입력해주세요.'}
+          {status === 'error' &&
+            '검색 결과를 불러오지 못했어요. 잠시 후 다시 입력해주세요.'}
+          {status === 'sdk-error' &&
+            '주소 검색을 준비하지 못했어요. 네트워크 연결을 확인하고 화면을 새로고침해주세요.'}
+        </SearchStatus>
+        <SearchHint id="address-search-hint">
+          정확한 출발지를 선택해주세요.
+        </SearchHint>
+      </SearchResults>
     </Container>
   );
 }
@@ -162,8 +169,9 @@ export default function Address({ setValue }: AddressProps) {
 const Container = styled.div`
   display: flex;
   flex-direction: column;
-  min-height: calc(100dvh - 64px);
-  padding: 20px 4px 16px;
+  height: 100%;
+  min-height: 0;
+  padding: 0 4px 16px;
   background: var(--app-bg);
   color: var(--text-primary);
   button:focus-visible {
@@ -171,6 +179,23 @@ const Container = styled.div`
       color-mix(in srgb, var(--primary) 65%, var(--text-primary));
     outline-offset: 3px;
   }
+`;
+
+const SearchControls = styled.div`
+  flex-shrink: 0;
+  padding-top: 4px;
+  background: var(--app-bg);
+`;
+
+const SearchResults = styled.div`
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+  padding: 4px;
+  margin: 0 -4px;
 `;
 
 const SearchHeader = styled.div`
@@ -193,6 +218,8 @@ const BackButton = styled.button`
 `;
 
 const Title = styled.h1`
+  flex: 1;
+  min-width: 0;
   font-size: 24px;
   font-weight: 700;
   line-height: 1.4;

@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Check } from 'lucide-react';
+import { Check, Share2 } from 'lucide-react';
 
 import useModal from '@/hooks/common/useModal';
 import useHostControlFlow from '@/hooks/result/useHostControlFlow';
@@ -11,9 +11,6 @@ import { convertToKoreanTime } from '@/utils/date';
 import { getConfirmTitle } from '@/utils/recommendationDisplay';
 import { ResultLocationType } from '@/types/location';
 import { RecommendationOptions } from '@/types/recommendationOptions';
-
-import { ShareIcon } from '@/assets/icons/Share';
-import { HomeIcon } from '@/assets/icons/Home';
 
 import { useResetAtom } from 'jotai/utils';
 import { modalState } from '@/jotai/global/store';
@@ -25,7 +22,6 @@ import {
   ExpandBody,
   ContentWrapper,
   Header,
-  HomeButton,
   SharingButton,
   StationName,
   TitleWrapper,
@@ -82,25 +78,22 @@ export default function DistanceSummary({
 
   return (
     <Container>
-      <Header>
-        <HomeButton type="button" aria-label="홈으로 이동" onClick={clickHome}>
-          <HomeIcon />
-        </HomeButton>
+      <Header home onBack={clickHome} backLabel="홈으로 이동">
         <SharingButton type="button" onClick={handleKakaoSharingBtnClick}>
-          <ShareIcon />
+          <Share2 size={18} aria-hidden="true" />
           공유하기
         </SharingButton>
       </Header>
       <ExpandBody>
         <ContentWrapper>
           <TitleWrapper>
+            <StationName>{title}</StationName>
             <ConfirmedLabel>
               <span aria-hidden="true">
                 <Check size={13} strokeWidth={3} />
               </span>
               장소 확정
             </ConfirmedLabel>
-            <StationName>{title}</StationName>
           </TitleWrapper>
           <SummaryRow>
             <AverageArrivalTime>

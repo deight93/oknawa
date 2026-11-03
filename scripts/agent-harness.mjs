@@ -205,10 +205,24 @@ const staticContracts = [
         'light mode token overrides must exist',
       );
       assertIncludes(
-        'src/components/layout/BaseLayout.tsx',
+        'src/components/PageHeader/index.tsx',
         '<ThemeToggle />',
-        'theme toggle must be globally reachable',
+        'theme toggle must be reachable in the shared page header',
       );
+      for (const path of [
+        'src/views/main/MainView.tsx',
+        'src/views/search/SearchView.tsx',
+        'src/views/search/SearchCompleteList.tsx',
+        'src/views/search/SearchCompleteListWithTogether.tsx',
+        'src/views/result/style.ts',
+        'src/views/result-confirm/style.ts',
+      ]) {
+        assertIncludes(
+          path,
+          'PageHeader',
+          'each step must use the shared header',
+        );
+      }
     },
   },
   {

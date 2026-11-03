@@ -16,8 +16,7 @@ import useHostControlFlow from '@/hooks/result/useHostControlFlow';
 import useResultShare from '@/hooks/result/useResultShare';
 import useVoteFlow from '@/hooks/result/useVoteFlow';
 
-import { ShareIcon } from '@/assets/icons/Share';
-import { HomeIcon } from '@/assets/icons/Home';
+import { Share2 } from 'lucide-react';
 import { ChevronLeft } from '@/assets/icons/ChevronLeft';
 import { ChevronRight } from '@/assets/icons/ChevronRight';
 import { LikeIconInactive } from '@/assets/icons/LikeInactive';
@@ -49,18 +48,15 @@ import {
 import {
   Container,
   ArrivalTime,
-  AverageArrivalTime,
   ExpandBody,
   ButtonWrapper,
   ContentWrapper,
+  CandidateMeta,
   Count,
   Header,
-  HomeButton,
   Indicator,
   IndicatorWrapper,
   Label,
-  LikeItem,
-  LikeWrapper,
   PreffertWrapper,
   SharingButton,
   StationName,
@@ -73,7 +69,6 @@ import {
   FoldBody,
   FoldLabel,
   FoldLabelWrapper,
-  HostControlButtonWrapper,
   HostControlPanel,
   HostControlTitle,
   DividerVertical,
@@ -103,8 +98,8 @@ import {
   QualityMetricLabel,
   QualityMetricValue,
   QualityMetrics,
-  SortButton,
   SortWrapper,
+  SortSelect,
   SummaryMetric,
   SummaryMetricLabel,
   SummaryMetrics,
@@ -288,9 +283,6 @@ export default function DistanceSummary({
     setExpandTail(!isExpandTail);
   };
 
-  const voteCount = Array(stationParticipants.length)
-    .fill(true, 0, vote)
-    .fill(false, vote);
   const isCarResult = isCarRecommendation(station.recommendationOptions);
   const selectedPreference = getPreferenceOption(
     sortOption,
@@ -313,16 +305,9 @@ export default function DistanceSummary({
 
   return (
     <Container>
-      <Header>
-        <HomeButton
-          type="button"
-          aria-label="홈으로 돌아가기"
-          onClick={clickHome}
-        >
-          <HomeIcon />
-        </HomeButton>
+      <Header home onBack={clickHome}>
         <SharingButton type="button" onClick={copyInvitationLink}>
-          <ShareIcon />
+          <Share2 size={18} aria-hidden="true" />
           초대하기
         </SharingButton>
       </Header>
@@ -330,53 +315,30 @@ export default function DistanceSummary({
         <>
           <ExpandBody id="expanded-result">
             <ContentWrapper>
-              <TitleWrapper>
+              <StationName>{stationName}</StationName>
+              <CandidateMeta>
                 <Label>{resultTitleLabel}</Label>
-                <StationName>{stationName}</StationName>
-              </TitleWrapper>
-              <IndicatorWrapper>
-                <ChevronButton
-                  type="button"
-                  aria-label="이전 후보"
-                  onClick={onPrev}
-                >
-                  <ChevronLeft />
-                </ChevronButton>
-                <Indicator>
-                  {stationIndex}/{stationLength}
-                </Indicator>
-                <ChevronButton
-                  type="button"
-                  aria-label="다음 후보"
-                  onClick={onNext}
-                >
-                  <ChevronRight />
-                </ChevronButton>
-              </IndicatorWrapper>
-              <AverageArrivalTime>
-                도착하는데 평균{' '}
-                <ArrivalTime>
-                  {convertToKoreanTime(station.averageTravelTime)}
-                </ArrivalTime>{' '}
-                걸려요!
-              </AverageArrivalTime>
+                <IndicatorWrapper>
+                  <ChevronButton
+                    type="button"
+                    aria-label="이전 후보"
+                    onClick={onPrev}
+                  >
+                    <ChevronLeft />
+                  </ChevronButton>
+                  <Indicator>
+                    {stationIndex}/{stationLength}
+                  </Indicator>
+                  <ChevronButton
+                    type="button"
+                    aria-label="다음 후보"
+                    onClick={onNext}
+                  >
+                    <ChevronRight />
+                  </ChevronButton>
+                </IndicatorWrapper>
+              </CandidateMeta>
             </ContentWrapper>
-            <SortWrapper role="group" aria-label="추천 결과 정렬">
-              {sortOptions.map(option => (
-                <SortButton
-                  key={option.value}
-                  type="button"
-                  $isActive={sortOption === option.value}
-                  aria-pressed={sortOption === option.value}
-                  onClick={() => onSortChange(option.value)}
-                >
-                  {option.label}
-                </SortButton>
-              ))}
-            </SortWrapper>
-            <PreferenceDescription>
-              {selectedPreference.description}
-            </PreferenceDescription>
             <SummaryMetrics>
               <SummaryMetric>
                 <SummaryMetricLabel>평균</SummaryMetricLabel>
@@ -395,6 +357,28 @@ export default function DistanceSummary({
                 <SummaryMetricValue>{vote}표</SummaryMetricValue>
               </SummaryMetric>
             </SummaryMetrics>
+            <SortWrapper>
+              <label htmlFor="result-sort">추천 기준</label>
+              <SortSelect
+                id="result-sort"
+                value={sortOption}
+                onChange={event => {
+                  const option = sortOptions.find(
+                    item => item.value === event.target.value,
+                  );
+                  if (option) onSortChange(option.value);
+                }}
+              >
+                {sortOptions.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </SortSelect>
+              <PreferenceDescription>
+                {selectedPreference.description}
+              </PreferenceDescription>
+            </SortWrapper>
             <DetailSection>
               <ParticipantSectionHeader>
                 <DetailSectionTitle>참가자별 이동 시간</DetailSectionTitle>
@@ -675,44 +659,33 @@ export default function DistanceSummary({
             {canManage && (
               <HostControlPanel>
                 <HostControlTitle>방장 관리</HostControlTitle>
-                <HostControlButtonWrapper>
-                  <Button
-                    label="재투표 시작"
-                    size="small"
-                    onClick={requestResetVote}
-                    $widthFull
-                  />
-                </HostControlButtonWrapper>
+                <Button label="재투표 시작" onClick={requestResetVote} />
               </HostControlPanel>
             )}
-            <PreffertWrapper>
-              <VoteWrapper>
-                <VoteTitle>
-                  <Label>선호도 결과</Label>
-                  <Count>{vote}표</Count>
-                </VoteTitle>
-                <LikeWrapper>
-                  {voteCount.map((item: boolean, index: number) => (
-                    <LikeItem key={index}>
-                      {item ? <LikeIconActive /> : <LikeIconInactive />}
-                    </LikeItem>
-                  ))}
-                </LikeWrapper>
-              </VoteWrapper>
-              <ButtonWrapper>
-                <LikeButtonWithVote
-                  label={'좋아요'}
-                  onClick={requestVote}
-                  $isVote={isVote}
-                >
-                  {isVote ? <LikeIconActive /> : <LikeIconInactive />}
-                </LikeButtonWithVote>
-                {canConfirm && (
-                  <ButtonPrimary label={'확정하기'} onClick={requestConfirm} />
-                )}
-              </ButtonWrapper>
-            </PreffertWrapper>
           </ExpandBody>
+          <PreffertWrapper>
+            <VoteWrapper>
+              <VoteTitle>
+                <Label>선호도 결과</Label>
+                <Count>
+                  {vote}표 · {stationParticipants.length}명 참여
+                </Count>
+              </VoteTitle>
+            </VoteWrapper>
+            <ButtonWrapper>
+              <LikeButtonWithVote
+                label="좋아요"
+                onClick={requestVote}
+                $isVote={isVote}
+                aria-pressed={isVote}
+              >
+                {isVote ? <LikeIconActive /> : <LikeIconInactive />}
+              </LikeButtonWithVote>
+              {canConfirm && (
+                <ButtonPrimary label="확정하기" onClick={requestConfirm} />
+              )}
+            </ButtonWrapper>
+          </PreffertWrapper>
         </>
       ) : (
         <FoldBody>

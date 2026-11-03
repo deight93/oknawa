@@ -28,7 +28,7 @@ export default function PeopleCard({
   const avatarColor = AVATAR_COLORS[index ?? 0] ?? 'var(--primary)';
 
   return (
-    <Container>
+    <Container $hasModeSelector={Boolean(onTravelModeChange)}>
       <Wrapper>
         <Avatar name={name} color={avatarColor} size="lg" />
         <Details>
@@ -85,7 +85,7 @@ export default function PeopleCard({
   );
 }
 
-const Container = styled.div`
+const Container = styled.div<{ $hasModeSelector: boolean }>`
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -97,6 +97,15 @@ const Container = styled.div`
   border-radius: 10px;
   border: 1px solid var(--border);
   flex-wrap: wrap;
+  @media (max-width: 420px) {
+    > div:first-child {
+      flex-basis: ${({ $hasModeSelector }) =>
+        $hasModeSelector ? '100%' : '120px'};
+    }
+    > div:last-child {
+      padding-top: 4px;
+    }
+  }
 `;
 
 const Wrapper = styled.div`
@@ -148,7 +157,7 @@ const Place = styled.p`
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  @media (max-width: 359px) {
+  @media (max-width: 420px) {
     svg {
       display: none;
     }

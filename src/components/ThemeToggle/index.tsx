@@ -28,18 +28,17 @@ export default function ThemeToggle() {
 }
 
 const ToggleButton = styled.button`
-  position: fixed;
-  top: 16px;
-  right: max(16px, calc((100vw - 500px) / 2 + 16px));
   display: inline-flex;
-  width: 40px;
-  height: 40px;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background-color: var(--surface);
-  color: var(--text-primary);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
-  z-index: 100000000;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-secondary);
+  &:hover {
+    background: var(--surface-muted);
+  }
 `;

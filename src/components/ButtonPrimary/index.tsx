@@ -56,6 +56,6 @@ const Container = styled.button<{
   }
 `;
 
-const Text = styled.h1`
+const Text = styled.span`
   font-weight: 500;
 `;

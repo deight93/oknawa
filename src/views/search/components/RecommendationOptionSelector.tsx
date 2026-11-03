@@ -44,10 +44,8 @@ const Container = styled.section`
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 14px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background-color: var(--surface-raised);
+  padding: 20px 0 4px;
+  border-top: 1px solid var(--border);
 `;
 
 const OptionGroup = styled.div`
@@ -70,12 +68,12 @@ const OptionList = styled.div`
 
 const OptionButton = styled.button<{ $isActive: boolean }>`
   min-width: fit-content;
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 12px;
   border: 1px solid
     ${({ $isActive }) =>
       $isActive ? 'var(--primary)' : 'var(--border-strong)'};
-  border-radius: 999px;
+  border-radius: 10px;
   background-color: ${({ $isActive }) =>
     $isActive ? 'var(--primary-soft)' : 'var(--surface-muted)'};
   color: ${({ $isActive }) =>
