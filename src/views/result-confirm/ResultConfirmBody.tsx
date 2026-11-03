@@ -77,13 +77,15 @@ export default function ResultConfirmBody({
           recommendationOptions={recommendationOptions}
           resultType={resultType}
         />
-        <MeetingMap
-          stationName={stationName}
-          endX={end_x}
-          endY={end_y}
-          participants={request_info?.participant}
-          itinerary={itinerary}
-        />
+        <MapBackground>
+          <MeetingMap
+            stationName={stationName}
+            endX={end_x}
+            endY={end_y}
+            participants={request_info?.participant}
+            itinerary={itinerary}
+          />
+        </MapBackground>
 
         {shouldShowHotPlaceButton && (
           <FloatingButton
@@ -103,16 +105,24 @@ export default function ResultConfirmBody({
 
 const Container = styled.main`
   position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
   width: 100%;
   height: 100vh;
   height: 100dvh;
 `;
 
+const MapBackground = styled.div`
+  position: absolute;
+  inset: 0;
+`;
+
 const FloatingButton = styled(Button)`
-  position: fixed;
-  bottom: max(24px, env(safe-area-inset-bottom));
-  left: 50%;
-  transform: translateX(-50%);
+  position: relative;
+  flex-shrink: 0;
+  align-self: center;
+  margin: auto 20px max(24px, env(safe-area-inset-bottom));
   font-weight: 600;
   max-width: calc(min(100vw, 500px) - 40px);
   min-height: 48px;

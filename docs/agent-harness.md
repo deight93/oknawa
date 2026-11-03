@@ -44,6 +44,27 @@ Run these manually when UI or routing changes:
 5. Start recommendation as host and verify the participant sees loading.
 6. Verify both browsers move to the result page and then the confirmed page.
 7. Confirm mobile layout does not cover the main map controls or action buttons.
+8. Search for a lot address such as `봉천동 1511-6` and select it as a departure.
+9. Before recommending, edit one direct-entry participant's name, address and
+   travel mode; verify the other participants remain unchanged.
+10. In a new together room, verify each browser can edit only its own entries,
+    including after a reload. The host must not be able to edit a guest's entry.
+11. At 320px width and in landscape, scroll the expanded result panel to the
+    preference results, like and confirm buttons. Verify the station title wraps
+    normally and every action remains reachable.
+
+## Departure editing rollout
+
+Apply `supabase/migrations/20261103090000_participant_edit.sql` before deploying
+the frontend that uses `location_update_participant`. The migration preserves
+the existing create/join response fields and adds a private edit capability for
+each new registration. The capability table is not publicly readable.
+
+Existing together-room entries have no edit capability and remain uneditable;
+there is no claim-by-name fallback. To use editing, create a new room and register
+with the updated frontend. A participant must use the browser that registered
+their entry; clearing its storage removes that browser's edit capability.
+Direct-entry lists remain editable locally without a participant capability.
 
 ## When To Extend
 

@@ -685,34 +685,34 @@ export default function DistanceSummary({
                 </HostControlButtonWrapper>
               </HostControlPanel>
             )}
+            <PreffertWrapper>
+              <VoteWrapper>
+                <VoteTitle>
+                  <Label>선호도 결과</Label>
+                  <Count>{vote}표</Count>
+                </VoteTitle>
+                <LikeWrapper>
+                  {voteCount.map((item: boolean, index: number) => (
+                    <LikeItem key={index}>
+                      {item ? <LikeIconActive /> : <LikeIconInactive />}
+                    </LikeItem>
+                  ))}
+                </LikeWrapper>
+              </VoteWrapper>
+              <ButtonWrapper>
+                <LikeButtonWithVote
+                  label={'좋아요'}
+                  onClick={requestVote}
+                  $isVote={isVote}
+                >
+                  {isVote ? <LikeIconActive /> : <LikeIconInactive />}
+                </LikeButtonWithVote>
+                {canConfirm && (
+                  <ButtonPrimary label={'확정하기'} onClick={requestConfirm} />
+                )}
+              </ButtonWrapper>
+            </PreffertWrapper>
           </ExpandBody>
-          <PreffertWrapper>
-            <VoteWrapper>
-              <VoteTitle>
-                <Label>선호도 결과</Label>
-                <Count>{vote}표</Count>
-              </VoteTitle>
-              <LikeWrapper>
-                {voteCount.map((item: boolean, index: number) => (
-                  <LikeItem key={index}>
-                    {item ? <LikeIconActive /> : <LikeIconInactive />}
-                  </LikeItem>
-                ))}
-              </LikeWrapper>
-            </VoteWrapper>
-            <ButtonWrapper>
-              <LikeButtonWithVote
-                label={'좋아요'}
-                onClick={requestVote}
-                $isVote={isVote}
-              >
-                {isVote ? <LikeIconActive /> : <LikeIconInactive />}
-              </LikeButtonWithVote>
-              {canConfirm && (
-                <ButtonPrimary label={'확정하기'} onClick={requestConfirm} />
-              )}
-            </ButtonWrapper>
-          </PreffertWrapper>
         </>
       ) : (
         <FoldBody>

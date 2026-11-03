@@ -1,9 +1,10 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import styled from 'styled-components';
-import { useAtom, useSetAtom } from 'jotai';
+import { atom, useAtom, useAtomValue, useSetAtom } from 'jotai';
+import { useQueryClient } from '@tanstack/react-query';
 import { Link, CirclePlus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Button as FloatingButton } from '@nextui-org/react';
@@ -12,12 +13,13 @@ import { ArrowBackIcon } from '@/assets/icons/ArrowBack';
 import { SearchState, searchState } from '@/jotai/global/store';
 import { useInputStatusListQuery } from '@/hooks/query/search';
 import PeopleCard from './components/PeopleCard';
+import DepartureEditor from './components/DepartureEditor';
 import Button from '@/components/Button';
 import { APP_BASE_URL } from '@/config/env';
 import SearchLoading from './components/SearchLoading';
 import MeetingPurposeSelector from './components/MeetingPurposeSelector';
 import RecommendationOptionSelector from './components/RecommendationOptionSelector';
-import { roomState } from '@/jotai/global/room';
+import { participantEditCapabilityState, roomState } from '@/jotai/global/room';
 import { Participant } from '@/types/location';
 import useCreateResultFlow from '@/hooks/search/useCreateResultFlow';
 import { MeetingPurpose } from '@/types/meetingPurpose';
@@ -54,9 +56,14 @@ const toRecommendationOptions = (
 
 export default function SearchCompleteListWithTogetherView() {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const setSearchList = useSetAtom(searchState);
   const [storageRoomData, setStorageRoomData] = useAtom(roomState);
+  const [editing, setEditing] = useState<{
+    roomId: string;
+    participantId: number;
+  } | null>(null);
   const [meetingPurpose, setMeetingPurpose] = useState<MeetingPurpose>();
   const [recommendationOptions, setRecommendationOptions] =
     useState<RecommendationOptions>(DEFAULT_RECOMMENDATION_OPTIONS);
@@ -66,7 +73,22 @@ export default function SearchCompleteListWithTogetherView() {
 
   const { data: roomStatus, participant: participants } =
     useInputStatusListQuery(storageRoomData.roomId || '');
-  const participantList = (participants ?? []) as Participant[];
+  const participantList = participants ?? [];
+  const participantCapabilities = useAtomValue(
+    useMemo(
+      () =>
+        atom(
+          get =>
+            new Map(
+              (participants ?? []).map(({ id }) => [
+                id,
+                get(participantEditCapabilityState(storageRoomData.roomId, id)),
+              ]),
+            ),
+        ),
+      [participants, storageRoomData.roomId],
+    ),
+  );
   const isHost = Boolean(storageRoomData.hostId);
   const isRoomGenerating = roomStatus?.recommendation_status === 'generating';
   const isRoomFailed = roomStatus?.recommendation_status === 'failed';
@@ -80,6 +102,13 @@ export default function SearchCompleteListWithTogetherView() {
     ? roomRecommendationOptions.travelMode
     : 'transit';
   const shouldShowLoading = isLoading || isRoomGenerating;
+  const canEdit =
+    Boolean(roomStatus) &&
+    !shouldShowLoading &&
+    !resultMapId &&
+    roomStatus?.recommendation_status !== 'completed';
+  const editingParticipantId =
+    editing?.roomId === storageRoomData.roomId ? editing.participantId : null;
 
   useEffect(() => {
     if (!resultMapId) return;
@@ -129,6 +158,7 @@ export default function SearchCompleteListWithTogetherView() {
   };
 
   const handleSearchBtnClick = () => {
+    if (editingParticipantId !== null || shouldShowLoading) return;
     if (!isHost) {
       return toast.error('방장의 권한입니다.');
     }
@@ -207,14 +237,50 @@ export default function SearchCompleteListWithTogetherView() {
         <div className="flex flex-col gap-3">
           {participantList.map((participant, index) => {
             return (
-              <PeopleCard
-                key={index}
-                name={participant.name}
-                place={participant.region_name}
-                index={index}
-                type="together"
-                travelMode={participant.travel_mode ?? roomTravelMode}
-              />
+              <Fragment key={participant.id ?? index}>
+                <PeopleCard
+                  name={participant.name}
+                  place={participant.region_name}
+                  index={index}
+                  type="together"
+                  travelMode={participant.travel_mode ?? roomTravelMode}
+                  onEdit={
+                    canEdit &&
+                    editingParticipantId === null &&
+                    participantCapabilities.get(participant.id)
+                      ? () =>
+                          setEditing({
+                            roomId: storageRoomData.roomId,
+                            participantId: participant.id,
+                          })
+                      : undefined
+                  }
+                />
+                {canEdit && editingParticipantId === participant.id && (
+                  <DepartureEditor
+                    key={`${storageRoomData.roomId}:${participant.id}`}
+                    initialValue={toSearchState(participant, roomTravelMode)}
+                    onCancel={() => setEditing(null)}
+                    onSave={async value => {
+                      const roomId = storageRoomData.roomId;
+                      const token = participantCapabilities.get(participant.id);
+                      if (!token)
+                        throw new Error(
+                          '이 출발지를 등록한 브라우저에서 수정해주세요.',
+                        );
+                      await SearchService.updateDeparturePoint(
+                        roomId,
+                        participant.id,
+                        token,
+                        value,
+                      );
+                      await queryClient.invalidateQueries({
+                        queryKey: ['inputStatusList', roomId],
+                      });
+                    }}
+                  />
+                )}
+              </Fragment>
             );
           })}
         </div>
@@ -262,7 +328,10 @@ export default function SearchCompleteListWithTogetherView() {
           color="success"
           onClick={handleSearchBtnClick}
           isDisabled={
-            !isHost || participantList.length < 2 || shouldShowLoading
+            !isHost ||
+            participantList.length < 2 ||
+            shouldShowLoading ||
+            editingParticipantId !== null
           }
           className="w-full"
         >

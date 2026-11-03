@@ -4,6 +4,8 @@ import SearchForm from '@/model/search/SearchForm';
 
 import {
   CreatedResult,
+  CreatedRoom,
+  DepartureRegistration,
   RoomRecommendationRun,
   RoomStatusResponse,
   SubmitDeparturePointRequestBody,
@@ -65,9 +67,12 @@ export default class SearchService {
   static async makeRoom(searchForm: SearchState) {
     const requestBody = SearchFormWithTogether.convertToRequestBody(searchForm);
 
-    const { data } = await api.post('/rest/v1/rpc/location_together', {
-      ...requestBody,
-    });
+    const { data } = await api.post<CreatedRoom>(
+      '/rest/v1/rpc/location_together',
+      {
+        ...requestBody,
+      },
+    );
 
     return data;
   }
@@ -86,16 +91,42 @@ export default class SearchService {
   static async submitDeparturePoint(
     requestBody: SubmitDeparturePointRequestBody,
   ) {
-    const { data } = await api.post(`/rest/v1/rpc/location_join_room`, {
-      p_room_id: requestBody.room_id,
-      p_name: requestBody.name,
-      p_travel_mode: requestBody.travel_mode ?? null,
-      p_region_name: requestBody.region_name,
-      p_full_address: requestBody.full_address,
-      p_start_x: requestBody.start_x,
-      p_start_y: requestBody.start_y,
-    });
+    const { data } = await api.post<DepartureRegistration>(
+      `/rest/v1/rpc/location_join_room`,
+      {
+        p_room_id: requestBody.room_id,
+        p_name: requestBody.name,
+        p_travel_mode: requestBody.travel_mode ?? null,
+        p_region_name: requestBody.region_name,
+        p_full_address: requestBody.full_address,
+        p_start_x: requestBody.start_x,
+        p_start_y: requestBody.start_y,
+      },
+    );
 
+    return data;
+  }
+
+  static async updateDeparturePoint(
+    roomId: string,
+    participantId: number,
+    participantToken: string,
+    searchForm: SearchState,
+  ) {
+    const { data } = await api.post<{ participant_id: number }>(
+      '/rest/v1/rpc/location_update_participant',
+      {
+        p_room_id: roomId,
+        p_participant_id: participantId,
+        p_participant_token: participantToken,
+        p_name: searchForm.name,
+        p_region_name: searchForm.address.regionName,
+        p_full_address: searchForm.address.fullAddress,
+        p_start_x: searchForm.address.longitude,
+        p_start_y: searchForm.address.latitude,
+        p_travel_mode: searchForm.travelMode ?? null,
+      },
+    );
     return data;
   }
 

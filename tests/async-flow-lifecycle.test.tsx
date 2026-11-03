@@ -331,7 +331,7 @@ test('changing rooms rearms creation without allowing an old response to unlock 
     newGate = deferred();
   let creates = 0;
   let oldTask: Promise<void> | undefined, newTask: Promise<void> | undefined;
-  const m = await mount(
+  const m = await mount<ReturnType<typeof useCreateResultFlow>, string>(
     (context: string) => useCreateResultFlow(context),
     'old-room',
     async config => {

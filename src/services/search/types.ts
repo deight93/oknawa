@@ -11,6 +11,21 @@ export interface CreatedResult {
   map_host_id: string;
 }
 
+export interface DepartureRegistration {
+  // Optional while an older backend is still deployed.
+  participant_id?: number;
+  participant_token?: string;
+}
+
+export interface CreatedRoom extends DepartureRegistration {
+  room_id: string;
+  room_host_id: string;
+}
+
+export interface RoomParticipant extends Participant {
+  id: number;
+}
+
 export interface SubmitDeparturePointRequestBody {
   room_id: string;
   name: string;
@@ -39,5 +54,5 @@ export interface RoomStatusResponse {
   recommendation_status?: RoomRecommendationStatus;
   meeting_purpose?: string | null;
   recommendation_options?: unknown;
-  participant?: unknown[];
+  participant?: RoomParticipant[];
 }
