@@ -67,6 +67,13 @@ Pushing to `main` triggers:
 - GitHub Actions CI
 - Supabase migrations and Edge Function deployment when `supabase/**` changes
 
+The deployment and config-check workflows pin Supabase CLI to `2.122.1`.
+Keep both versions aligned. `latest` selected v3 on 2026-11-03 and broke the
+existing `[inbucket]` configuration before migrations could run. A future v3
+upgrade must migrate the config, remote-target flags and non-interactive
+confirmation together. CI runs `supabase services --log-level error` without
+credentials and checks both its exit code and error output before deployment.
+
 GitHub Actions production secrets:
 
 ```txt

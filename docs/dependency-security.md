@@ -2,6 +2,26 @@
 
 Run `pnpm install --frozen-lockfile` and `pnpm audit` to reproduce the dependency audit. CI runs `pnpm audit --audit-level=moderate` against production and development dependencies; moderate, high and critical findings fail the build. Low findings remain visible in its output. No advisory is ignored.
 
+## Deployment recovery on 2026-11-03
+
+The audit found four moderate findings after the October 30 advisories for
+minimatch and glob. Pin minimatch to 11.0.4 and glob 9+ consumers to 14.0.3.
+ESLint moves to 9.39.5, supported by the existing Next.js 15 configuration, to
+remove the legacy rimraf/glob 7 chain that depends on minimatch's old regular
+expression internals. The existing `next/core-web-vitals` rules are retained.
+
+The small `patches/minimatch@11.0.4.patch` preserves the callable CommonJS export
+used by React, import and accessibility lint plugins. It forwards to the patched
+v11 matcher and retains named exports; it does not alter matching logic or the
+ESM entry point. `tests/lint-toolchain.test.ts` exercises real plugin rules that
+would otherwise throw `minimatch is not a function`. Remove the patch when those
+plugins support minimatch's named export. Review both overrides when updating
+the lint or CSS toolchains.
+
+With these changes `pnpm audit --audit-level=moderate` passes; the existing low
+deepmerge finding below remains. No audit threshold or advisory suppression is
+changed.
+
 ## Cleanup on 2026-10-29
 
 The full pnpm audit changed from 115 findings (1 critical, 64 high, 42 moderate, 8 low) to one low finding. Counts are a snapshot of the registry advisory database on this date.

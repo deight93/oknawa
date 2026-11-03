@@ -15,7 +15,8 @@ Use `pnpm agent:harness:quick` while designing or editing small pieces. It runs
 static contract checks only.
 
 Use `pnpm agent:harness` before committing feature work. It runs the static
-contracts, executable React/SQL regression tests, frontend lint/build, and Supabase Edge Function type/test checks.
+contracts, dependency security audit at the CI threshold, executable React/SQL
+regression tests, frontend lint/build, and Supabase Edge Function type/test checks.
 
 ## Covered Flows
 
