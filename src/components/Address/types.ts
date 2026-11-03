@@ -1,10 +1,9 @@
-export interface KakaoPlace {
-  id: string;
-  place_name: string;
-  road_address_name?: string;
-  address_name: string;
-  x: string;
-  y: string;
-}
+export type KakaoPlace = Pick<
+  kakao.maps.services.PlacesSearchResultItem,
+  'id' | 'place_name' | 'address_name' | 'x' | 'y'
+> &
+  Partial<
+    Pick<kakao.maps.services.PlacesSearchResultItem, 'road_address_name'>
+  >;
 
-export type KakaoPlacesSearchStatus = 'OK' | 'ZERO_RESULT' | 'ERROR';
+export type KakaoPlacesSearchStatus = `${kakao.maps.services.Status}`;

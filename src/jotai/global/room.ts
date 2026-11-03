@@ -1,6 +1,6 @@
 import { createSafeJSONStorage } from '@/utils/browserStorage';
 import { atom } from 'jotai';
-import { atomWithStorage } from 'jotai/utils';
+import { atomFamily, atomWithStorage } from 'jotai/utils';
 
 interface InitialState {
   roomId: string;
@@ -24,6 +24,24 @@ const roomHostCapabilities = atomWithStorage<Record<string, string>>(
   {},
   createSafeJSONStorage<Record<string, string>>(() => localStorage),
 );
+
+// Independent registration keys prevent concurrent tabs from replacing each
+// other's capabilities. Reuse the atom to retain hydration and storage events.
+const participantEditCapabilities = atomFamily((key: string) =>
+  atomWithStorage<string | null>(
+    key,
+    null,
+    createSafeJSONStorage<string | null>(() => localStorage),
+  ),
+);
+
+export const participantEditCapabilityState = (
+  roomId: string,
+  participantId: number,
+) =>
+  participantEditCapabilities(
+    `participantEditCapability:${roomId}:${participantId}`,
+  );
 
 // Keep the old active-room storage format, while retaining ownership when a
 // host follows their own invite or visits another room on the same browser.

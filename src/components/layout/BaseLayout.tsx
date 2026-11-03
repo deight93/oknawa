@@ -28,12 +28,14 @@ export default function BaseLayout({
 const Container = styled.div`
   ${flexCenter('row')}
   min-height: 100vh;
+  min-height: 100dvh;
   overflow: auto;
   background-color: var(--app-outer-bg);
 `;
 
 const Wrapper = styled.div`
   height: 100vh;
+  height: 100dvh;
   /* min-width: 50%; */
   width: 100%;
   max-width: 500px;

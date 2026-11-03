@@ -196,5 +196,5 @@ export default function MeetingMap({
 
 const Map = styled(KakaoMap)`
   width: 100%;
-  height: 100vh;
+  height: 100%;
 `;

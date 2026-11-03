@@ -4,14 +4,23 @@ import { setTimeout as wait } from 'node:timers/promises';
 import React from 'react';
 import { act, create, ReactTestRenderer } from 'react-test-renderer';
 import { Provider, createStore } from 'jotai';
+import { RESET } from 'jotai/utils';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AppRouterContext } from 'next/dist/shared/lib/app-router-context.shared-runtime';
 import { AxiosError, type AxiosAdapter } from 'axios';
 import { api, edgeApi } from '../src/api/client';
 import useSearchEntryFlow from '../src/hooks/search/useSearchEntryFlow';
 import useSearchForm from '../src/hooks/form/search/useSearchForm';
-import { roomState } from '../src/jotai/global/room';
-import { modalState, searchState } from '../src/jotai/global/store';
+import {
+  participantEditCapabilityState,
+  roomState,
+} from '../src/jotai/global/room';
+import {
+  bottomSheetState,
+  modalState,
+  searchState,
+} from '../src/jotai/global/store';
+import SearchCompleteList from '../src/views/search/SearchCompleteList';
 import SearchCompleteListWithTogetherView from '../src/views/search/SearchCompleteListWithTogether';
 import SearchLoading from '../src/views/search/components/SearchLoading';
 import RecommendationOptionSelector from '../src/views/search/components/RecommendationOptionSelector';
@@ -34,6 +43,7 @@ const form = {
 };
 const participants: Participant[] = ['방장', '친구', '방금 합류'].map(
   (name, i) => ({
+    id: i + 1,
     name,
     region_name: '강남역',
     full_address: '서울 강남구',
@@ -42,6 +52,438 @@ const participants: Participant[] = ['방장', '친구', '방금 합류'].map(
     travel_mode: i === 2 ? 'walk' : null,
   }),
 );
+
+test('direct input can edit an existing departure without adding or changing other participants', async () => {
+  const mounted = await mountRoom({ type: 'individual', individualList: true });
+  try {
+    act(() =>
+      mounted.store.set(searchState, [form, { ...form, name: '친구' }]),
+    );
+    const edit = mounted.renderer.root
+      .findAllByType('button')
+      .find(button => button.props['aria-label'] === '방장 출발지 수정');
+    assert.ok(edit, 'existing departures need an edit control');
+    act(() => edit.props.onClick());
+    const editor = mounted.renderer.root.findByType('form');
+    const nameInput = editor.findByProps({ 'aria-label': '수정할 이름' });
+    act(() =>
+      nameInput.props.onChange({
+        target: { name: 'name', value: '수정됨' },
+        type: 'change',
+      }),
+    );
+    act(() =>
+      editor
+        .findAllByType('button')
+        .find(button => button.props['aria-label'] === '수정할 출발지 검색')!
+        .props.onClick(),
+    );
+    const contents = mounted.store.get(bottomSheetState).contents;
+    assert.ok(
+      React.isValidElement<{
+        setValue: (name: string, value: unknown) => void;
+      }>(contents),
+    );
+    const address = {
+      ...form.address,
+      fullAddress: '서울 관악구 봉천동 1511-6',
+      regionName: '봉천동 1511-6',
+      longitude: 126.95,
+    };
+    act(() => contents.props.setValue('address', address));
+    await act(async () =>
+      editor.props.onSubmit({ preventDefault() {}, persist() {} }),
+    );
+    assert.deepEqual(mounted.store.get(searchState), [
+      { ...form, name: '수정됨', travelMode: 'transit', address },
+      { ...form, name: '친구' },
+    ]);
+    assert.equal(mounted.renderer.root.findAllByType('form').length, 0);
+  } finally {
+    mounted.close();
+  }
+});
+
+test('together editing is visible only for departures owned by this browser, even for the host', async () => {
+  const mounted = await mountRoom({
+    view: true,
+    participantTokens: { [roomId]: { 2: 'friend-edit-token' } },
+  });
+  try {
+    const buttons = mounted.renderer.root.findAllByType('button');
+    assert.ok(
+      buttons.some(button => button.props['aria-label'] === '친구 출발지 수정'),
+    );
+    assert.equal(
+      buttons.some(button => button.props['aria-label'] === '방장 출발지 수정'),
+      false,
+    );
+  } finally {
+    mounted.close();
+  }
+});
+
+test('storage events update own-only edit controls without granting another room ownership', async () => {
+  const mounted = await mountRoom({ view: true });
+  const canEditFriend = () =>
+    mounted.renderer.root
+      .findAllByType('button')
+      .some(button => button.props['aria-label'] === '친구 출발지 수정');
+  try {
+    assert.equal(canEditFriend(), false);
+    mounted.externalStorageChange(
+      `participantEditCapability:${otherRoomId}:2`,
+      JSON.stringify('other-room-token'),
+    );
+    assert.equal(canEditFriend(), false);
+    const key = `participantEditCapability:${roomId}:2`;
+    mounted.externalStorageChange(key, JSON.stringify('friend-token'));
+    assert.equal(canEditFriend(), true);
+    mounted.externalStorageChange(key, null);
+    assert.equal(canEditFriend(), false);
+    await act(async () => {
+      mounted.client.setQueryData(['inputStatusList', otherRoomId], {
+        ...mounted.status,
+        room_id: otherRoomId,
+      });
+      mounted.store.set(roomState, { roomId: otherRoomId, hostId: '' });
+      await wait(10);
+    });
+    assert.equal(canEditFriend(), true);
+    assert.equal(mounted.store.get(roomState).hostId, '');
+    await act(async () => {
+      mounted.store.set(roomState, { roomId, hostId: '' });
+      await wait(10);
+    });
+    assert.equal(canEditFriend(), false);
+    assert.equal(mounted.store.get(roomState).hostId, hostId);
+  } finally {
+    mounted.close();
+  }
+});
+
+test('a together departure update sends its private capability and refreshes the shared list', async () => {
+  const sent: Array<{ url?: string; body: Record<string, unknown> }> = [];
+  const mounted = await mountRoom({
+    view: true,
+    participantTokens: { [roomId]: { 2: 'friend-edit-token' } },
+    adapter: async config => {
+      sent.push({ url: config.url, body: JSON.parse(config.data) });
+      return {
+        data: config.url?.endsWith('location_room_status')
+          ? {
+              room_id: roomId,
+              recommendation_status: 'idle',
+              participant: participants.slice(0, 2),
+            }
+          : { participant_id: 2 },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config,
+      };
+    },
+  });
+  try {
+    const edit = mounted.renderer.root
+      .findAllByType('button')
+      .find(button => button.props['aria-label'] === '친구 출발지 수정');
+    assert.ok(edit, 'the owner can edit their own departure');
+    act(() => edit.props.onClick());
+    const editor = mounted.renderer.root.findByType('form');
+    await act(async () =>
+      editor.props.onSubmit({ preventDefault() {}, persist() {} }),
+    );
+    const request = sent.find(item =>
+      item.url?.endsWith('location_update_participant'),
+    );
+    assert.deepEqual(request?.body, {
+      p_room_id: roomId,
+      p_participant_id: 2,
+      p_participant_token: 'friend-edit-token',
+      p_name: '친구',
+      p_region_name: '강남역',
+      p_full_address: '서울 강남구',
+      p_start_x: 127.01,
+      p_start_y: 37.5,
+      p_travel_mode: 'transit',
+    });
+    assert.ok(sent.some(item => item.url?.endsWith('location_room_status')));
+  } finally {
+    mounted.close();
+  }
+});
+
+test('registration retains the participant edit capability only in its room', async () => {
+  const mounted = await mountRoom({
+    shareRoomId: otherRoomId,
+    participantTokens: { [roomId]: { 7: 'existing-capability' } },
+    adapter: async config => ({
+      data: {
+        participant_id: 42,
+        participant_token: 'private-edit-capability',
+      },
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config,
+    }),
+  });
+  try {
+    act(() => mounted.entry.submitSearch(form));
+    await until(() => mounted.navigation.length > 0);
+    assert.equal(readToken(mounted.memory, roomId, 7), 'existing-capability');
+    assert.equal(
+      readToken(mounted.memory, otherRoomId, 42),
+      'private-edit-capability',
+    );
+    assert.equal(readToken(mounted.memory, roomId, 42), null);
+  } finally {
+    mounted.close();
+  }
+});
+
+for (const secondRoomId of [roomId, otherRoomId]) {
+  test(`concurrent registrations retain both tokens in ${secondRoomId === roomId ? 'the same room' : 'different rooms'}`, async () => {
+    const memory = new Map<string, string>();
+    let release!: () => void;
+    let requests = 0;
+    const gate = new Promise<void>(resolve => {
+      release = resolve;
+    });
+    const adapter: AxiosAdapter = async config => {
+      const { p_name } = JSON.parse(config.data);
+      requests++;
+      await gate;
+      return {
+        data:
+          p_name === 'first'
+            ? { participant_id: 1, participant_token: 'first-token' }
+            : { participant_id: 2, participant_token: 'second-token' },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config,
+      };
+    };
+    const first = await mountRoom({ memory, adapter, shareRoomId: roomId });
+    const second = await mountRoom({
+      memory,
+      adapter,
+      shareRoomId: secondRoomId,
+    });
+    try {
+      act(() => {
+        first.entry.submitSearch({ ...form, name: 'first' });
+        second.entry.submitSearch({ ...form, name: 'second' });
+      });
+      await until(() => requests === 2);
+      await act(async () => {
+        release();
+        await wait(20);
+      });
+      // Both tabs started from the same state; storage events have not arrived.
+      assert.equal(readToken(memory, roomId, 1), 'first-token');
+      assert.equal(readToken(memory, secondRoomId, 2), 'second-token');
+      const reloaded = createStore();
+      const firstAtom = participantEditCapabilityState(roomId, 1);
+      const secondAtom = participantEditCapabilityState(secondRoomId, 2);
+      const unmountFirst = reloaded.sub(firstAtom, () => {});
+      const unmountSecond = reloaded.sub(secondAtom, () => {});
+      try {
+        assert.equal(reloaded.get(firstAtom), 'first-token');
+        assert.equal(reloaded.get(secondAtom), 'second-token');
+      } finally {
+        unmountFirst();
+        unmountSecond();
+      }
+    } finally {
+      release();
+      second.close();
+      first.close();
+    }
+  });
+}
+
+test('a registration token remains usable in this tab if storage writes fail after the preflight', async () => {
+  let release!: () => void;
+  let started = false;
+  const gate = new Promise<void>(resolve => {
+    release = resolve;
+  });
+  const mounted = await mountRoom({
+    shareRoomId: otherRoomId,
+    adapter: async config => {
+      started = true;
+      await gate;
+      return {
+        data: { participant_id: 9042, participant_token: 'fallback-token' },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config,
+      };
+    },
+  });
+  const capability = participantEditCapabilityState(otherRoomId, 9042);
+  try {
+    act(() => mounted.entry.submitSearch(form));
+    await until(() => started);
+    mounted.blockWrites(true);
+    release();
+    await until(() => mounted.navigation.length > 0);
+    assert.equal(readToken(mounted.memory, otherRoomId, 9042), null);
+    assert.equal(mounted.store.get(capability), 'fallback-token');
+    const unsubscribe = mounted.store.sub(capability, () => {});
+    unsubscribe();
+    const remount = mounted.store.sub(capability, () => {});
+    try {
+      assert.equal(mounted.store.get(capability), 'fallback-token');
+    } finally {
+      remount();
+    }
+    assert.equal(mounted.store.get(modalState).isOpen, false);
+  } finally {
+    release();
+    mounted.blockWrites(false);
+    mounted.store.set(capability, RESET);
+    // Clear existing host/room fallback state while storage is available again.
+    mounted.store.set(roomState, { roomId: '', hostId: '' });
+    mounted.close();
+  }
+});
+
+test('cancelling an edit preserves the existing departure', async () => {
+  const mounted = await mountRoom({ type: 'individual', individualList: true });
+  try {
+    act(() =>
+      mounted.store.set(searchState, [form, { ...form, name: '친구' }]),
+    );
+    act(() =>
+      mounted.renderer.root
+        .findAllByType('button')
+        .find(button => button.props['aria-label'] === '방장 출발지 수정')!
+        .props.onClick(),
+    );
+    const editor = mounted.renderer.root.findByType('form');
+    act(() =>
+      editor.findByProps({ 'aria-label': '수정할 이름' }).props.onChange({
+        target: { name: 'name', value: '임시' },
+        type: 'change',
+      }),
+    );
+    act(() =>
+      editor
+        .findAllByType('button')
+        .find(button => button.children.includes('취소'))!
+        .props.onClick(),
+    );
+    assert.deepEqual(mounted.store.get(searchState), [
+      form,
+      { ...form, name: '친구' },
+    ]);
+    assert.equal(mounted.renderer.root.findAllByType('form').length, 0);
+  } finally {
+    mounted.close();
+  }
+});
+
+test('together edits stop being available once recommendation starts', async () => {
+  const mounted = await mountRoom({
+    view: true,
+    participantTokens: { [roomId]: { 2: 'friend-edit-token' } },
+  });
+  try {
+    act(() =>
+      mounted.renderer.root
+        .findAllByType('button')
+        .find(button => button.props['aria-label'] === '친구 출발지 수정')!
+        .props.onClick(),
+    );
+    assert.equal(mounted.renderer.root.findAllByType('form').length, 1);
+    await act(async () => {
+      mounted.client.setQueryData(['inputStatusList', roomId], {
+        ...mounted.status,
+        recommendation_status: 'generating',
+      });
+      await wait(10);
+    });
+    assert.equal(mounted.renderer.root.findAllByType('form').length, 0);
+    assert.equal(
+      mounted.renderer.root
+        .findAllByType('button')
+        .some(button => button.props['aria-label'] === '친구 출발지 수정'),
+      false,
+    );
+  } finally {
+    mounted.close();
+  }
+});
+
+test('a rejected together edit keeps the draft and allows retry without duplicate submissions', async () => {
+  let attempts = 0;
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => {
+    release = resolve;
+  });
+  const mounted = await mountRoom({
+    view: true,
+    participantTokens: { [roomId]: { 2: 'friend-edit-token' } },
+    adapter: async config => {
+      if (config.url?.endsWith('location_update_participant')) {
+        attempts++;
+        if (attempts === 1) {
+          await gate;
+          throw new Error('temporary network failure');
+        }
+      }
+      return {
+        data: config.url?.endsWith('location_room_status')
+          ? {
+              room_id: roomId,
+              recommendation_status: 'idle',
+              participant: participants.slice(0, 2),
+            }
+          : { participant_id: 2 },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config,
+      };
+    },
+  });
+  try {
+    act(() =>
+      mounted.renderer.root
+        .findAllByType('button')
+        .find(button => button.props['aria-label'] === '친구 출발지 수정')!
+        .props.onClick(),
+    );
+    const editor = mounted.renderer.root.findByType('form');
+    let first!: Promise<void>, second!: Promise<void>;
+    await act(async () => {
+      first = editor.props.onSubmit({ preventDefault() {}, persist() {} });
+      second = editor.props.onSubmit({ preventDefault() {}, persist() {} });
+      await wait(10);
+    });
+    assert.equal(attempts, 1);
+    assert.equal(editor.findByType('fieldset').props.disabled, true);
+    await act(async () => {
+      release();
+      await Promise.all([first, second]);
+    });
+    assert.equal(mounted.renderer.root.findAllByType('form').length, 1);
+    assert.ok(editor.findAllByProps({ role: 'alert' }).length > 0);
+    await act(async () =>
+      editor.props.onSubmit({ preventDefault() {}, persist() {} }),
+    );
+    assert.equal(attempts, 2);
+    assert.equal(mounted.renderer.root.findAllByType('form').length, 0);
+  } finally {
+    release();
+    mounted.close();
+  }
+});
 
 async function until(predicate: () => boolean) {
   for (let i = 0; i < 100; i++) {
@@ -53,6 +495,16 @@ async function until(predicate: () => boolean) {
   assert.fail('Room flow did not reach the expected state');
 }
 
+function readToken(
+  memory: Map<string, string>,
+  room: string,
+  id: number,
+): unknown {
+  return JSON.parse(
+    memory.get(`participantEditCapability:${room}:${id}`) ?? 'null',
+  );
+}
+
 async function mountRoom(
   options: {
     shareRoomId?: string;
@@ -60,29 +512,65 @@ async function mountRoom(
     adapter?: AxiosAdapter;
     status?: string;
     type?: 'individual' | 'together';
+    individualList?: boolean;
+    participantTokens?: Record<string, Record<number, string>>;
+    memory?: Map<string, string>;
   } = {},
 ) {
-  const memory = new Map<string, string>([
-    ['room', JSON.stringify({ roomId, hostId })],
-  ]);
-  const storage = {
-    getItem: (key: string) => memory.get(key) ?? null,
-    setItem: (key: string, value: string) => {
+  const memory =
+    options.memory ??
+    new Map<string, string>([['room', JSON.stringify({ roomId, hostId })]]);
+  for (const [room, tokens] of Object.entries(options.participantTokens ?? {}))
+    for (const [id, token] of Object.entries(tokens))
+      memory.set(
+        `participantEditCapability:${room}:${id}`,
+        JSON.stringify(token),
+      );
+  let failWrites = false;
+  class MemoryStorage {
+    getItem(key: string) {
+      return memory.get(key) ?? null;
+    }
+    setItem(key: string, value: string) {
+      if (failWrites) throw new Error('Storage blocked');
       memory.set(key, value);
-    },
-    removeItem: (key: string) => {
+    }
+    removeItem(key: string) {
       memory.delete(key);
-    },
+    }
+  }
+  const storage = new MemoryStorage();
+  type StorageChange = {
+    key: string;
+    newValue: string | null;
+    storageArea: MemoryStorage;
   };
+  const storageListeners = new Set<(event: StorageChange) => void>();
   const globals = Object.entries({
     localStorage: storage,
     sessionStorage: storage,
     React,
+    Image: class {
+      src = '';
+    },
     HTMLElement: class {},
     SVGElement: class {},
     window: {
       localStorage: storage,
       sessionStorage: storage,
+      Storage: MemoryStorage,
+      addEventListener: (
+        type: string,
+        listener: (event: StorageChange) => void,
+      ) => {
+        if (type === 'storage') storageListeners.add(listener);
+      },
+      removeEventListener: (
+        type: string,
+        listener: (event: StorageChange) => void,
+      ) => {
+        if (type === 'storage') storageListeners.delete(listener);
+      },
       setInterval,
       clearInterval,
       setTimeout,
@@ -136,7 +624,11 @@ async function mountRoom(
       resetCount++;
       searchForm.reset();
     });
-    return options.view ? <SearchCompleteListWithTogetherView /> : null;
+    return options.individualList ? (
+      <SearchCompleteList />
+    ) : options.view ? (
+      <SearchCompleteListWithTogetherView />
+    ) : null;
   }
   await act(async () => {
     renderer = create(
@@ -175,6 +667,18 @@ async function mountRoom(
     client,
     status,
     memory,
+    blockWrites: (blocked: boolean) => {
+      failWrites = blocked;
+    },
+    externalStorageChange: (key: string, newValue: string | null) => {
+      if (newValue === null) memory.delete(key);
+      else memory.set(key, newValue);
+      act(() => {
+        storageListeners.forEach(listener =>
+          listener({ key, newValue, storageArea: storage }),
+        );
+      });
+    },
     changeRoom: (id: string) => act(() => setShareRoomId(id)),
     get resetCount() {
       return resetCount;
@@ -294,7 +798,12 @@ for (const joining of [false, true]) {
           await pending;
           if (fails) throw new Error('Late registration failure');
           return {
-            data: { room_id: otherRoomId, room_host_id: 'late-host' },
+            data: {
+              room_id: otherRoomId,
+              room_host_id: 'late-host',
+              participant_id: 42,
+              participant_token: 'late-edit-token',
+            },
             status: 200,
             statusText: 'OK',
             headers: {},
@@ -320,6 +829,11 @@ for (const joining of [false, true]) {
           hostId: 'next-room-host',
         });
         assert.equal(mounted.store.get(modalState).isOpen, false);
+        assert.equal(
+          readToken(mounted.memory, otherRoomId, 42),
+          fails ? null : 'late-edit-token',
+        );
+        assert.equal(readToken(mounted.memory, mapId, 42), null);
       } finally {
         release();
         mounted.close();
@@ -336,13 +850,27 @@ test('changing the invitation on a mounted form ignores the old request and perm
       await new Promise<void>(resolve => {
         releases.push(resolve);
       });
-      return { data: {}, status: 200, statusText: 'OK', headers: {}, config };
+      const { p_room_id } = JSON.parse(config.data);
+      return {
+        data: {
+          participant_id: 42,
+          participant_token:
+            p_room_id === roomId ? 'old-invite-token' : 'new-invite-token',
+        },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config,
+      };
     },
   });
   try {
     act(() => mounted.entry.submitSearch(form));
     await until(() => releases.length === 1);
     mounted.changeRoom(otherRoomId);
+    act(() =>
+      mounted.store.set(roomState, { roomId: mapId, hostId: 'active-host' }),
+    );
     assert.equal(mounted.entry.isSubmitting, false);
     act(() => mounted.entry.submitSearch({ ...form, name: '새 친구' }));
     await until(() => releases.length === 2);
@@ -351,6 +879,12 @@ test('changing the invitation on a mounted form ignores the old request and perm
       await wait(20);
     });
     assert.deepEqual(mounted.navigation, []);
+    assert.deepEqual(mounted.store.get(roomState), {
+      roomId: mapId,
+      hostId: 'active-host',
+    });
+    assert.equal(readToken(mounted.memory, roomId, 42), 'old-invite-token');
+    assert.equal(readToken(mounted.memory, otherRoomId, 42), null);
     assert.equal(mounted.entry.isSubmitting, true);
     await act(async () => {
       releases[1]();
@@ -358,6 +892,12 @@ test('changing the invitation on a mounted form ignores the old request and perm
     });
     assert.deepEqual(mounted.navigation, ['/search/list-together']);
     assert.equal(mounted.store.get(roomState).roomId, otherRoomId);
+    assert.equal(mounted.store.get(roomState).hostId, '');
+    assert.equal(readToken(mounted.memory, roomId, 42), 'old-invite-token');
+    assert.equal(
+      readToken(mounted.memory, otherRoomId, 42),
+      'new-invite-token',
+    );
   } finally {
     releases.forEach(release => release());
     mounted.close();
@@ -411,7 +951,12 @@ for (const shareRoomId of [undefined, otherRoomId]) {
         requests.push(config.url ?? '');
         await response;
         return {
-          data: { room_id: otherRoomId, room_host_id: 'new-creator' },
+          data: {
+            room_id: otherRoomId,
+            room_host_id: 'new-creator',
+            participant_id: 42,
+            participant_token: 'new-edit-token',
+          },
           status: 200,
           statusText: 'OK',
           headers: {},
@@ -435,6 +980,14 @@ for (const shareRoomId of [undefined, otherRoomId]) {
       });
       assert.equal(requests.length, 1);
       assert.equal(mounted.navigation.length, 1);
+      assert.equal(
+        readToken(mounted.memory, otherRoomId, 42),
+        'new-edit-token',
+      );
+      assert.equal(
+        mounted.store.get(roomState).hostId,
+        shareRoomId ? '' : 'new-creator',
+      );
     } finally {
       release();
       mounted.close();

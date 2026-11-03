@@ -18,18 +18,20 @@ const createSearchFormVerifySchema = () => {
   });
 };
 
-export default function useSearchForm() {
+export default function useSearchForm(initialValue?: SearchState) {
   return useForm<SearchState>({
-    defaultValues: {
-      name: '',
-      travelMode: 'transit',
-      address: {
-        fullAddress: '',
-        latitude: 0,
-        longitude: 0,
-        regionName: '',
-      },
-    },
+    defaultValues: initialValue
+      ? { ...initialValue, travelMode: initialValue.travelMode ?? 'transit' }
+      : {
+          name: '',
+          travelMode: 'transit',
+          address: {
+            fullAddress: '',
+            latitude: 0,
+            longitude: 0,
+            regionName: '',
+          },
+        },
     resolver: yupResolver(createSearchFormVerifySchema()),
   });
 }

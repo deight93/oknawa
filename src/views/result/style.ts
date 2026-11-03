@@ -33,7 +33,8 @@ export const Container = styled.div`
   left: 0;
   background-color: var(--surface);
   width: 100%;
-  max-height: 88dvh;
+  max-height: 88vh;
+  max-height: min(88dvh, calc(100dvh - max(64px, env(safe-area-inset-top))));
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -49,7 +50,8 @@ export const Header = styled.div`
   display: flex;
   flex-direction: row;
   justify-content: space-between;
-  padding: 8px 16px 0 8px;
+  padding: 8px max(16px, env(safe-area-inset-right)) 0
+    max(8px, env(safe-area-inset-left));
   flex-shrink: 0;
 `;
 
@@ -82,8 +84,10 @@ export const ExpandBody = styled.div`
   flex: 1;
   min-height: 0;
   flex-direction: column;
-  padding: 0 20px 4px;
+  padding: 0 max(20px, env(safe-area-inset-right)) 0
+    max(20px, env(safe-area-inset-left));
   gap: 10px;
+  margin-bottom: env(safe-area-inset-bottom);
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
@@ -107,17 +111,16 @@ export const ContentWrapper = styled.div<ExpandProps>`
 
 export const TitleWrapper = styled.div`
   min-width: 0;
-  flex: 1;
+  flex: 1 1 12rem;
   display: flex;
   flex-direction: column;
   gap: 2px;
 `;
 
 export const StationName = styled.h2<ExpandProps>`
+  word-break: keep-all;
   overflow-wrap: anywhere;
   line-height: 1.4;
-  display: flex;
-  justify-content: space-between;
   font-size: ${({ $isExpand }) => ($isExpand ? '24px' : '18px')};
   font-weight: ${({ $isExpand }) => ($isExpand ? '700' : '600')};
 `;
@@ -165,7 +168,7 @@ export const ChevronButton = styled.button`
 `;
 
 export const PreffertWrapper = styled.div`
-  padding: 12px 20px max(16px, env(safe-area-inset-bottom));
+  padding: 12px 0 16px;
   gap: 12px;
   flex-shrink: 0;
   flex-wrap: wrap;
@@ -548,8 +551,8 @@ export const ComparisonToggle = styled.button`
 export const VoteWrapper = styled.div`
   display: flex;
   flex-direction: column;
-  width: 100%;
-  max-width: 106px;
+  flex: 1 1 106px;
+  min-width: 0;
   gap: 8px;
 `;
 
@@ -576,6 +579,7 @@ export const LikeItem = styled.div``;
 
 export const ButtonWrapper = styled.div<ExpandProps>`
   display: flex;
+  flex-shrink: 0;
   width: fit-content;
   flex-direction: row;
   align-items: center;
@@ -586,11 +590,16 @@ export const FoldBody = styled.div`
   display: flex;
   flex-direction: row;
   justify-content: space-between;
-  padding: 0 8px 18px;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 max(8px, env(safe-area-inset-right))
+    max(18px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
 `;
 
 export const FoldLabel = styled.div`
   display: flex;
+  flex-shrink: 0;
+  white-space: nowrap;
   flex-direction: row;
   align-items: center;
   gap: 4px;
@@ -598,6 +607,7 @@ export const FoldLabel = styled.div`
 
 export const FoldLabelWrapper = styled.div`
   display: flex;
+  flex-wrap: wrap;
   flex-direction: row;
   align-items: center;
   gap: 8px;

@@ -1,15 +1,18 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
-import { useAtom } from 'jotai';
+import { useAtom, useStore } from 'jotai';
 
 import {
   useMakeRoomMutation,
   useSubmitDeparturePointMutation,
 } from '@/hooks/mutation/search';
-import { roomState } from '@/jotai/global/room';
+import { participantEditCapabilityState, roomState } from '@/jotai/global/room';
 import { SearchState, searchState } from '@/jotai/global/store';
-import { SubmitDeparturePointRequestBody } from '@/services/search/types';
+import {
+  DepartureRegistration,
+  SubmitDeparturePointRequestBody,
+} from '@/services/search/types';
 import useModal from '@/hooks/common/useModal';
 import { getApiErrorMessage } from '@/api/errors';
 import { assertBrowserStorageWritable } from '@/utils/browserStorage';
@@ -48,6 +51,21 @@ export default function useSearchEntryFlow(
   const router = useRouter();
   const [searchList, setSearchList] = useAtom(searchState);
   const [storageRoomData, setStorageRoomData] = useAtom(roomState);
+  const store = useStore();
+
+  const retainParticipantCapability = (
+    roomId: string,
+    data: DepartureRegistration,
+  ) => {
+    if (
+      !Number.isInteger(data.participant_id) ||
+      !data.participant_id ||
+      !data.participant_token
+    )
+      return;
+    const { participant_id: id, participant_token: token } = data;
+    store.set(participantEditCapabilityState(roomId, id), token);
+  };
 
   const { mutateAsync: makeRoom } = useMakeRoomMutation();
   const { mutateAsync: submitDeparturePoint } =
@@ -103,14 +121,17 @@ export default function useSearchEntryFlow(
       const targetRoomId =
         shareRoomId || (searchCount > 0 ? storageRoomData.roomId : '');
       if (targetRoomId) {
-        await submitDeparturePoint({
+        const data = await submitDeparturePoint({
           requestBody: toDeparturePointRequestBody(targetRoomId, searchForm),
         });
+        // A successful registration owns its token even after leaving the form.
+        retainParticipantCapability(targetRoomId, data);
         if (submittedVersion !== formVersion.current) return;
         if (shareRoomId)
           setStorageRoomData({ roomId: shareRoomId, hostId: '' });
       } else {
         const data = await makeRoom(searchForm);
+        retainParticipantCapability(data.room_id, data);
         if (submittedVersion !== formVersion.current) return;
         setStorageRoomData({
           roomId: data?.room_id ?? '',

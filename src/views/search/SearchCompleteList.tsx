@@ -2,12 +2,13 @@
 
 import { useRouter } from 'next/navigation';
 
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 
 import styled from 'styled-components';
 import { ChevronLeft, CirclePlus } from 'lucide-react';
 
 import PeopleCard from './components/PeopleCard';
+import DepartureEditor from './components/DepartureEditor';
 import SearchLoading from './components/SearchLoading';
 import MeetingPurposeSelector from './components/MeetingPurposeSelector';
 import RecommendationOptionSelector from './components/RecommendationOptionSelector';
@@ -28,12 +29,14 @@ export default function SearchCompleteList() {
   const router = useRouter();
 
   const [searchList, setSearchList] = useAtom(searchState);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [meetingPurpose, setMeetingPurpose] = useState<MeetingPurpose>();
   const [recommendationOptions, setRecommendationOptions] =
     useState<RecommendationOptions>(DEFAULT_RECOMMENDATION_OPTIONS);
   const { requestResult, isLoading, loadingPhase } = useCreateResultFlow();
 
   const handleSearchBtnClick = () => {
+    if (editingIndex !== null || isLoading) return;
     requestResult(searchList, meetingPurpose, undefined, recommendationOptions);
   };
 
@@ -64,26 +67,53 @@ export default function SearchCompleteList() {
           </Title>
           {searchList.map((search, index) => {
             return (
-              <PeopleCard
-                key={index}
-                name={search.name}
-                place={search.address.regionName}
-                index={index}
-                travelMode={search.travelMode ?? 'transit'}
-                onTravelModeChange={mode =>
-                  setSearchList(list =>
-                    list.map((person, i) =>
-                      i === index ? { ...person, travelMode: mode } : person,
-                    ),
-                  )
-                }
-                onDeleteIconClick={() => handleDeleteIconClick(index)}
-              />
+              <Fragment key={index}>
+                <PeopleCard
+                  name={search.name}
+                  place={search.address.regionName}
+                  index={index}
+                  travelMode={search.travelMode ?? 'transit'}
+                  onEdit={
+                    editingIndex === null && !isLoading
+                      ? () => setEditingIndex(index)
+                      : undefined
+                  }
+                  onTravelModeChange={
+                    editingIndex === null && !isLoading
+                      ? mode =>
+                          setSearchList(list =>
+                            list.map((person, i) =>
+                              i === index
+                                ? { ...person, travelMode: mode }
+                                : person,
+                            ),
+                          )
+                      : undefined
+                  }
+                  onDeleteIconClick={
+                    editingIndex === null && !isLoading
+                      ? () => handleDeleteIconClick(index)
+                      : undefined
+                  }
+                />
+                {editingIndex === index && (
+                  <DepartureEditor
+                    initialValue={search}
+                    onCancel={() => setEditingIndex(null)}
+                    onSave={value => {
+                      setSearchList(list =>
+                        list.map((person, i) => (i === index ? value : person)),
+                      );
+                    }}
+                  />
+                )}
+              </Fragment>
             );
           })}
         </Section>
         <AddButton
           type="button"
+          disabled={editingIndex !== null || isLoading}
           onClick={() => router.push('/search/individual')}
         >
           출발지 추가하기 <CirclePlus size={18} aria-hidden="true" />
@@ -105,7 +135,9 @@ export default function SearchCompleteList() {
           size="lg"
           color="success"
           onClick={handleSearchBtnClick}
-          isDisabled={searchList.length < 2 || isLoading}
+          isDisabled={
+            searchList.length < 2 || isLoading || editingIndex !== null
+          }
         >
           이대로 추천 받기
         </SubmitButton>

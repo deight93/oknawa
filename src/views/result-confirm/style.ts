@@ -20,20 +20,28 @@ export const Container = styled.div`
     outline: 2px solid var(--confirm-accent);
     outline-offset: 3px;
   }
-  position: absolute;
+  position: relative;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background-color: var(--surface);
   width: 100%;
   display: flex;
   flex-direction: column;
   gap: 12px;
   z-index: 3;
+
+  > * {
+    flex-shrink: 0;
+  }
 `;
 
 export const Header = styled.div`
   display: flex;
   flex-direction: row;
   justify-content: space-between;
-  padding: 64px 20px 0 12px;
+  padding: max(64px, env(safe-area-inset-top))
+    max(20px, env(safe-area-inset-right)) 0 max(12px, env(safe-area-inset-left));
 `;
 
 export const HomeButton = styled.button`
@@ -65,7 +73,8 @@ export const SharingButton = styled.button`
 export const ExpandBody = styled.div`
   display: flex;
   flex-direction: column;
-  padding: 0 20px 20px;
+  padding: 0 max(20px, env(safe-area-inset-right)) 20px
+    max(20px, env(safe-area-inset-left));
   gap: 12px;
 `;
 

@@ -1,4 +1,4 @@
-import { CircleMinus, Crown, MapPin } from 'lucide-react';
+import { CircleMinus, Crown, MapPin, Pencil } from 'lucide-react';
 import Avatar, { AVATAR_COLORS } from '@/components/Avatar';
 import styled from 'styled-components';
 import { TRAVEL_MODE_OPTIONS, TravelMode } from '@/types/recommendationOptions';
@@ -8,6 +8,7 @@ interface PeopleCardProps {
   name: string;
   place: string;
   onDeleteIconClick?: () => void;
+  onEdit?: () => void;
   index?: number;
   type?: 'individual' | 'together';
   travelMode?: TravelMode;
@@ -18,6 +19,7 @@ export default function PeopleCard({
   name,
   place,
   onDeleteIconClick,
+  onEdit,
   index,
   type = 'individual',
   travelMode,
@@ -43,6 +45,15 @@ export default function PeopleCard({
         </Details>
       </Wrapper>
       <Actions>
+        {onEdit && (
+          <RemoveButton
+            type="button"
+            aria-label={`${name} 출발지 수정`}
+            onClick={onEdit}
+          >
+            <Pencil size={18} aria-hidden="true" />
+          </RemoveButton>
+        )}
         {onTravelModeChange ? (
           <TravelModeSelector
             value={travelMode ?? 'transit'}
@@ -85,9 +96,11 @@ const Container = styled.div`
   padding: 14px 12px;
   border-radius: 10px;
   border: 1px solid var(--border);
+  flex-wrap: wrap;
 `;
 
 const Wrapper = styled.div`
+  flex: 1 1 120px;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -154,6 +167,7 @@ const Actions = styled.div`
   align-items: center;
   flex-shrink: 0;
   gap: 4px;
+  margin-left: auto;
 `;
 
 const ModeText = styled.span`
