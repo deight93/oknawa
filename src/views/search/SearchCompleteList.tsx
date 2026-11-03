@@ -1,11 +1,13 @@
 'use client';
 
+import PageHeader from '@/components/PageHeader';
+
 import { useRouter } from 'next/navigation';
 
 import { Fragment, useEffect, useState } from 'react';
 
 import styled from 'styled-components';
-import { ChevronLeft, CirclePlus } from 'lucide-react';
+import { CirclePlus } from 'lucide-react';
 
 import PeopleCard from './components/PeopleCard';
 import DepartureEditor from './components/DepartureEditor';
@@ -52,13 +54,10 @@ export default function SearchCompleteList() {
   return (
     <Container>
       <Wrapper>
-        <BackButton
-          type="button"
-          aria-label="이전 화면으로 돌아가기"
-          onClick={() => router.back()}
-        >
-          <ChevronLeft size={24} aria-hidden="true" />
-        </BackButton>
+        <PageHeader
+          onBack={() => router.back()}
+          backLabel="이전 화면으로 돌아가기"
+        />
         <Section>
           <Title>
             {searchList.length === 0
@@ -156,7 +155,9 @@ const Container = styled.div`
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 20px 19px 20px;
+  padding: max(12px, env(safe-area-inset-top))
+    max(20px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom))
+    max(20px, env(safe-area-inset-left));
   min-height: 100dvh;
 `;
 
@@ -172,30 +173,13 @@ const Section = styled.section`
   gap: 10px;
 `;
 
-const BackButton = styled.button`
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  margin: 0 0 12px -10px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--text-primary);
-  cursor: pointer;
-  &:focus-visible {
-    outline: 2px solid
-      color-mix(in srgb, var(--primary) 65%, var(--text-primary));
-    outline-offset: 2px;
-  }
-`;
-
 const Title = styled.h1`
+  margin-top: 24px;
   margin-bottom: 12px;
   font-size: 28px;
   font-weight: 700;
-  line-height: 43px;
-  text-align: center;
+  line-height: 1.45;
+  text-align: left;
   white-space: pre-line;
   @media (max-width: 359px) {
     font-size: 24px;

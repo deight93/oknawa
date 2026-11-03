@@ -1,7 +1,9 @@
 'use client';
 
+import PageHeader from '@/components/PageHeader';
+
 import { useId, useRef } from 'react';
-import { ChevronLeft, MapPin, Search, X } from 'lucide-react';
+import { MapPin, Search, X } from 'lucide-react';
 import { useSetAtom } from 'jotai';
 import { styled } from 'styled-components';
 import { useRouter } from 'next/navigation';
@@ -96,13 +98,7 @@ export default function SearchView({ type, shareRoomId }: SearchViewProps) {
   return (
     <Container onSubmit={handleSubmit(handleSearchBtnClick)}>
       <Wrapper>
-        <BackButton
-          type="button"
-          aria-label="홈으로 돌아가기"
-          onClick={() => router.push('/')}
-        >
-          <ChevronLeft size={24} aria-hidden="true" />
-        </BackButton>
+        <PageHeader onBack={() => router.push('/')} />
         <Title>{titleText}</Title>
         <Section>
           <Field>
@@ -189,10 +185,12 @@ export default function SearchView({ type, shareRoomId }: SearchViewProps) {
 const Container = styled.form`
   display: flex;
   flex-direction: column;
-  padding: 20px 19px 28px;
+  padding: max(12px, env(safe-area-inset-top))
+    max(20px, env(safe-area-inset-right)) max(28px, env(safe-area-inset-bottom))
+    max(20px, env(safe-area-inset-left));
   min-height: 100dvh;
   @media (max-width: 480px) and (max-height: 640px) {
-    padding-top: 16px;
+    padding-top: max(12px, env(safe-area-inset-top));
   }
 `;
 
@@ -201,32 +199,12 @@ const Wrapper = styled.div`
   flex-direction: column;
 `;
 
-const BackButton = styled.button`
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  margin: 0 0 24px -10px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--text-primary);
-  cursor: pointer;
-  &:focus-visible {
-    outline: 2px solid
-      color-mix(in srgb, var(--primary) 65%, var(--text-primary));
-    outline-offset: 2px;
-  }
-  @media (max-width: 480px) and (max-height: 640px) {
-    margin-bottom: 16px;
-  }
-`;
-
 const Title = styled.h1`
+  margin-top: 24px;
   font-size: 28px;
   font-weight: 700;
   white-space: pre-line;
-  line-height: 43px;
+  line-height: 1.45;
   @media (max-width: 359px) {
     font-size: 24px;
     line-height: 1.5;
@@ -348,20 +326,21 @@ const SubmitButton = styled.button`
   width: 100%;
   min-height: 48px;
   padding: 12px 16px;
-  border: 1px solid var(--text-muted);
+  border: 1px solid transparent;
   border-radius: 10px;
-  background: transparent;
-  color: var(--text-primary);
+  background: var(--primary);
+  color: var(--button-text-on-primary);
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
   &:disabled {
     color: var(--text-muted);
+    background: transparent;
     border-color: var(--border-strong);
     cursor: default;
   }
   &:hover:not(:disabled) {
-    background: var(--surface-raised);
+    background: var(--primary-hover);
   }
   &:focus-visible {
     outline: 2px solid

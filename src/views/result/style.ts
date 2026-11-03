@@ -1,4 +1,5 @@
 import styled from 'styled-components';
+import PageHeader from '@/components/PageHeader';
 
 interface ExpandProps {
   $isExpand?: boolean;
@@ -46,25 +47,9 @@ export const Container = styled.div`
   z-index: 8888;
 `;
 
-export const Header = styled.div`
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  padding: 8px max(16px, env(safe-area-inset-right)) 0
-    max(8px, env(safe-area-inset-left));
-  flex-shrink: 0;
-`;
-
-export const HomeButton = styled.button`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  flex-shrink: 0;
-  svg path {
-    fill: currentColor;
-  }
+export const Header = styled(PageHeader)`
+  padding: 8px max(20px, env(safe-area-inset-right)) 0
+    max(20px, env(safe-area-inset-left));
 `;
 
 export const SharingButton = styled.button`
@@ -72,10 +57,11 @@ export const SharingButton = styled.button`
   gap: 6px;
   align-items: center;
   min-height: 44px;
-  font-size: 16px;
+  border-radius: 8px;
+  font-size: 14px;
   color: var(--text-secondary);
-  svg path {
-    fill: currentColor;
+  &:hover {
+    color: var(--text-primary);
   }
 `;
 
@@ -86,8 +72,8 @@ export const ExpandBody = styled.div`
   flex-direction: column;
   padding: 0 max(20px, env(safe-area-inset-right)) 0
     max(20px, env(safe-area-inset-left));
-  gap: 10px;
-  margin-bottom: env(safe-area-inset-bottom);
+  gap: 20px;
+  padding-bottom: 20px;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
@@ -101,64 +87,60 @@ export const ExpandBody = styled.div`
 export const ContentWrapper = styled.div<ExpandProps>`
   display: flex;
   width: 100%;
-  flex-direction: row;
   justify-content: space-between;
-  flex-wrap: ${({ $isExpand }) => ($isExpand ? 'wrap' : 'nowrap')};
-  gap: ${({ $isExpand }) => ($isExpand ? '8px' : '0')};
-  padding-bottom: ${({ $isExpand }) => $isExpand && '12px'};
-  border-bottom: ${({ $isExpand }) => $isExpand && '1px solid var(--border)'};
+  flex-direction: ${({ $isExpand = true }) => ($isExpand ? 'column' : 'row')};
+  align-items: ${({ $isExpand = true }) => ($isExpand ? 'stretch' : 'center')};
+  gap: ${({ $isExpand = true }) => ($isExpand ? '4px' : '0')};
+`;
+
+export const CandidateMeta = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 `;
 
 export const TitleWrapper = styled.div`
   min-width: 0;
-  flex: 1 1 12rem;
+  flex: 1 1 13rem;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 6px;
 `;
 
 export const StationName = styled.h2<ExpandProps>`
   word-break: keep-all;
   overflow-wrap: anywhere;
   line-height: 1.4;
-  font-size: ${({ $isExpand }) => ($isExpand ? '24px' : '18px')};
-  font-weight: ${({ $isExpand }) => ($isExpand ? '700' : '600')};
-`;
-
-export const AverageArrivalTime = styled.p`
-  width: 100%;
-  font-size: 17px;
-  line-height: 1.5;
-  word-break: keep-all;
+  font-size: ${({ $isExpand = true }) => ($isExpand ? '28px' : '18px')};
+  font-weight: ${({ $isExpand = true }) => ($isExpand ? '700' : '600')};
 `;
 
 export const ArrivalTime = styled.span<ExpandProps>`
-  color: ${({ $isExpand }) =>
+  color: ${({ $isExpand = true }) =>
     $isExpand ? 'var(--result-accent)' : 'var(--text-secondary)'};
-  font-weight: ${({ $isExpand }) => ($isExpand ? '700' : '500')};
-  font-size: ${({ $isExpand }) => ($isExpand ? '18px' : ' 14px')};
+  font-weight: ${({ $isExpand = true }) => ($isExpand ? '700' : '500')};
+  font-size: ${({ $isExpand = true }) => ($isExpand ? '18px' : ' 14px')};
 `;
 
 export const IndicatorWrapper = styled.div`
   display: flex;
-  flex-direction: row;
   align-items: center;
-  gap: 4px;
+  gap: 0;
   flex-shrink: 0;
-  align-self: center;
+  margin-left: auto;
 `;
 
 export const Indicator = styled.div`
   color: var(--result-muted);
-  font-size: 16px;
-  font-weight: 500;
-  letter-spacing: -0.003em;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
 `;
 
 export const ChevronButton = styled.button`
   display: grid;
   place-items: center;
-  width: 32px;
+  width: 44px;
   height: 44px;
   border-radius: 10px;
   cursor: pointer;
@@ -168,61 +150,65 @@ export const ChevronButton = styled.button`
 `;
 
 export const PreffertWrapper = styled.div`
-  padding: 12px 0 16px;
-  gap: 12px;
   flex-shrink: 0;
-  flex-wrap: wrap;
   display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px max(20px, env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  > div:last-child {
+    width: 100%;
+  }
+  > div:last-child > button {
+    flex: 1;
+    min-height: 48px;
+  }
 `;
 
 export const HostControlPanel = styled.div`
   display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background-color: var(--surface-raised);
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
 `;
 
 export const HostControlTitle = styled.p`
-  color: var(--text-primary);
-  font-size: 15px;
-  font-weight: 700;
-`;
-
-export const HostControlButtonWrapper = styled.div`
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 8px;
+  color: var(--result-muted);
+  font-size: 13px;
+  font-weight: 500;
 `;
 
 export const SortWrapper = styled.div`
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px 12px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  > label {
+    font-size: 14px;
+    font-weight: 600;
+  }
+  > p {
+    grid-column: 1 / -1;
+  }
 `;
 
-export const SortButton = styled.button<{ $isActive: boolean }>`
-  display: flex;
-  align-items: center;
-  justify-content: center;
+export const SortSelect = styled.select`
   min-width: 0;
-  min-height: 40px;
-  padding: 0 6px;
-  border: 1px solid
-    ${({ $isActive }) => ($isActive ? 'var(--primary)' : 'var(--border)')};
-  border-radius: 999px;
-  background-color: ${({ $isActive }) =>
-    $isActive ? 'var(--primary-soft)' : 'var(--surface-raised)'};
-  color: ${({ $isActive }) =>
-    $isActive ? 'var(--result-accent)' : 'var(--result-muted)'};
-  font-size: 13px;
-  font-weight: 600;
-  white-space: nowrap;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font-size: 16px;
+  cursor: pointer;
 `;
 
 export const PreferenceDescription = styled.p`
@@ -257,18 +243,18 @@ export const ConditionBadge = styled.span`
 export const SummaryMetrics = styled.div`
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: 16px;
 `;
 
 export const SummaryMetric = styled.div`
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: 4px;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background-color: var(--surface-raised);
+  gap: 6px;
+  &:not(:first-child) {
+    padding-left: 16px;
+    border-left: 1px solid var(--border);
+  }
 `;
 
 export const SummaryMetricLabel = styled.span`
@@ -280,7 +266,7 @@ export const SummaryMetricLabel = styled.span`
 export const SummaryMetricValue = styled.span`
   font-variant-numeric: tabular-nums;
   color: var(--text-primary);
-  font-size: clamp(16px, 4.5vw, 20px);
+  font-size: 20px;
   font-weight: 700;
   line-height: 1.4;
   word-break: keep-all;
@@ -289,17 +275,19 @@ export const SummaryMetricValue = styled.span`
 export const DetailToggleButton = styled.button`
   display: inline-flex;
   width: fit-content;
-  min-height: 36px;
+  min-height: 44px;
   align-items: center;
   justify-content: center;
-  padding: 0 10px;
-  border: 1px solid var(--border-strong);
-  border-radius: 999px;
-  background-color: var(--surface-muted);
-  color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 700;
+  padding: 0 8px;
+  border-radius: 8px;
+  color: var(--result-muted);
+  font-size: 13px;
+  font-weight: 500;
   white-space: nowrap;
+  &:hover {
+    background: var(--surface-muted);
+    color: var(--text-primary);
+  }
 `;
 
 export const DetailPanel = styled.div`
@@ -332,13 +320,10 @@ export const QualityMetrics = styled.div`
 
 export const QualityMetric = styled.div`
   display: flex;
-  min-width: 74px;
+  min-width: 0;
   flex-direction: column;
   gap: 4px;
-  padding: 10px 8px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background-color: var(--surface-raised);
+  padding: 8px 0;
 `;
 
 export const QualityMetricLabel = styled.span`
@@ -458,15 +443,11 @@ export const ParticipantSectionHeader = styled.div`
 export const ParticipantList = styled.ul`
   display: flex;
   flex-direction: column;
-  padding: 0 12px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface-raised);
 `;
 
 export const ParticipantRow = styled.li`
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) 4.5rem 6rem;
   align-items: center;
   gap: 12px;
   min-height: 52px;
@@ -503,6 +484,7 @@ export const ParticipantName = styled.span`
 `;
 
 export const ParticipantMode = styled.span`
+  text-align: right;
   color: var(--result-muted);
   font-size: 13px;
   white-space: nowrap;
@@ -549,17 +531,14 @@ export const ComparisonToggle = styled.button`
 `;
 
 export const VoteWrapper = styled.div`
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 106px;
-  min-width: 0;
-  gap: 8px;
+  width: 100%;
 `;
 
 export const VoteTitle = styled.div`
   display: flex;
-  flex-direction: row;
-  gap: 4px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 `;
 export const Label = styled.p`
   font-size: 13px;
@@ -569,21 +548,11 @@ export const Count = styled.p`
   font-size: 13px;
 `;
 
-export const LikeWrapper = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-`;
-
-export const LikeItem = styled.div``;
-
-export const ButtonWrapper = styled.div<ExpandProps>`
+export const ButtonWrapper = styled.div`
   display: flex;
   flex-shrink: 0;
-  width: fit-content;
-  flex-direction: row;
   align-items: center;
-  gap: ${({ $isExpand }) => ($isExpand ? '8px' : '12px')};
+  gap: 8px;
 `;
 
 export const FoldBody = styled.div`
@@ -702,18 +671,3 @@ export const Tail = styled.button`
     stroke: currentColor;
   }
 `;
-
-ContentWrapper.defaultProps = {
-  $isExpand: true,
-};
-
-StationName.defaultProps = {
-  $isExpand: true,
-};
-ArrivalTime.defaultProps = {
-  $isExpand: true,
-};
-
-ButtonWrapper.defaultProps = {
-  $isExpand: true,
-};

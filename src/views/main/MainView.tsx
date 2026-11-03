@@ -3,6 +3,8 @@ import { useAtom } from 'jotai';
 import { useEffect } from 'react';
 import Image from 'next/image';
 
+import PageHeader from '@/components/PageHeader';
+
 import SearchTypeSelector from '@/components/SearchTypeSelector';
 import { PeopleIcon } from '@/assets/icons/People';
 import { PlusIcon } from '@/assets/icons/Plus';
@@ -17,6 +19,7 @@ export default function MainView() {
 
   return (
     <Container>
+      <PageHeader />
       <Introduction>
         <MeetingIllustration
           src="/images/meeting-friends.webp"
@@ -52,28 +55,30 @@ const Container = styled.main`
   flex-direction: column;
   align-items: center;
   gap: 28px;
-  padding: clamp(80px, 12vh, 104px) 19px 40px;
-  min-height: 100vh;
+  padding: max(12px, env(safe-area-inset-top))
+    max(20px, env(safe-area-inset-right)) max(32px, env(safe-area-inset-bottom))
+    max(20px, env(safe-area-inset-left));
+  min-height: 100dvh;
 
   @media (max-width: 500px) and (max-height: 640px) {
     gap: 24px;
-    padding: 64px 16px 24px;
+    padding-top: max(12px, env(safe-area-inset-top));
   }
 `;
 
 const Introduction = styled.header`
+  margin-top: clamp(0px, 3vh, 24px);
   width: 100%;
   text-align: center;
 `;
 
 const MeetingIllustration = styled(Image)`
   display: block;
-  width: min(100%, 340px);
+  width: min(100%, clamp(224px, 40dvh, 340px));
   height: auto;
   margin: 0 auto 12px;
 
   @media (max-width: 500px) and (max-height: 640px) {
-    width: min(100%, 224px);
     margin-bottom: 16px;
   }
 `;

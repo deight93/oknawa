@@ -57,12 +57,16 @@ body {
   box-sizing: border-box;
 }
 
-input[type='text'] {
-  font-size: 16px;
-  transform: scale(0.8);
-  transform-origin: left;
-}
-
 button {
   color: inherit;
+}
+
+:where(button, a, select, input):focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--primary) 65%, var(--text-primary));
+  outline-offset: 3px;
+}
+
+::selection {
+  background: var(--primary);
+  color: var(--button-text-on-primary);
 }

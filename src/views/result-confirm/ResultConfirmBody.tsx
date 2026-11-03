@@ -85,19 +85,18 @@ export default function ResultConfirmBody({
             participants={request_info?.participant}
             itinerary={itinerary}
           />
+          {shouldShowHotPlaceButton && (
+            <FloatingButton
+              radius="md"
+              size="lg"
+              color="success"
+              variant="solid"
+              onClick={handleHotplaceBtnClick}
+            >
+              {stationName} 주변 장소 보기
+            </FloatingButton>
+          )}
         </MapBackground>
-
-        {shouldShowHotPlaceButton && (
-          <FloatingButton
-            radius="full"
-            size="lg"
-            color="success"
-            variant="solid"
-            onClick={handleHotplaceBtnClick}
-          >
-            {stationName} 주변 장소 보기
-          </FloatingButton>
-        )}
       </Container>
     </>
   );
@@ -107,22 +106,24 @@ const Container = styled.main`
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  overflow-y: auto;
   width: 100%;
   height: 100vh;
   height: 100dvh;
 `;
 
 const MapBackground = styled.div`
-  position: absolute;
-  inset: 0;
+  position: relative;
+  flex: 1;
+  min-height: 180px;
 `;
 
 const FloatingButton = styled(Button)`
-  position: relative;
-  flex-shrink: 0;
-  align-self: center;
-  margin: auto 20px max(24px, env(safe-area-inset-bottom));
+  position: absolute;
+  bottom: max(20px, env(safe-area-inset-bottom));
+  left: max(20px, env(safe-area-inset-left));
+  right: max(20px, env(safe-area-inset-right));
+  margin: 0 auto;
   font-weight: 600;
   max-width: calc(min(100vw, 500px) - 40px);
   min-height: 48px;

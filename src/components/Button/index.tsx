@@ -3,6 +3,7 @@ import styled from 'styled-components';
 
 interface ButtonProps {
   label?: string;
+  'aria-pressed'?: boolean;
   disabled?: boolean;
   $widthFull?: boolean;
   size?: 'small' | 'medium' | 'large';
@@ -21,9 +22,11 @@ export default function Button({
   type = 'button',
   onClick,
   className,
+  'aria-pressed': ariaPressed,
 }: ButtonProps) {
   return (
     <Container
+      aria-pressed={ariaPressed}
       disabled={disabled}
       type={type}
       onClick={onClick}
@@ -69,6 +72,6 @@ const Container = styled.button<{
     disabled ? 'var(--text-muted)' : 'var(--text-primary)'};
 `;
 
-const Text = styled.h1`
+const Text = styled.span`
   font-weight: 500;
 `;
