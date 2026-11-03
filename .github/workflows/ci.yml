@@ -14,6 +14,31 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  supabase-config:
+    name: Supabase config check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup deployment CLI
+        uses: supabase/setup-cli@v2
+        with:
+          # Keep in sync with supabase-deploy.yml.
+          version: 2.122.1
+
+      - name: Parse local Supabase configuration
+        # services may print config errors but still exit 0; check stderr too.
+        run: |
+          config_errors=$(mktemp)
+          trap 'cat "$config_errors" >&2; rm -f "$config_errors"' EXIT
+          supabase services --log-level error 2>"$config_errors"
+          # The pinned v2 CLI always prints these two upgrade-notice lines.
+          if grep -Ev '^(A new version of Supabase CLI is available:|We recommend updating regularly for new features and bug fixes:|[[:space:]]*$)' "$config_errors"; then
+            exit 1
+          fi
+
   frontend:
     name: Frontend checks
     runs-on: ubuntu-latest

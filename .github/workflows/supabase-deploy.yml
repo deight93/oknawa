@@ -40,13 +40,15 @@ jobs:
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v2
         with:
-          version: latest
+          # v3 changes config keys, remote targeting and confirmation semantics.
+          # Upgrade the CLI and deployment commands together, never via latest.
+          version: 2.122.1
 
       - name: Link Supabase project
         run: supabase link --project-ref "$SUPABASE_PROJECT_REF"
 
       - name: Apply database migrations
-        run: supabase db push
+        run: supabase db push --linked --yes
 
       - name: Deploy Edge Functions
-        run: supabase functions deploy --project-ref "$SUPABASE_PROJECT_REF"
+        run: supabase functions deploy --project-ref "$SUPABASE_PROJECT_REF" --yes

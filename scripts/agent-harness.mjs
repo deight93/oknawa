@@ -400,6 +400,7 @@ const staticContracts = [
 
 const commands = isFull
   ? [
+      ['pnpm', ['audit', '--audit-level=moderate']],
       ['pnpm', ['test:app']],
       ['pnpm', ['lint']],
       ['pnpm', ['build']],
