@@ -16,6 +16,8 @@ import { MeetingPurpose } from '@/types/meetingPurpose';
 import { RecommendationOptions } from '@/types/recommendationOptions';
 import { clearLegacyVoteState } from '@/utils/voteStorage';
 import { assertBrowserStorageWritable } from '@/utils/browserStorage';
+import SearchService from '@/services/search/SearchService';
+import type { DestinationRequest } from '@/types/meetingDestination';
 
 export type CreateResultLoadingPhase = 'generating' | 'fetching';
 
@@ -24,6 +26,7 @@ interface RequestResultOptions {
   onCreated?: (data: CreatedResult) => void;
   onReady?: (data: CreatedResult) => Promise<void> | void;
   onError?: (error: unknown) => Promise<void> | void;
+  destinationRequest?: () => DestinationRequest;
 }
 
 export default function useCreateResultFlow(roomId?: string) {
@@ -55,6 +58,7 @@ export default function useCreateResultFlow(roomId?: string) {
     meetingPurpose?: MeetingPurpose,
     options?: RequestResultOptions,
     recommendationOptions?: RecommendationOptions,
+    destinationRequest?: DestinationRequest,
   ) => {
     if (inFlight.current) return;
     inFlight.current = true;
@@ -73,11 +77,14 @@ export default function useCreateResultFlow(roomId?: string) {
       const participants = preparedSearchList ?? searchList;
       prepared = true;
       requireCurrentPage();
-      const created = await createResult({
-        searchForm: participants,
-        meetingPurpose,
-        recommendationOptions,
-      });
+      const destination = options?.destinationRequest?.() ?? destinationRequest;
+      const created = destination
+        ? await SearchService.destinationRoutes(participants, destination)
+        : await createResult({
+            searchForm: participants,
+            meetingPurpose,
+            recommendationOptions,
+          });
       requireCurrentPage();
       setMapIdInfo({ mapId: created.map_id, mapHostId: created.map_host_id });
       options?.onCreated?.(created);

@@ -4,7 +4,7 @@ import PageHeader from '@/components/PageHeader';
 
 import { useId, useRef } from 'react';
 import { MapPin, Search, X } from 'lucide-react';
-import { useSetAtom } from 'jotai';
+import { useAtomValue, useSetAtom } from 'jotai';
 import { styled } from 'styled-components';
 import { useRouter } from 'next/navigation';
 
@@ -13,6 +13,11 @@ import useSearchForm from '@/hooks/form/search/useSearchForm';
 import useSearchEntryFlow from '@/hooks/search/useSearchEntryFlow';
 import { bottomSheetState, SearchState } from '@/jotai/global/store';
 import TravelModeSelector from './components/TravelModeSelector';
+import { meetingDestinationState } from '@/jotai/meeting/store';
+import { roomState } from '@/jotai/global/room';
+import { searchState } from '@/jotai/global/store';
+import { useInputStatusListQuery } from '@/hooks/query/search';
+import MeetingDestinationField from './components/MeetingDestinationField';
 
 const numberConfig: { [key: number]: string } = {
   1: '첫',
@@ -30,19 +35,43 @@ const numberConfig: { [key: number]: string } = {
 interface SearchViewProps {
   type: 'individual' | 'together';
   shareRoomId: string | null;
+  destinationMode?: boolean;
 }
 
-export default function SearchView({ type, shareRoomId }: SearchViewProps) {
+export default function SearchView({
+  type,
+  shareRoomId,
+  destinationMode = false,
+}: SearchViewProps) {
   const router = useRouter();
   const fieldId = useId();
   const addressButtonRef = useRef<HTMLButtonElement>(null);
 
   const setBottomSheet = useSetAtom(bottomSheetState);
+  const draftDestination = useAtomValue(meetingDestinationState);
+  const room = useAtomValue(roomState);
+  const list = useAtomValue(searchState);
+  const targetRoomId =
+    type === 'together' && !destinationMode
+      ? shareRoomId || (list.length > 0 ? room.roomId : '')
+      : '';
+  const { data: roomStatus } = useInputStatusListQuery(targetRoomId);
+  const destination = targetRoomId
+    ? roomStatus?.meeting_destination
+    : destinationMode
+      ? draftDestination
+      : null;
 
   const { register, setValue, setFocus, handleSubmit, watch, reset } =
     useSearchForm();
   const { isIndividualView, searchCount, submitSearch, isSubmitting } =
-    useSearchEntryFlow(type, shareRoomId, reset);
+    useSearchEntryFlow(
+      type,
+      shareRoomId,
+      reset,
+      destination ?? undefined,
+      destinationMode,
+    );
 
   const handleSearchAddressBtnClick = () => {
     setBottomSheet(prevState => ({
@@ -54,16 +83,18 @@ export default function SearchView({ type, shareRoomId }: SearchViewProps) {
   };
 
   const handleSearchBtnClick = (searchForm: SearchState) => {
+    if (destinationMode && !destination) return;
+    if (targetRoomId && !roomStatus) return;
     submitSearch(searchForm);
   };
 
   const getTitleText = (orderNums: number) => {
     if (isIndividualView) {
-      return `${numberConfig[orderNums + 1]}번째 출발지 정보를\n입력해주세요.`;
+      return `${numberConfig[orderNums + 1] ?? orderNums + 1}번째 출발지 정보를\n입력해주세요.`;
     } else {
       if (orderNums > 0) {
         return `${
-          numberConfig[orderNums + 1]
+          numberConfig[orderNums + 1] ?? orderNums + 1
         }번째 출발지 정보를\n입력해주세요.`;
       } else {
         return '먼저 자신의 출발지 정보를\n입력해주세요.';
@@ -75,10 +106,14 @@ export default function SearchView({ type, shareRoomId }: SearchViewProps) {
   const nameValue = watch('name');
   const titleText = getTitleText(searchCount);
   const buttonText =
-    searchCount >= 1
+    destination || searchCount >= 1
       ? '등록하기'
       : `${numberConfig[searchCount + 2]}번째 출발지 추가하기`;
-  const isButtonDisabled = !nameValue || !addressValue?.fullAddress;
+  const isButtonDisabled =
+    !nameValue ||
+    !addressValue?.fullAddress ||
+    (destinationMode && !destination) ||
+    Boolean(targetRoomId && !roomStatus);
 
   const handleClearName = () => {
     setValue('name', '', { shouldDirty: true });
@@ -100,6 +135,25 @@ export default function SearchView({ type, shareRoomId }: SearchViewProps) {
       <Wrapper>
         <PageHeader onBack={() => router.push('/')} />
         <Title>{titleText}</Title>
+        {destination && <MeetingDestinationField destination={destination} />}
+        {destinationMode && !destination && (
+          <p className="mt-4 text-base">
+            모임 장소를 먼저 선택해주세요.{' '}
+            <button
+              type="button"
+              className="underline min-h-11"
+              onClick={() => router.push('/meeting')}
+            >
+              장소 선택하기
+            </button>
+          </p>
+        )}
+        {targetRoomId && !roomStatus && (
+          <p role="status" className="mt-4 text-base">
+            모임 정보를 불러오는 중이에요. 계속 표시되면 초대 링크를
+            확인해주세요.
+          </p>
+        )}
         <Section>
           <Field>
             <FieldLabel htmlFor={`${fieldId}-name`}>이름</FieldLabel>

@@ -24,6 +24,7 @@ import SearchCompleteList from '../src/views/search/SearchCompleteList';
 import SearchCompleteListWithTogetherView from '../src/views/search/SearchCompleteListWithTogether';
 import SearchLoading from '../src/views/search/components/SearchLoading';
 import RecommendationOptionSelector from '../src/views/search/components/RecommendationOptionSelector';
+import type Address from '../src/components/Address';
 import { Button } from '@nextui-org/react';
 import type { Participant } from '../src/types/location';
 
@@ -513,6 +514,8 @@ async function mountRoom(
     status?: string;
     type?: 'individual' | 'together';
     individualList?: boolean;
+    createNewRoom?: boolean;
+    destination?: { name: string; address: string; x: number; y: number };
     participantTokens?: Record<string, Record<number, string>>;
     memory?: Map<string, string>;
   } = {},
@@ -603,6 +606,7 @@ async function mountRoom(
   const status = {
     room_id: roomId,
     recommendation_status: options.status ?? 'idle',
+    meeting_destination: options.destination ?? null,
     result_map_id: null,
     recommendation_options: { travelMode: 'transit', midpointBasis: 'time' },
     participant: participants.slice(0, 2),
@@ -620,10 +624,16 @@ async function mountRoom(
       options.shareRoomId ?? null,
     );
     setShareRoomId = changeRoom;
-    entry = useSearchEntryFlow(options.type ?? 'together', shareRoomId, () => {
-      resetCount++;
-      searchForm.reset();
-    });
+    entry = useSearchEntryFlow(
+      options.type ?? 'together',
+      shareRoomId,
+      () => {
+        resetCount++;
+        searchForm.reset();
+      },
+      options.destination,
+      options.createNewRoom,
+    );
     return options.individualList ? (
       <SearchCompleteList />
     ) : options.view ? (
@@ -1241,3 +1251,335 @@ test('a recovered room removes the loading overlay and enables the existing host
     mounted.close();
   }
 });
+
+const meetingPlace = {
+  name: '코엑스',
+  address: '서울 강남구 영동대로 513',
+  x: 127.059,
+  y: 37.512,
+};
+
+test('fixed destination direct entry goes to its list after the first departure and locks duplicates', async () => {
+  const mounted = await mountRoom({
+    type: 'individual',
+    destination: meetingPlace,
+  });
+  try {
+    act(() => {
+      mounted.entry.submitSearch(form);
+      mounted.entry.submitSearch(form);
+    });
+    assert.equal(mounted.store.get(searchState).length, 1);
+    assert.deepEqual(mounted.navigation, ['/meeting/list']);
+    assert.equal(mounted.resetCount, 0);
+  } finally {
+    mounted.close();
+  }
+});
+
+test('fixed destination room is created atomically with private participant capability retained', async () => {
+  const requests: { url: string; body: Record<string, unknown> }[] = [];
+  const mounted = await mountRoom({
+    destination: meetingPlace,
+    adapter: async config => {
+      requests.push({ url: config.url ?? '', body: JSON.parse(config.data) });
+      return {
+        data: {
+          room_id: otherRoomId,
+          room_host_id: 'fixed-host',
+          participant_id: 42,
+          participant_token: 'fixed-token',
+        },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config,
+      };
+    },
+  });
+  try {
+    act(() => mounted.entry.submitSearch({ ...form, travelMode: 'walk' }));
+    await until(() => mounted.navigation.length > 0);
+    assert.equal(requests.length, 1);
+    assert.ok(requests[0].url.endsWith('location_destination_together'));
+    assert.deepEqual(requests[0].body.meeting_destination, meetingPlace);
+    assert.equal(requests[0].body.travel_mode, 'walk');
+    assert.equal(readToken(mounted.memory, otherRoomId, 42), 'fixed-token');
+  } finally {
+    mounted.close();
+  }
+});
+
+test('joining a room never replaces its destination with a local selection', async () => {
+  const requests: { url: string; body: Record<string, unknown> }[] = [];
+  const mounted = await mountRoom({
+    destination: meetingPlace,
+    shareRoomId: otherRoomId,
+    adapter: async config => {
+      requests.push({ url: config.url ?? '', body: JSON.parse(config.data) });
+      return { data: {}, status: 200, statusText: 'OK', headers: {}, config };
+    },
+  });
+  try {
+    act(() => mounted.entry.submitSearch(form));
+    await until(() => mounted.navigation.length > 0);
+    assert.ok(requests[0].url.endsWith('location_join_room'));
+    assert.equal('meeting_destination' in requests[0].body, false);
+  } finally {
+    mounted.close();
+  }
+});
+
+test('fixed shared result uses the server run context and skips midpoint settings', async () => {
+  const requests: { url: string; body: Record<string, unknown> }[] = [];
+  const mounted = await mountRoom({
+    view: true,
+    destination: meetingPlace,
+    adapter: async config => {
+      const url = config.url ?? '';
+      requests.push({ url, body: JSON.parse(config.data) });
+      const data = url.endsWith('location_room_recommend_start')
+        ? {
+            recommendation_run_id: runId,
+            participant: participants,
+            meeting_destination: meetingPlace,
+          }
+        : url.endsWith('location-destination')
+          ? { map_id: mapId, map_host_id: 'fixed-result-host' }
+          : url.endsWith('location_result_by_map_id')
+            ? {
+                map_id: mapId,
+                station_info: [],
+                request_info: {
+                  participant: participants,
+                  meetingDestination: meetingPlace,
+                  destinationRoutes: [],
+                },
+              }
+            : {};
+      return { data, status: 200, statusText: 'OK', headers: {}, config };
+    },
+  });
+  try {
+    assert.equal(
+      mounted.renderer.root.findAllByType(RecommendationOptionSelector).length,
+      0,
+    );
+    act(() => mounted.renderer.root.findByType(Button).props.onClick());
+    await until(() => mounted.navigation.length > 0);
+    const generated = requests.find(request =>
+      request.url.endsWith('location-destination'),
+    );
+    assert.deepEqual(generated?.body, {
+      roomContext: { roomId, hostId, runId },
+    });
+    assert.equal(
+      requests.some(request => request.url.endsWith('location-points')),
+      false,
+    );
+    const completed = requests.find(request =>
+      request.url.endsWith('location_room_recommend_complete'),
+    );
+    assert.equal(completed?.body.p_recommendation_run_id, runId);
+    assert.equal(mounted.navigation.at(-1), `/result?mapId=${mapId}`);
+  } finally {
+    mounted.close();
+  }
+});
+
+test('fixed shared result refuses an old server snapshot with no destination and releases only that run', async () => {
+  const urls: string[] = [];
+  const mounted = await mountRoom({
+    view: true,
+    destination: meetingPlace,
+    adapter: async config => {
+      urls.push(config.url ?? '');
+      return {
+        data: { recommendation_run_id: runId, participant: participants },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config,
+      };
+    },
+  });
+  try {
+    act(() => mounted.renderer.root.findByType(Button).props.onClick());
+    await until(() => mounted.store.get(modalState).isOpen);
+    assert.deepEqual(urls, [
+      '/rest/v1/rpc/location_room_recommend_start',
+      '/rest/v1/rpc/location_room_recommend_fail',
+    ]);
+    assert.deepEqual(mounted.navigation, []);
+  } finally {
+    mounted.close();
+  }
+});
+
+test('fixed shared destination change is hidden from guests and enabled for the host only', async () => {
+  for (const host of [false, true]) {
+    const mounted = await mountRoom({
+      view: true,
+      destination: meetingPlace,
+      memory: new Map([
+        ['room', JSON.stringify({ roomId, hostId: host ? hostId : '' })],
+      ]),
+    });
+    try {
+      assert.equal(
+        mounted.renderer.root
+          .findAllByType('button')
+          .some(button => button.props['aria-label'] === '모임 장소 변경'),
+        host,
+      );
+      assert.equal(
+        mounted.renderer.root.findByType(Button).props.isDisabled,
+        !host,
+      );
+    } finally {
+      mounted.close();
+    }
+  }
+});
+
+test('starting fixed together input cannot join a previously active room after visiting direct input', async () => {
+  const requests: string[] = [];
+  const mounted = await mountRoom({
+    destination: meetingPlace,
+    createNewRoom: true,
+    adapter: async config => {
+      requests.push(config.url ?? '');
+      return {
+        data: { room_id: otherRoomId, room_host_id: 'new' },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config,
+      };
+    },
+  });
+  try {
+    act(() => mounted.store.set(searchState, [form]));
+    act(() => mounted.entry.submitSearch(form));
+    await until(() => mounted.navigation.length > 0);
+    assert.deepEqual(requests, ['/rest/v1/rpc/location_destination_together']);
+  } finally {
+    mounted.close();
+  }
+});
+
+for (const pendingSave of [false, true]) {
+  test(`switching cached fixed rooms isolates an ${pendingSave ? 'in-flight destination save' : 'open destination picker'}`, async () => {
+    const requests: { url: string; body: Record<string, unknown> }[] = [];
+    const otherHostId = 'other-room-host';
+    const otherPlace = { ...meetingPlace, name: '다른 방 장소' };
+    let releaseSave!: () => void;
+    const save = new Promise<void>(resolve => {
+      releaseSave = resolve;
+    });
+    const mounted = await mountRoom({
+      view: true,
+      destination: meetingPlace,
+      adapter: async config => {
+        const url = config.url ?? '';
+        requests.push({ url, body: JSON.parse(config.data) });
+        if (url.endsWith('location_room_destination_update')) await save;
+        const data = url.endsWith('location_room_recommend_start')
+          ? {
+              recommendation_run_id: runId,
+              participant: participants,
+              meeting_destination: otherPlace,
+            }
+          : url.endsWith('location-destination')
+            ? { map_id: mapId, map_host_id: 'fixed-result-host' }
+            : url.endsWith('location_result_by_map_id')
+              ? {
+                  map_id: mapId,
+                  station_info: [],
+                  request_info: {
+                    participant: participants,
+                    meetingDestination: otherPlace,
+                    destinationRoutes: [],
+                  },
+                }
+              : {};
+        return { data, status: 200, statusText: 'OK', headers: {}, config };
+      },
+    });
+    const calculate = () => mounted.renderer.root.findByType(Button);
+    const destinationWrites = () =>
+      requests.filter(request =>
+        request.url.endsWith('location_room_destination_update'),
+      );
+    try {
+      mounted.client.setQueryData(['inputStatusList', otherRoomId], {
+        ...mounted.status,
+        room_id: otherRoomId,
+        meeting_destination: otherPlace,
+      });
+      act(() =>
+        mounted.renderer.root
+          .findAllByType('button')
+          .find(button => button.props['aria-label'] === '모임 장소 변경')!
+          .props.onClick(),
+      );
+      const picker = mounted.store.get(bottomSheetState).contents;
+      assert.ok(
+        React.isValidElement<React.ComponentProps<typeof Address>>(picker),
+      );
+      const select = picker.props.onSelect;
+      assert.ok(select);
+      if (pendingSave) {
+        await act(async () => {
+          select(form.address);
+          mounted.store.set(bottomSheetState, RESET);
+        });
+        assert.equal(destinationWrites().length, 1);
+        assert.equal(destinationWrites()[0].body.p_room_id, roomId);
+        assert.equal(calculate().props.isDisabled, true);
+      }
+      await act(async () =>
+        mounted.store.set(roomState, {
+          roomId: otherRoomId,
+          hostId: otherHostId,
+        }),
+      );
+      await act(async () => select(form.address));
+      assert.equal(
+        destinationWrites().length,
+        pendingSave ? 1 : 0,
+        'the previous room picker must not send another mutation',
+      );
+      assert.equal(mounted.store.get(bottomSheetState).isOpen, false);
+      assert.equal(calculate().props.isDisabled, false);
+      if (pendingSave) {
+        await act(async () => mounted.store.set(roomState, { roomId, hostId }));
+        assert.equal(
+          calculate().props.isDisabled,
+          false,
+          'returning to the previous room must not restore an abandoned busy flag',
+        );
+        await act(async () =>
+          mounted.store.set(roomState, {
+            roomId: otherRoomId,
+            hostId: otherHostId,
+          }),
+        );
+      }
+      act(() => calculate().props.onClick());
+      await until(() => mounted.navigation.length > 0);
+      assert.deepEqual(
+        requests.find(request => request.url.endsWith('location-destination'))
+          ?.body,
+        { roomContext: { roomId: otherRoomId, hostId: otherHostId, runId } },
+      );
+      assert.equal(mounted.navigation.at(-1), `/result?mapId=${mapId}`);
+    } finally {
+      await act(async () => {
+        releaseSave();
+        await wait(0);
+      });
+      mounted.close();
+    }
+  });
+}

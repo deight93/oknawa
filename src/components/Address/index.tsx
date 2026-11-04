@@ -13,9 +13,12 @@ import { KakaoPlace } from './types';
 import { bottomSheetState, SearchState } from '@/jotai/global/store';
 import { SearchHistoryItem, searchHistoryState } from '@/jotai/search/store';
 
-interface AddressProps {
-  setValue: UseFormSetValue<SearchState>;
-}
+type AddressProps = {
+  label?: string;
+} & (
+  | { setValue: UseFormSetValue<SearchState>; onSelect?: never }
+  | { onSelect: (address: SearchHistoryItem) => void; setValue?: never }
+);
 
 const isSearchHistoryItem = (item: unknown): item is SearchHistoryItem => {
   if (!item || typeof item !== 'object') return false;
@@ -42,7 +45,11 @@ const readSearchHistory = (): SearchHistoryItem[] => {
   }
 };
 
-export default function Address({ setValue }: AddressProps) {
+export default function Address({
+  setValue,
+  onSelect,
+  label = '출발지',
+}: AddressProps) {
   const resetBottomSheet = useResetAtom(bottomSheetState);
   const [input, setInput] = useState('');
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -52,7 +59,8 @@ export default function Address({ setValue }: AddressProps) {
   const { places, status } = useKakaoPlaceService(input);
 
   const selectAddress = (address: SearchHistoryItem) => {
-    setValue('address', address);
+    if (onSelect) onSelect(address);
+    else setValue('address', address);
     resetBottomSheet();
   };
 
@@ -77,23 +85,27 @@ export default function Address({ setValue }: AddressProps) {
         <SearchHeader>
           <BackButton
             type="button"
-            aria-label="출발지 검색 닫기"
+            aria-label={`${label} 검색 닫기`}
             onClick={resetBottomSheet}
           >
             <ChevronLeft size={26} aria-hidden="true" />
           </BackButton>
-          <Title>출발지 검색</Title>
+          <Title>{label} 검색</Title>
           <ThemeToggle />
         </SearchHeader>
         <SearchField>
           <SearchInput
             ref={inputRef}
             type="text"
-            aria-label="출발지 검색"
+            aria-label={`${label} 검색`}
             aria-describedby="address-search-hint"
             autoComplete="off"
             value={input}
-            placeholder="출발지를 입력해주세요."
+            placeholder={
+              label === '출발지'
+                ? '출발지를 입력해주세요.'
+                : '장소명이나 주소를 입력해주세요.'
+            }
             onChange={event => setInput(event.target.value)}
             onFocus={() => setIsHistoryOpen(true)}
             onKeyDown={event => {
@@ -118,7 +130,7 @@ export default function Address({ setValue }: AddressProps) {
         {isHistoryOpen && !input.trim() && recentSearches.length > 0 && (
           <RecentSearch>
             <RecentTitle>최근 검색</RecentTitle>
-            <PlacesList aria-label="최근 검색한 출발지">
+            <PlacesList aria-label={`최근 검색한 ${label}`}>
               {recentSearches.map((item, index) => (
                 <Place
                   key={`${item.fullAddress}-${index}`}
@@ -150,7 +162,7 @@ export default function Address({ setValue }: AddressProps) {
           </PlacesList>
         )}
         <SearchStatus role="status" aria-live="polite">
-          {status === 'loading' && '출발지를 검색하고 있어요.'}
+          {status === 'loading' && `${label} 검색 중이에요.`}
           {status === 'empty' &&
             '검색 결과가 없습니다. 장소명이나 주소를 다시 입력해주세요.'}
           {status === 'error' &&
@@ -159,7 +171,9 @@ export default function Address({ setValue }: AddressProps) {
             '주소 검색을 준비하지 못했어요. 네트워크 연결을 확인하고 화면을 새로고침해주세요.'}
         </SearchStatus>
         <SearchHint id="address-search-hint">
-          정확한 출발지를 선택해주세요.
+          {label === '출발지'
+            ? '정확한 출발지를 선택해주세요.'
+            : '모두가 만날 장소를 선택해주세요.'}
         </SearchHint>
       </SearchResults>
     </Container>

@@ -15,8 +15,44 @@ import SearchFormWithTogether from '@/model/search-together/SearchFormWithTogeth
 import { MeetingPurpose } from '@/types/meetingPurpose';
 import { RecommendationOptions } from '@/types/recommendationOptions';
 import { LocationResult, StationInfo } from '@/types/location';
+import type {
+  MeetingDestination,
+  DestinationRequest,
+} from '@/types/meetingDestination';
 
 export default class SearchService {
+  static async destinationRoutes(
+    searchForm: SearchState[],
+    request: DestinationRequest,
+  ) {
+    const body = request.roomContext
+      ? { roomContext: request.roomContext }
+      : {
+          participant: SearchForm.convertToRequestBody(searchForm).participant,
+          meetingDestination: request.meetingDestination,
+        };
+    const { data } = await edgeApi.post<CreatedResult>(
+      '/functions/v1/location-destination',
+      body,
+      { timeout: 180000 },
+    );
+    return data;
+  }
+
+  static async updateMeetingDestination(
+    roomId: string,
+    hostId: string,
+    destination: MeetingDestination,
+    expectedMapId?: string,
+  ) {
+    await api.post('/rest/v1/rpc/location_room_destination_update', {
+      p_room_id: roomId,
+      p_room_host_id: hostId,
+      p_meeting_destination: destination,
+      p_expected_map_id: expectedMapId ?? null,
+    });
+  }
+
   static async searchPlaces(
     searchForm: SearchState[],
     meetingPurpose?: MeetingPurpose,
@@ -64,13 +100,19 @@ export default class SearchService {
     return data ?? null;
   }
 
-  static async makeRoom(searchForm: SearchState) {
+  static async makeRoom(
+    searchForm: SearchState,
+    destination?: MeetingDestination,
+  ) {
     const requestBody = SearchFormWithTogether.convertToRequestBody(searchForm);
 
     const { data } = await api.post<CreatedRoom>(
-      '/rest/v1/rpc/location_together',
+      destination
+        ? '/rest/v1/rpc/location_destination_together'
+        : '/rest/v1/rpc/location_together',
       {
         ...requestBody,
+        ...(destination ? { meeting_destination: destination } : {}),
       },
     );
 

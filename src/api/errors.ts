@@ -19,6 +19,14 @@ const getResponseField = (
 };
 
 const apiErrorMessageMap: Record<string, string> = {
+  too_many_participants: '한 번에 출발지 50곳까지 조회할 수 있어요.',
+  invalid_meeting_destination:
+    '모임 장소가 올바르지 않습니다. 다시 선택해주세요.',
+  invalid_room_context:
+    '모임 정보를 확인하지 못했어요. 초대 링크에서 다시 접속해주세요.',
+  destination_snapshot_failed:
+    '모임 정보가 변경되었거나 계산이 만료됐어요. 출발지 목록에서 다시 시도해주세요.',
+  internal_error: '이동시간을 확인하지 못했어요. 잠시 후 다시 시도해주세요.',
   invalid_json_body: '요청 형식이 올바르지 않습니다. 다시 시도해주세요.',
   invalid_participant: '출발지 정보가 올바르지 않습니다. 다시 입력해주세요.',
   candidate_location_empty:

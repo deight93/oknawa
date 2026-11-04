@@ -172,7 +172,7 @@ export default function MeetingMap({
           key={`${user.name}-${index}`}
           position={user.point}
           image={{
-            src: `/images/marker${index}.svg`,
+            src: `/images/marker${index % 10}.svg`,
             size: { width: 30, height: 39 },
           }}
           onClick={marker => handleMarkerClick(marker, index)}

@@ -12,6 +12,7 @@ import { clearLegacyVoteState } from '@/utils/voteStorage';
 export default function useResultPageState(queryMapId: string | null) {
   const mapIdInfo = useAtomValue(mapIdState);
   const setResult = useSetAtom(resultState);
+  const cachedResult = useAtomValue(resultState);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [sortOption, setSortOption] = useState<ResultSortOption>('recommended');
 
@@ -74,6 +75,7 @@ export default function useResultPageState(queryMapId: string | null) {
   };
 
   return {
+    result: data ?? (cachedResult.map_id === activeMapId ? cachedResult : null),
     activeMapId,
     activeMapHostId,
     confirmedShareKey: data?.confirmed ?? null,

@@ -47,6 +47,27 @@ const assertNotIncludes = (path, pattern, message) => {
 
 const staticContracts = [
   {
+    name: 'fixed destinations have isolated routes and executable permission coverage',
+    run: () => {
+      for (const path of [
+        'src/app/meeting/page.tsx',
+        'src/app/meeting/individual/page.tsx',
+        'src/app/meeting/together/page.tsx',
+        'src/app/meeting/list/page.tsx',
+        'supabase/functions/location-destination/index.ts',
+        'supabase/migrations/20261104090000_fixed_meeting_destination.sql',
+        'tests/fixed-destination-rpc.test.ts',
+        'supabase/functions/tests/location-destination.test.ts',
+      ])
+        requireFile(path);
+      assertIncludes(
+        'supabase/config.toml',
+        '[functions.location-destination]',
+        'new function must deploy with explicit configuration',
+      );
+    },
+  },
+  {
     name: 'individual search sends full address and meeting purpose',
     run: () => {
       assertIncludes(
@@ -428,6 +449,7 @@ const commands = isFull
           '--config',
           'supabase/functions/location-points/deno.json',
           'supabase/functions/location-points/index.ts',
+          'supabase/functions/location-destination/index.ts',
           'supabase/functions/location-meeting/index.ts',
           'supabase/functions/location-meeting-terminal/index.ts',
           'supabase/functions/location-point-place/index.ts',

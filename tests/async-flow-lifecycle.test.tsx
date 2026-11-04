@@ -576,3 +576,109 @@ test('current-round vote and confirmation still allow retry and navigate success
     m.close();
   }
 });
+
+test('fixed direct result sends the selected destination and preserves duplicate-name travel modes', async () => {
+  const destination = {
+    name: '코엑스',
+    address: '서울 강남구 영동대로 513',
+    x: 127.059,
+    y: 37.512,
+  };
+  const people = [
+    { ...person('민수'), travelMode: 'car' as const },
+    { ...person('민수'), travelMode: 'walk' as const },
+  ];
+  const requests: { url: string; body: Record<string, unknown> }[] = [];
+  const m = await mount(
+    () => useCreateResultFlow(),
+    undefined,
+    async config => {
+      const url = config.url ?? '';
+      requests.push({ url, body: JSON.parse(config.data) });
+      const data = url.endsWith('location-destination')
+        ? { map_id: newMap, map_host_id: 'fixed-host' }
+        : {
+            ...result(newMap),
+            request_info: {
+              participant: [],
+              meetingDestination: destination,
+              destinationRoutes: [],
+            },
+          };
+      return { data, status: 200, statusText: 'OK', headers: {}, config };
+    },
+  );
+  try {
+    await act(async () => {
+      await m.current.requestResult(people, undefined, undefined, undefined, {
+        meetingDestination: destination,
+      });
+    });
+    const request = requests[0];
+    assert.ok(request.url.endsWith('location-destination'));
+    assert.deepEqual(request.body.meetingDestination, destination);
+    const participant = request.body.participant as {
+      travel_mode: string;
+      full_address: string;
+    }[];
+    assert.deepEqual(
+      participant.map(p => p.travel_mode),
+      ['car', 'walk'],
+    );
+    assert.equal(participant[0].full_address, '서울');
+    assert.deepEqual(m.navigation, [`/result?mapId=${newMap}`]);
+  } finally {
+    m.close();
+  }
+});
+
+test('leaving a pending fixed result cannot overwrite the next search or navigate', async () => {
+  const gate = deferred();
+  let started = false;
+  const m = await mount(
+    () => useCreateResultFlow(),
+    undefined,
+    async config => {
+      started = true;
+      await gate.promise;
+      return {
+        data: { map_id: oldMap, map_host_id: 'old-host' },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config,
+      };
+    },
+  );
+  try {
+    let task!: Promise<void>;
+    act(() => {
+      task = m.current.requestResult(
+        [person('이전')],
+        undefined,
+        undefined,
+        undefined,
+        {
+          meetingDestination: {
+            name: '이전 장소',
+            address: '서울',
+            x: 127,
+            y: 37,
+          },
+        },
+      );
+    });
+    await until(() => started);
+    m.unmount();
+    m.store.set(searchState, [person('다음')]);
+    gate.resolve();
+    await act(async () => {
+      await task;
+    });
+    assert.equal(m.store.get(searchState)[0].name, '다음');
+    assert.deepEqual(m.navigation, []);
+  } finally {
+    gate.resolve();
+    m.close();
+  }
+});

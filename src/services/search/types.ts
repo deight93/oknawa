@@ -1,9 +1,11 @@
 import { TravelMode } from '@/types/recommendationOptions';
 import { Participant } from '@/types/location';
+import type { MeetingDestination } from '@/types/meetingDestination';
 
 export interface RoomRecommendationRun {
   recommendation_run_id: string;
   participant: Participant[];
+  meeting_destination?: MeetingDestination | null;
 }
 
 export interface CreatedResult {
@@ -49,6 +51,7 @@ export type RoomRecommendationStatus =
 
 export interface RoomStatusResponse {
   room_id: string;
+  meeting_destination?: MeetingDestination | null;
   confirmed_share_key?: string | null;
   result_map_id?: string | null;
   recommendation_status?: RoomRecommendationStatus;
