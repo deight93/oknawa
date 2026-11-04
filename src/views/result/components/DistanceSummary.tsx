@@ -3,7 +3,11 @@
 import { useRouter } from 'next/navigation';
 
 import { useState } from 'react';
-import { ChevronDown as DisclosureChevron } from 'lucide-react';
+import {
+  ChevronDown as DisclosureChevron,
+  ExternalLink,
+  Route,
+} from 'lucide-react';
 import Avatar, { AVATAR_COLORS } from '@/components/Avatar';
 import { TRAVEL_MODE_OPTIONS } from '@/types/recommendationOptions';
 
@@ -15,6 +19,8 @@ import useModal from '@/hooks/common/useModal';
 import useHostControlFlow from '@/hooks/result/useHostControlFlow';
 import useResultShare from '@/hooks/result/useResultShare';
 import useVoteFlow from '@/hooks/result/useVoteFlow';
+import useKakaoDirections from '@/hooks/result/useKakaoDirections';
+import { getParticipantDirections } from '@/utils/kakaoDirections';
 
 import { Share2 } from 'lucide-react';
 import { ChevronLeft } from '@/assets/icons/ChevronLeft';
@@ -111,6 +117,12 @@ import {
   ParticipantIdentity,
   ParticipantMode,
   ParticipantTime,
+  ParticipantInfo,
+  ParticipantOrigin,
+  ParticipantDirections,
+  DirectionsLink,
+  DirectionsWebLink,
+  DirectionsHint,
   ParticipantSectionHeader,
   ComparisonToggle,
   CompareSelectButton,
@@ -264,6 +276,9 @@ export default function DistanceSummary({
   const { isVote, isConfirming, requestVote, requestConfirm, canConfirm } =
     useVoteFlow(shareKey, queryMapId, voteRound);
   const { canManage, requestResetVote } = useHostControlFlow(activeMapId);
+  const { openDirections, cancelPendingDirections } = useKakaoDirections(
+    `${activeMapId}:${shareKey}:${isExpandTail}`,
+  );
 
   const clickHome = () => {
     setModalContents({
@@ -391,9 +406,18 @@ export default function DistanceSummary({
                   {isDetailOpen ? '상세 접기' : '이동 상세'}
                 </DetailToggleButton>
               </ParticipantSectionHeader>
+              <DirectionsHint>
+                내 출발지에서 이 후보까지 길찾기를 확인해요.
+              </DirectionsHint>
               <ParticipantList aria-label="참가자별 이동 시간">
                 {station.itinerary.map((route, index) => {
+                  const directions = getParticipantDirections(
+                    station.station,
+                    index,
+                    station.recommendationOptions?.travelMode,
+                  );
                   const travelMode =
+                    directions?.travelMode ??
                     route.travel_mode ??
                     station.recommendationOptions?.travelMode;
                   const modeLabel =
@@ -411,12 +435,51 @@ export default function DistanceSummary({
                             color={AVATAR_COLORS[index % AVATAR_COLORS.length]}
                           />
                         </span>
-                        <ParticipantName>{route.name}</ParticipantName>
+                        <ParticipantInfo>
+                          <ParticipantName>{route.name}</ParticipantName>
+                          <ParticipantOrigin>
+                            {route.region_name}
+                          </ParticipantOrigin>
+                        </ParticipantInfo>
                       </ParticipantIdentity>
                       <ParticipantMode>{modeLabel}</ParticipantMode>
                       <ParticipantTime>
                         {convertToKoreanTime(route.itinerary.totalTime)}
                       </ParticipantTime>
+                      <ParticipantDirections>
+                        {directions ? (
+                          <>
+                            <DirectionsLink
+                              href={directions.webUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              aria-label={`${route.name}, ${route.region_name}에서 ${stationName}까지 ${modeLabel} 카카오맵 길찾기`}
+                              onClick={event =>
+                                openDirections(event, directions)
+                              }
+                              onAuxClick={cancelPendingDirections}
+                            >
+                              <Route size={18} aria-hidden="true" />
+                              카카오맵 길찾기
+                            </DirectionsLink>
+                            <DirectionsWebLink
+                              href={directions.webUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              aria-label={`${route.name}, ${route.region_name}에서 ${stationName}까지 ${modeLabel} 길찾기 웹으로 보기 (새 탭)`}
+                              onClick={cancelPendingDirections}
+                              onAuxClick={cancelPendingDirections}
+                            >
+                              웹으로 보기
+                              <ExternalLink size={14} aria-hidden="true" />
+                            </DirectionsWebLink>
+                          </>
+                        ) : (
+                          <DirectionsHint>
+                            출발지 정보가 없어 길찾기를 열 수 없어요.
+                          </DirectionsHint>
+                        )}
+                      </ParticipantDirections>
                     </ParticipantRow>
                   );
                 })}

@@ -19,7 +19,8 @@ export const Container = styled.div`
       var(--text-primary)
     );
   }
-  button:focus-visible {
+  button:focus-visible,
+  a:focus-visible {
     outline: 2px solid
       color-mix(in srgb, var(--primary) 65%, var(--text-primary));
     outline-offset: 2px;
@@ -450,35 +451,24 @@ export const ParticipantList = styled.ul`
 export const ParticipantRow = styled.li`
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas: 'identity mode time' 'directions directions directions';
   align-items: center;
-  gap: 12px;
+  gap: 8px 12px;
   min-height: 52px;
-  padding: 8px 0;
+  padding: 14px 0;
   border-bottom: 1px solid var(--border);
   &:last-child {
     border-bottom: 0;
   }
   @media (max-width: 399px) {
     grid-template-columns: minmax(0, 1fr) auto;
-    gap: 2px 12px;
-    > div {
-      grid-column: 1;
-      grid-row: 1;
-    }
-    > span:nth-child(2) {
-      grid-column: 1;
-      grid-row: 2;
-      padding-left: 46px;
-      text-align: left;
-    }
-    > span:last-child {
-      grid-column: 2;
-      grid-row: 1 / 3;
-    }
+    grid-template-areas: 'identity time' 'mode time' 'directions directions';
+    gap: 6px 12px;
   }
 `;
 
 export const ParticipantIdentity = styled.div`
+  grid-area: identity;
   display: flex;
   min-width: 0;
   align-items: center;
@@ -486,6 +476,75 @@ export const ParticipantIdentity = styled.div`
   > span:first-child {
     flex-shrink: 0;
   }
+`;
+
+export const ParticipantInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+`;
+
+export const ParticipantOrigin = styled.span`
+  color: var(--result-muted);
+  font-size: var(--font-caption);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+`;
+
+export const ParticipantDirections = styled.div`
+  grid-area: directions;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  min-width: 0;
+`;
+
+export const DirectionsLink = styled.a`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--result-accent);
+  background: var(--surface-raised);
+  font-size: var(--font-label);
+  font-weight: 600;
+  line-height: 1.5;
+  svg {
+    flex-shrink: 0;
+  }
+  &:hover {
+    background: var(--surface-muted);
+  }
+`;
+
+export const DirectionsWebLink = styled.a`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 8px;
+  border-radius: 6px;
+  color: var(--result-muted);
+  font-size: var(--font-caption);
+  line-height: 1.5;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  &:hover {
+    color: var(--text-primary);
+  }
+`;
+
+export const DirectionsHint = styled.p`
+  color: var(--result-muted);
+  font-size: var(--font-caption);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 `;
 
 export const ParticipantName = styled.span`
@@ -498,13 +557,19 @@ export const ParticipantName = styled.span`
 `;
 
 export const ParticipantMode = styled.span`
+  grid-area: mode;
   text-align: right;
   color: var(--result-muted);
   font-size: var(--font-label);
   white-space: nowrap;
+  @media (max-width: 399px) {
+    padding-left: 46px;
+    text-align: left;
+  }
 `;
 
 export const ParticipantTime = styled.span`
+  grid-area: time;
   color: var(--text-primary);
   font-size: var(--font-body);
   font-weight: 700;
