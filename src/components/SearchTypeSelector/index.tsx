@@ -61,8 +61,8 @@ const Title = styled.span`
 
 const Description = styled.span`
   display: block;
-  font-size: 15px;
-  line-height: 20px;
+  font-size: var(--font-body);
+  line-height: 1.6;
   font-weight: 500;
   color: var(--text-secondary);
   color: color-mix(in srgb, var(--text-muted) 85%, var(--text-primary));

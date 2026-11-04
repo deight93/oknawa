@@ -65,7 +65,7 @@ const TitleContainer = styled.span`
 const SubTitleContainer = styled.span`
   display: block;
   margin-top: 3px;
-  font-size: 14px;
+  font-size: var(--font-label);
   line-height: 1.5;
   overflow-wrap: anywhere;
   color: color-mix(in srgb, var(--text-muted) 75%, var(--text-primary));

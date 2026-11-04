@@ -220,7 +220,7 @@ const Hint = styled.p`
   margin-bottom: 10px;
   text-align: center;
   color: color-mix(in srgb, var(--text-muted) 75%, var(--text-primary));
-  font-size: 13px;
+  font-size: var(--font-body);
   line-height: 1.5;
 `;
 

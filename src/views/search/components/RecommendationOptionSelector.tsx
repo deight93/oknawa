@@ -69,7 +69,7 @@ const OptionList = styled.div`
 const OptionButton = styled.button<{ $isActive: boolean }>`
   min-width: fit-content;
   min-height: 44px;
-  padding: 0 12px;
+  padding: 8px;
   border: 1px solid
     ${({ $isActive }) =>
       $isActive ? 'var(--primary)' : 'var(--border-strong)'};
@@ -78,7 +78,7 @@ const OptionButton = styled.button<{ $isActive: boolean }>`
     $isActive ? 'var(--primary-soft)' : 'var(--surface-muted)'};
   color: ${({ $isActive }) =>
     $isActive ? 'var(--primary)' : 'var(--text-secondary)'};
-  font-size: 14px;
+  font-size: var(--font-body);
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;

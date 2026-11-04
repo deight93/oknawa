@@ -35,7 +35,7 @@ export const SharingButton = styled.button`
   min-height: 44px;
   border-radius: 8px;
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: var(--font-body);
   &:hover {
     color: var(--text-primary);
   }
@@ -70,7 +70,7 @@ export const ConfirmedLabel = styled.p`
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--font-label);
   font-weight: 600;
   color: var(--confirm-accent);
   span {
@@ -96,7 +96,7 @@ export const SummaryRow = styled.div`
 `;
 
 export const AverageArrivalTime = styled.p`
-  font-size: 15px;
+  font-size: var(--font-body);
   line-height: 1.6;
   color: var(--text-secondary);
   word-break: keep-all;
@@ -115,7 +115,7 @@ export const RetrySelectButton = styled.button`
   border: 1px solid var(--border-strong);
   border-radius: 10px;
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: var(--font-body);
   font-weight: 500;
   &:hover {
     background: var(--surface-muted);
