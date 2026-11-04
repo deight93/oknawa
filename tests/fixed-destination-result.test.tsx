@@ -14,6 +14,11 @@ import type { LocationResult } from '../src/types/location';
 import type { RoomStatusResponse } from '../src/services/search/types';
 import DestinationResult from '../src/views/result/DestinationResult';
 import MeetingDestinationField from '../src/views/search/components/MeetingDestinationField';
+import MeetingMap from '../src/components/MeetingMap';
+import {
+  onKakaoMapsScriptError,
+  onKakaoMapsScriptLoad,
+} from '../src/utils/kakaoMapsReady';
 
 const mapId = '11111111-1111-4111-8111-111111111111';
 const roomId = '22222222-2222-4222-8222-222222222222';
@@ -66,7 +71,13 @@ function result(shared = false): LocationResult {
             name: '민수',
             region_name: '사당동',
             travel_mode: 'car',
-            itinerary: { totalTime: 1200, total_polyline: [] },
+            itinerary: {
+              totalTime: 1200,
+              total_polyline: [
+                { lat: 37.501, lng: 127.101 },
+                { lat: destination.y, lng: destination.x },
+              ],
+            },
           },
         },
         { participantIndex: 0, status: 'unavailable' },
@@ -91,9 +102,11 @@ const originalLocalStorage = Object.getOwnPropertyDescriptor(
 let tree: ReactTestRenderer | undefined;
 let client: QueryClient | undefined;
 
-afterEach(() => {
+afterEach(async () => {
   act(() => tree?.unmount());
   tree = undefined;
+  onKakaoMapsScriptError();
+  await Promise.resolve();
   client?.clear();
   api.defaults.adapter = originalAdapter;
   for (const [key, descriptor] of [
@@ -114,6 +127,7 @@ async function mount(
     value?: LocationResult;
   } = {},
 ) {
+  onKakaoMapsScriptLoad();
   Object.defineProperty(globalThis, 'React', {
     configurable: true,
     value: React,
@@ -170,6 +184,27 @@ async function mount(
   });
   return { store, navigation, root: tree!.root, client };
 }
+
+test('destination map is visible immediately with routes aligned to original participants', async () => {
+  const value = result();
+  const { root } = await mount({ value });
+  const map = root.findByType(MeetingMap);
+  assert.equal(map.props.focusMode, 'overview');
+  assert.deepEqual(map.props.participants, origins);
+  const successful = value.request_info.destinationRoutes![0];
+  assert.equal(successful.status, 'ok');
+  assert.deepEqual(map.props.itinerary, [
+    null,
+    successful.status === 'ok' ? successful.route : null,
+    null,
+  ]);
+  assert.equal(
+    root.findAllByType('button').some(button =>
+      button.children.some(child => typeof child === 'string' && /지도/.test(child)),
+    ),
+    false,
+  );
+});
 
 test('partial and missing routes retain every origin, mapping duplicate names by participantIndex', async () => {
   const m = await mount();
