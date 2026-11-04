@@ -20,7 +20,8 @@ interface MeetingMapProps {
   endY: unknown;
   focusMode?: 'destination' | 'overview';
   participants?: Participant[];
-  itinerary?: ItineraryItem[];
+  // Each slot belongs to the participant at the same index, even without a route.
+  itinerary?: (ItineraryItem | null)[];
 }
 
 interface MapPoint {
@@ -30,6 +31,7 @@ interface MapPoint {
 
 interface ParticipantMarker extends Participant {
   point: MapPoint;
+  participantIndex: number;
 }
 
 const getStrokeColor = (index: number) => {
@@ -78,14 +80,17 @@ export default function MeetingMap({
 }: MeetingMapProps) {
   const [loaded, setLoaded] = useState(false);
   const [map, setMap] = useState<kakao.maps.Map | undefined>(undefined);
+  const [selectedParticipant, setSelectedParticipant] = useState<number | null>(
+    null,
+  );
 
   const center = useMemo(() => toMapPoint(endY, endX), [endX, endY]);
   const validParticipants = useMemo(
     () =>
       participants
-        .map(participant => {
+        .map((participant, participantIndex) => {
           const point = toMapPoint(participant.start_y, participant.start_x);
-          return point ? { ...participant, point } : null;
+          return point ? { ...participant, point, participantIndex } : null;
         })
         .filter((participant): participant is ParticipantMarker =>
           Boolean(participant),
@@ -94,9 +99,9 @@ export default function MeetingMap({
   );
   const polylines = useMemo(
     () =>
-      itinerary
-        .map(user => toValidPolyline(user.itinerary?.total_polyline ?? []))
-        .filter(polyline => polyline.length > 0),
+      itinerary.map(user =>
+        toValidPolyline(user?.itinerary?.total_polyline ?? []),
+      ),
     [itinerary],
   );
   const canRenderMap = loaded && Boolean(center);
@@ -111,24 +116,19 @@ export default function MeetingMap({
     });
 
     bounds.extend(new kakao.maps.LatLng(center.lat, center.lng));
+    polylines.forEach(polyline => {
+      polyline.forEach(point =>
+        bounds.extend(new kakao.maps.LatLng(point.lat, point.lng)),
+      );
+    });
 
     return bounds;
-  }, [center, map, validParticipants]);
+  }, [center, map, validParticipants, polylines]);
 
   const handleMarkerClick = (marker: kakao.maps.Marker, index: number) => {
     if (!map) return;
-    const polyline = polylines[index];
-    if (!polyline) return;
-
     map.panTo(marker.getPosition());
-
-    new kakao.maps.Polyline({
-      map,
-      path: polyline.map(path => new kakao.maps.LatLng(path.lat, path.lng)),
-      strokeWeight: 7,
-      strokeOpacity: 1,
-      strokeColor: getStrokeColor(index),
-    });
+    setSelectedParticipant(index);
   };
 
   useEffect(() => {
@@ -167,29 +167,33 @@ export default function MeetingMap({
 
   return (
     <Map center={center} level={6} isPanto onCreate={setMap}>
-      {validParticipants.map((user, index) => (
+      {validParticipants.map(user => (
         <MapMarker
-          key={`${user.name}-${index}`}
+          key={user.participantIndex}
           position={user.point}
           image={{
-            src: `/images/marker${index % 10}.svg`,
+            src: `/images/marker${user.participantIndex % 10}.svg`,
             size: { width: 30, height: 39 },
           }}
-          onClick={marker => handleMarkerClick(marker, index)}
+          onClick={marker => handleMarkerClick(marker, user.participantIndex)}
         />
       ))}
       <CustomOverlayMap position={center}>
         <CenterMarker>{stationName}</CenterMarker>
       </CustomOverlayMap>
-      {polylines.map((polyline, index) => (
-        <Polyline
-          key={index}
-          path={polyline}
-          strokeWeight={6}
-          strokeOpacity={1}
-          strokeColor={getStrokeColor(index)}
-        />
-      ))}
+      {polylines.map(
+        (polyline, index) =>
+          polyline.length > 0 && (
+            <Polyline
+              key={index}
+              path={polyline}
+              strokeWeight={selectedParticipant === index ? 7 : 6}
+              strokeOpacity={1}
+              strokeColor={getStrokeColor(index)}
+              zIndex={selectedParticipant === index ? 1 : 0}
+            />
+          ),
+      )}
     </Map>
   );
 }

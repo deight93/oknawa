@@ -109,6 +109,11 @@ Additional smoke checks:
 5. Repeat input, destination editing, result sharing and directions at 320px,
    landscape and desktop widths in both themes. Test actual installed-app and
    missing-app handoff separately from browser fixtures.
+6. Verify the fixed-destination map is visible immediately without a toggle.
+   Successful routes use the existing participant colors. With an unavailable or
+   empty first route, later routes keep their original colors and marker numbers;
+   missing routes do not create straight lines. Check marker selection and that
+   overview bounds include the whole route.
 
 Apply `20261104090000_fixed_meeting_destination.sql`, then deploy the
 `location-destination` Edge Function before using the new frontend entry.

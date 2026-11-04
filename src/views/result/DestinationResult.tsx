@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAtom, useSetAtom } from 'jotai';
 import { useQueryClient } from '@tanstack/react-query';
@@ -48,7 +48,6 @@ export default function DestinationResult({
   const setSearchList = useSetAtom(searchState);
   const setDestination = useSetAtom(meetingDestinationState);
   const [storedRoom, setStoredRoom] = useAtom(roomState);
-  const [showMap, setShowMap] = useState(false);
   const [busy, setBusy] = useState(false);
   const [fieldBusy, setFieldBusy] = useState(false);
   const [error, setError] = useState('');
@@ -56,10 +55,20 @@ export default function DestinationResult({
   const {
     meetingDestination: destination,
     destinationRoom,
-    destinationRoutes = [],
+    destinationRoutes,
     participant: participants,
     recommendationOptions,
   } = result.request_info;
+  const mapItinerary = useMemo(
+    () =>
+      participants.map((_, index) => {
+        const entry = destinationRoutes?.find(
+          route => route.participantIndex === index,
+        );
+        return entry?.status === 'ok' ? entry.route : null;
+      }),
+    [participants, destinationRoutes],
+  );
   const { data: roomStatus } = useInputStatusListQuery(
     destinationRoom?.roomId ?? '',
   );
@@ -232,34 +241,25 @@ export default function DestinationResult({
           )}
         </Notice>
       )}
-      <Action
-        type="button"
-        aria-expanded={showMap}
-        aria-controls="destination-map"
-        onClick={() => setShowMap(value => !value)}
-      >
-        {showMap ? '지도 접기' : '출발지와 모임 장소 지도 보기'}
-      </Action>
-      {showMap && (
-        <MapFrame id="destination-map" aria-label="출발지와 모임 장소 지도">
-          <MeetingMap
-            stationName={destination.name}
-            endX={destination.x}
-            endY={destination.y}
-            participants={participants}
-            focusMode="overview"
-          />
-        </MapFrame>
-      )}
+      <MapFrame id="destination-map" aria-label="출발지와 모임 장소 지도">
+        <MeetingMap
+          stationName={destination.name}
+          endX={destination.x}
+          endY={destination.y}
+          participants={participants}
+          itinerary={mapItinerary}
+          focusMode="overview"
+        />
+      </MapFrame>
       <SectionTitle>참가자별 예상 이동시간</SectionTitle>
-      {destinationRoutes.some(route => route.status === 'unavailable') && (
+      {destinationRoutes?.some(route => route.status === 'unavailable') && (
         <Description>
           조회 불가인 출발지도 카카오맵에서 길찾기를 확인할 수 있어요.
         </Description>
       )}
       <ParticipantList aria-label="참가자별 이동 시간">
         {participants.map((participant, index) => {
-          const entry = destinationRoutes.find(
+          const entry = destinationRoutes?.find(
             item => item.participantIndex === index,
           );
           const route = entry?.status === 'ok' ? entry.route : undefined;
