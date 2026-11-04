@@ -389,7 +389,7 @@ const Title = styled.h1`
 
 const Desc = styled.p`
   margin-top: 8px;
-  font-size: 14px;
+  font-size: var(--font-body);
   line-height: 1.5;
   word-break: keep-all;
   color: var(--text-secondary);
@@ -423,7 +423,7 @@ const QuitRoom = styled.button`
   min-height: 44px;
   cursor: pointer;
   padding: 8px 0;
-  font-size: 13px;
+  font-size: var(--font-body);
   color: var(--text-secondary);
 
   &:hover {

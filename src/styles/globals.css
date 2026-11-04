@@ -3,6 +3,9 @@
 @tailwind utilities;
 
 :root {
+  --font-caption: 0.875rem;
+  --font-label: 0.9375rem;
+  --font-body: 1rem;
   --primary: #18c964;
   --primary-hover: #14b057;
   --primary-soft: rgba(24, 201, 100, 0.12);

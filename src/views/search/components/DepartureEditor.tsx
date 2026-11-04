@@ -149,7 +149,7 @@ const Fields = styled.fieldset`
   gap: 12px;
   min-width: 0;
   label {
-    font-size: 14px;
+    font-size: var(--font-label);
     color: var(--text-secondary);
   }
   button:focus-visible,
@@ -195,6 +195,8 @@ const AddressButton = styled.button`
   }
   small {
     display: block;
+    font-size: var(--font-caption);
+    line-height: 1.5;
     color: var(--text-muted);
     margin-top: 4px;
   }
@@ -219,6 +221,6 @@ const SaveButton = styled(ActionButton)`
 const ErrorMessage = styled.p`
   margin-top: 8px;
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: var(--font-label);
   line-height: 1.5;
 `;

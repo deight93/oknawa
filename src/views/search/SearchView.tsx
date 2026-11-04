@@ -230,7 +230,7 @@ const Field = styled.div`
 
 const FieldLabel = styled.label`
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: var(--font-label);
   font-weight: 600;
 `;
 

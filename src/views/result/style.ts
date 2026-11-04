@@ -58,7 +58,7 @@ export const SharingButton = styled.button`
   align-items: center;
   min-height: 44px;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: var(--font-body);
   color: var(--text-secondary);
   &:hover {
     color: var(--text-primary);
@@ -95,6 +95,7 @@ export const ContentWrapper = styled.div<ExpandProps>`
 
 export const CandidateMeta = styled.div`
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -120,7 +121,8 @@ export const ArrivalTime = styled.span<ExpandProps>`
   color: ${({ $isExpand = true }) =>
     $isExpand ? 'var(--result-accent)' : 'var(--text-secondary)'};
   font-weight: ${({ $isExpand = true }) => ($isExpand ? '700' : '500')};
-  font-size: ${({ $isExpand = true }) => ($isExpand ? '18px' : ' 14px')};
+  font-size: ${({ $isExpand = true }) =>
+    $isExpand ? '18px' : 'var(--font-label)'};
 `;
 
 export const IndicatorWrapper = styled.div`
@@ -133,7 +135,7 @@ export const IndicatorWrapper = styled.div`
 
 export const Indicator = styled.div`
   color: var(--result-muted);
-  font-size: 13px;
+  font-size: var(--font-caption);
   font-variant-numeric: tabular-nums;
 `;
 
@@ -178,7 +180,7 @@ export const HostControlPanel = styled.div`
 
 export const HostControlTitle = styled.p`
   color: var(--result-muted);
-  font-size: 13px;
+  font-size: var(--font-label);
   font-weight: 500;
 `;
 
@@ -190,7 +192,7 @@ export const SortWrapper = styled.div`
   padding-top: 20px;
   border-top: 1px solid var(--border);
   > label {
-    font-size: 14px;
+    font-size: var(--font-body);
     font-weight: 600;
   }
   > p {
@@ -207,15 +209,15 @@ export const SortSelect = styled.select`
   border-radius: 10px;
   background: var(--surface-raised);
   color: var(--text-primary);
-  font-size: 16px;
+  font-size: var(--font-body);
   cursor: pointer;
 `;
 
 export const PreferenceDescription = styled.p`
   color: var(--result-muted);
-  font-size: 13px;
+  font-size: var(--font-body);
   font-weight: 500;
-  line-height: 1.55;
+  line-height: 1.6;
 `;
 
 export const ConditionBadgeList = styled.div`
@@ -229,13 +231,13 @@ export const ConditionBadge = styled.span`
   width: fit-content;
   align-items: center;
   justify-content: center;
-  min-height: 24px;
+  min-height: 28px;
   padding: 0 8px;
   border: 1px solid var(--primary);
   border-radius: 999px;
   background-color: var(--primary-soft);
   color: var(--result-accent);
-  font-size: 11px;
+  font-size: var(--font-caption);
   font-weight: 700;
   white-space: nowrap;
 `;
@@ -259,7 +261,7 @@ export const SummaryMetric = styled.div`
 
 export const SummaryMetricLabel = styled.span`
   color: var(--result-muted);
-  font-size: 12px;
+  font-size: var(--font-caption);
   font-weight: 600;
 `;
 
@@ -281,7 +283,7 @@ export const DetailToggleButton = styled.button`
   padding: 0 8px;
   border-radius: 8px;
   color: var(--result-muted);
-  font-size: 13px;
+  font-size: var(--font-label);
   font-weight: 500;
   white-space: nowrap;
   &:hover {
@@ -308,13 +310,13 @@ export const DetailSection = styled.div`
 
 export const DetailSectionTitle = styled.h3`
   color: var(--text-primary);
-  font-size: 15px;
+  font-size: var(--font-body);
   font-weight: 600;
 `;
 
 export const QualityMetrics = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(74px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 7rem), 1fr));
   gap: 8px;
 `;
 
@@ -328,17 +330,17 @@ export const QualityMetric = styled.div`
 
 export const QualityMetricLabel = styled.span`
   color: var(--result-muted);
-  font-size: 11px;
+  font-size: var(--font-caption);
   font-weight: 600;
 `;
 
 export const QualityMetricValue = styled.span`
-  overflow: hidden;
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: var(--font-body);
   font-weight: 800;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.5;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 `;
 
 export const CompareHeader = styled.div`
@@ -351,7 +353,7 @@ export const CompareHeader = styled.div`
 
 export const CompareTitle = styled.p`
   color: var(--text-primary);
-  font-size: 15px;
+  font-size: var(--font-body);
   font-weight: 700;
 `;
 
@@ -390,7 +392,7 @@ export const CompareSelectButton = styled.button`
 export const CompareStationName = styled.p`
   overflow: hidden;
   color: var(--text-primary);
-  font-size: 15px;
+  font-size: var(--font-body);
   font-weight: 700;
   line-height: 1.25;
   text-overflow: ellipsis;
@@ -399,7 +401,7 @@ export const CompareStationName = styled.p`
 
 export const CompareBadgeList = styled.div`
   display: flex;
-  min-height: 24px;
+  min-height: 28px;
   flex-wrap: wrap;
   gap: 4px;
 `;
@@ -420,17 +422,17 @@ export const CompareMetric = styled.div`
 
 export const CompareMetricLabel = styled.span`
   color: var(--result-muted);
-  font-size: 11px;
+  font-size: var(--font-caption);
   font-weight: 500;
 `;
 
 export const CompareMetricValue = styled.span`
-  overflow: hidden;
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: var(--font-body);
   font-weight: 700;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.5;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 `;
 
 export const ParticipantSectionHeader = styled.div`
@@ -447,7 +449,7 @@ export const ParticipantList = styled.ul`
 
 export const ParticipantRow = styled.li`
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 4.5rem 6rem;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 12px;
   min-height: 52px;
@@ -456,8 +458,23 @@ export const ParticipantRow = styled.li`
   &:last-child {
     border-bottom: 0;
   }
-  @media (max-width: 359px) {
-    gap: 8px;
+  @media (max-width: 399px) {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 2px 12px;
+    > div {
+      grid-column: 1;
+      grid-row: 1;
+    }
+    > span:nth-child(2) {
+      grid-column: 1;
+      grid-row: 2;
+      padding-left: 46px;
+      text-align: left;
+    }
+    > span:last-child {
+      grid-column: 2;
+      grid-row: 1 / 3;
+    }
   }
 `;
 
@@ -469,16 +486,13 @@ export const ParticipantIdentity = styled.div`
   > span:first-child {
     flex-shrink: 0;
   }
-  @media (max-width: 359px) {
-    gap: 8px;
-  }
 `;
 
 export const ParticipantName = styled.span`
   min-width: 0;
   overflow-wrap: anywhere;
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: var(--font-body);
   font-weight: 600;
   line-height: 1.5;
 `;
@@ -486,13 +500,13 @@ export const ParticipantName = styled.span`
 export const ParticipantMode = styled.span`
   text-align: right;
   color: var(--result-muted);
-  font-size: 13px;
+  font-size: var(--font-label);
   white-space: nowrap;
 `;
 
 export const ParticipantTime = styled.span`
   color: var(--text-primary);
-  font-size: 15px;
+  font-size: var(--font-body);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   text-align: right;
@@ -501,7 +515,7 @@ export const ParticipantTime = styled.span`
 
 export const ParticipantStats = styled.span`
   color: var(--result-muted);
-  font-size: 13px;
+  font-size: var(--font-label);
   line-height: 1.5;
   text-align: right;
   word-break: keep-all;
@@ -518,7 +532,7 @@ export const ComparisonToggle = styled.button`
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--surface-raised);
-  font-size: 15px;
+  font-size: var(--font-body);
   font-weight: 600;
   text-align: left;
   svg {
@@ -536,16 +550,17 @@ export const VoteWrapper = styled.div`
 
 export const VoteTitle = styled.div`
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
 `;
 export const Label = styled.p`
-  font-size: 13px;
+  font-size: var(--font-label);
   color: var(--result-muted);
 `;
 export const Count = styled.p`
-  font-size: 13px;
+  font-size: var(--font-label);
 `;
 
 export const ButtonWrapper = styled.div`

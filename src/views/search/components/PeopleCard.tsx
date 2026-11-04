@@ -147,7 +147,7 @@ const Place = styled.p`
   align-items: center;
   gap: 3px;
   margin-top: 4px;
-  font-size: 14px;
+  font-size: var(--font-label);
   color: color-mix(in srgb, var(--text-muted) 75%, var(--text-primary));
   svg {
     flex-shrink: 0;
@@ -181,7 +181,7 @@ const Actions = styled.div`
 
 const ModeText = styled.span`
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: var(--font-label);
 `;
 
 const RemoveButton = styled.button`

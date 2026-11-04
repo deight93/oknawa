@@ -280,13 +280,13 @@ const RecentSearch = styled.section`
 `;
 
 const RecentTitle = styled.h2`
-  font-size: 14px;
+  font-size: var(--font-label);
   color: color-mix(in srgb, var(--text-muted) 75%, var(--text-primary));
 `;
 
 const SearchStatus = styled.p`
   color: color-mix(in srgb, var(--text-muted) 75%, var(--text-primary));
-  font-size: 14px;
+  font-size: var(--font-label);
   line-height: 1.6;
   &:not(:empty) {
     padding: 36px 12px;
@@ -298,6 +298,6 @@ const SearchHint = styled.p`
   margin-top: auto;
   padding-top: 32px;
   color: color-mix(in srgb, var(--text-muted) 75%, var(--text-primary));
-  font-size: 13px;
+  font-size: var(--font-label);
   line-height: 1.5;
 `;

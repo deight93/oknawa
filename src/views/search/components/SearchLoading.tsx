@@ -123,7 +123,7 @@ const StepItem = styled.div<{ $isActive: boolean }>`
   gap: 8px;
   color: ${({ $isActive }) =>
     $isActive ? 'var(--text-primary)' : 'var(--text-subtle)'};
-  font-size: 13px;
+  font-size: var(--font-body);
   font-weight: ${({ $isActive }) => ($isActive ? 800 : 600)};
 `;
 

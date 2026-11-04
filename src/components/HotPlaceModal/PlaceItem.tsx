@@ -101,7 +101,7 @@ const PlaceName = styled.h3`
 
 const Category = styled.p`
   margin-top: 4px;
-  font-size: 12px;
+  font-size: var(--font-caption);
   line-height: 1.4;
   color: var(--place-muted, var(--text-muted));
 `;
@@ -114,7 +114,7 @@ const Details = styled.div`
 `;
 
 const CardBodyText = styled.p`
-  font-size: 13px;
+  font-size: var(--font-body);
   line-height: 1.45;
   word-break: keep-all;
   overflow-wrap: anywhere;

@@ -93,7 +93,7 @@ const Field = styled.fieldset`
   legend {
     margin-bottom: 10px;
     color: var(--text-secondary);
-    font-size: 14px;
+    font-size: var(--font-label);
     font-weight: 600;
   }
 `;
@@ -135,7 +135,7 @@ const ChoiceContent = styled.span`
   border-radius: 10px;
   background: var(--surface-raised);
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: var(--font-label);
   font-weight: 600;
   transition:
     border-color 150ms ease,

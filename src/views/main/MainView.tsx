@@ -99,8 +99,8 @@ const Description = styled.p`
   margin-top: 12px;
   color: var(--text-secondary);
   color: color-mix(in srgb, var(--text-muted) 85%, var(--text-primary));
-  font-size: 15px;
-  line-height: 22px;
+  font-size: var(--font-body);
+  line-height: 1.6;
   word-break: keep-all;
 `;
 
