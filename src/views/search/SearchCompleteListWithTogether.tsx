@@ -19,6 +19,7 @@ import { APP_BASE_URL } from '@/config/env';
 import SearchLoading from './components/SearchLoading';
 import MeetingPurposeSelector from './components/MeetingPurposeSelector';
 import RecommendationOptionSelector from './components/RecommendationOptionSelector';
+import MeetingDestinationField from './components/MeetingDestinationField';
 import { participantEditCapabilityState, roomState } from '@/jotai/global/room';
 import { Participant } from '@/types/location';
 import useCreateResultFlow from '@/hooks/search/useCreateResultFlow';
@@ -65,6 +66,11 @@ export default function SearchCompleteListWithTogetherView() {
     participantId: number;
   } | null>(null);
   const [meetingPurpose, setMeetingPurpose] = useState<MeetingPurpose>();
+  const [changingDestinationRoom, setChangingDestinationRoom] = useState<
+    string | null
+  >(null);
+  const changingDestination =
+    changingDestinationRoom === storageRoomData.roomId;
   const [recommendationOptions, setRecommendationOptions] =
     useState<RecommendationOptions>(DEFAULT_RECOMMENDATION_OPTIONS);
   const { requestResult, isLoading, loadingPhase } = useCreateResultFlow(
@@ -74,6 +80,7 @@ export default function SearchCompleteListWithTogetherView() {
   const { data: roomStatus, participant: participants } =
     useInputStatusListQuery(storageRoomData.roomId || '');
   const participantList = participants ?? [];
+  const destination = roomStatus?.meeting_destination;
   const participantCapabilities = useAtomValue(
     useMemo(
       () =>
@@ -109,6 +116,10 @@ export default function SearchCompleteListWithTogetherView() {
     roomStatus?.recommendation_status !== 'completed';
   const editingParticipantId =
     editing?.roomId === storageRoomData.roomId ? editing.participantId : null;
+
+  useEffect(() => {
+    setChangingDestinationRoom(null);
+  }, [storageRoomData.roomId]);
 
   useEffect(() => {
     if (!resultMapId) return;
@@ -158,7 +169,14 @@ export default function SearchCompleteListWithTogetherView() {
   };
 
   const handleSearchBtnClick = () => {
-    if (editingParticipantId !== null || shouldShowLoading) return;
+    if (
+      editingParticipantId !== null ||
+      shouldShowLoading ||
+      changingDestination ||
+      !roomStatus ||
+      participantList.length < (destination ? 1 : 2)
+    )
+      return;
     if (!isHost) {
       return toast.error('방장의 권한입니다.');
     }
@@ -180,12 +198,27 @@ export default function SearchCompleteListWithTogetherView() {
       transformedParticipants,
       meetingPurpose,
       {
+        destinationRequest: destination
+          ? () => {
+              if (!run?.meeting_destination)
+                throw new Error(
+                  '모임 장소가 변경됐어요. 목록을 새로고침하고 다시 시도해주세요.',
+                );
+              return {
+                roomContext: {
+                  roomId: storageRoomData.roomId,
+                  hostId: storageRoomData.hostId,
+                  runId: run.recommendation_run_id,
+                },
+              };
+            }
+          : undefined,
         beforeCreate: async () => {
           run = await SearchService.startRoomRecommendation(
             storageRoomData.roomId,
             storageRoomData.hostId,
-            meetingPurpose,
-            recommendationOptions,
+            destination ? undefined : meetingPurpose,
+            destination ? undefined : recommendationOptions,
           );
           return run.participant.map(participant =>
             toSearchState(participant, selectedTravelMode),
@@ -231,6 +264,36 @@ export default function SearchCompleteListWithTogetherView() {
             <Desc>링크를 공유하고 팀원들을 초대해보세요.</Desc>
           </TitleBox>
         </Section>
+        {destination && (
+          <MeetingDestinationField
+            key={storageRoomData.roomId}
+            destination={destination}
+            disabled={!canEdit || editingParticipantId !== null}
+            onBusyChange={busy =>
+              setChangingDestinationRoom(previous =>
+                busy
+                  ? storageRoomData.roomId
+                  : previous === storageRoomData.roomId
+                    ? null
+                    : previous,
+              )
+            }
+            onChange={
+              isHost
+                ? async next => {
+                    await SearchService.updateMeetingDestination(
+                      storageRoomData.roomId,
+                      storageRoomData.hostId,
+                      next,
+                    );
+                    await queryClient.invalidateQueries({
+                      queryKey: ['inputStatusList', storageRoomData.roomId],
+                    });
+                  }
+                : undefined
+            }
+          />
+        )}
         <div className="flex flex-col gap-3">
           {participantList.map((participant, index) => {
             return (
@@ -297,7 +360,7 @@ export default function SearchCompleteListWithTogetherView() {
             <Link width={20} height={20} />
           </Button>
         </ButtonWrapper>
-        {isHost && (
+        {isHost && !destination && (
           <>
             <MeetingPurposeSelector
               value={meetingPurpose}
@@ -311,9 +374,13 @@ export default function SearchCompleteListWithTogetherView() {
         )}
         {!isHost && (
           <WaitingText>
-            {isRoomFailed
-              ? '추천 생성에 실패했어요. 방장이 다시 추천을 시작하면 이동해요.'
-              : '방장이 목적을 정하고 추천을 시작하면 자동으로 이동해요.'}
+            {destination
+              ? isRoomFailed
+                ? '이동시간 조회에 실패했어요. 방장이 다시 시작할 수 있어요.'
+                : '방장이 이동시간을 확인하면 함께 결과로 이동해요.'
+              : isRoomFailed
+                ? '추천 생성에 실패했어요. 방장이 다시 추천을 시작하면 이동해요.'
+                : '방장이 목적을 정하고 추천을 시작하면 자동으로 이동해요.'}
           </WaitingText>
         )}
       </Wrapper>
@@ -328,17 +395,26 @@ export default function SearchCompleteListWithTogetherView() {
           onClick={handleSearchBtnClick}
           isDisabled={
             !isHost ||
-            participantList.length < 2 ||
+            participantList.length < (destination ? 1 : 2) ||
+            !roomStatus ||
+            changingDestination ||
             shouldShowLoading ||
             editingParticipantId !== null
           }
           className="w-full"
         >
-          {isHost ? '만나기 편한 장소 추천받기' : '방장 추천 대기 중'}
+          {destination
+            ? isHost
+              ? '이 장소까지 이동시간 확인하기'
+              : '방장 이동시간 확인 대기 중'
+            : isHost
+              ? '만나기 편한 장소 추천받기'
+              : '방장 추천 대기 중'}
         </SubmitButton>
       </Footer>
       {shouldShowLoading && (
         <SearchLoading
+          destinationMode={Boolean(destination)}
           phase={loadingPhase}
           recommendationOptions={roomRecommendationOptions}
         />

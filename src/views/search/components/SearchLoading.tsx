@@ -9,6 +9,7 @@ import { isCarRecommendation } from '@/utils/recommendationDisplay';
 type SearchLoadingPhase = 'generating' | 'fetching';
 
 interface SearchLoadingProps {
+  destinationMode?: boolean;
   phase?: SearchLoadingPhase;
   recommendationOptions?: RecommendationOptions;
 }
@@ -26,15 +27,23 @@ const CAR_GENERATING_STEPS = [
 ];
 
 const FETCHING_STEP = '결과 화면을 준비 중';
+const DESTINATION_STEPS = [
+  '모임 장소까지 경로를 확인 중',
+  '각자의 이동수단으로 시간을 계산 중',
+  '이동시간 결과를 정리 중',
+];
 
 export default function SearchLoading({
   phase = 'generating',
   recommendationOptions,
+  destinationMode = false,
 }: SearchLoadingProps) {
   const [activeStepIndex, setActiveStepIndex] = useState(0);
-  const generatingSteps = isCarRecommendation(recommendationOptions)
-    ? CAR_GENERATING_STEPS
-    : TRANSIT_GENERATING_STEPS;
+  const generatingSteps = destinationMode
+    ? DESTINATION_STEPS
+    : isCarRecommendation(recommendationOptions)
+      ? CAR_GENERATING_STEPS
+      : TRANSIT_GENERATING_STEPS;
   const steps =
     phase === 'fetching'
       ? [...generatingSteps, FETCHING_STEP]
@@ -57,7 +66,17 @@ export default function SearchLoading({
       <Wrapper>
         <Image src="/loading.gif" width={148} height={148} alt="loading" />
         <Text>
-          가장 만나기 편한 <br /> 장소를 찾고 있어요
+          {destinationMode ? (
+            <>
+              정해진 장소까지
+              <br />
+              이동시간을 확인하고 있어요
+            </>
+          ) : (
+            <>
+              가장 만나기 편한 <br /> 장소를 찾고 있어요
+            </>
+          )}
         </Text>
         <StepList>
           {steps.map((step, index) => (

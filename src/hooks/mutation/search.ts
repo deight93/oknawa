@@ -8,6 +8,7 @@ import { SearchState } from '@/jotai/global/store';
 
 import { MeetingPurpose } from '@/types/meetingPurpose';
 import { RecommendationOptions } from '@/types/recommendationOptions';
+import type { MeetingDestination } from '@/types/meetingDestination';
 
 interface PlaceSearchVariables {
   searchForm: SearchState[];
@@ -52,10 +53,11 @@ export const usePlaceSearchWithShareKeyMutation = () => {
   });
 };
 
-export const useMakeRoomMutation = () => {
+export const useMakeRoomMutation = (destination?: MeetingDestination) => {
   return useMutation({
     mutationKey: ['roomMake'],
-    mutationFn: (searchForm: SearchState) => SearchService.makeRoom(searchForm),
+    mutationFn: (searchForm: SearchState) =>
+      SearchService.makeRoom(searchForm, destination),
     onError: error => {
       logApiError('roomMake', error);
     },

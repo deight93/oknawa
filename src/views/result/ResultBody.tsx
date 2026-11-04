@@ -8,6 +8,7 @@ import MeetingMap from '@/components/MeetingMap';
 import { useRouter } from 'next/navigation';
 import { Button } from '@nextui-org/react';
 import useResultPageState from '@/hooks/result/useResultPageState';
+import DestinationResult from './DestinationResult';
 
 interface ResultBodyProps {
   queryMapId: string | null;
@@ -17,6 +18,8 @@ export default function ResultBody({ queryMapId }: ResultBodyProps) {
   const router = useRouter();
   const {
     activeMapId,
+    activeMapHostId,
+    result,
     voteRound,
     confirmedShareKey,
     currentIndex,
@@ -36,6 +39,16 @@ export default function ResultBody({ queryMapId }: ResultBodyProps) {
 
     router.replace(`/result/confirm?sharekey=${confirmedShareKey}`);
   }, [confirmedShareKey, router]);
+
+  if (result?.request_info.meetingDestination) {
+    return (
+      <DestinationResult
+        result={result}
+        activeMapId={activeMapId}
+        activeMapHostId={activeMapHostId}
+      />
+    );
+  }
 
   if (!currentStation) {
     return (

@@ -95,6 +95,7 @@ jobs:
           deno check --no-lock --config supabase/functions/location-meeting-terminal/deno.json supabase/functions/location-meeting-terminal/index.ts
           deno check --no-lock --config supabase/functions/location-point-place/deno.json supabase/functions/location-point-place/index.ts
           deno check --no-lock --config supabase/functions/location-points/deno.json supabase/functions/location-points/index.ts
+          deno check --no-lock --config supabase/functions/location-destination/deno.json supabase/functions/location-destination/index.ts
 
       - name: Test Edge Function libraries
         run: deno test --no-lock --allow-read=supabase/migrations --config supabase/functions/location-points/deno.json supabase/functions/tests/*.test.ts

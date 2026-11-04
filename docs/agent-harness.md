@@ -85,3 +85,35 @@ shared-result hooks with real React, Jotai, and Query providers. External HTTP
 responses are controlled by an Axios adapter. Deno tests additionally cover empty
 routes, provider failures, incomplete group routes, and transit request options.
 Local and CI Edge Function checks use Deno 2.9.6.
+
+## Fixed meeting destinations
+
+The home entry `정해진 장소로 모이기` uses dedicated `/meeting` routes for
+place selection and direct input. Together rooms retain the existing invitation
+URL and authoritative room status. Fixed results skip candidate voting and keep
+one indexed route outcome for every participant, including unavailable routes.
+
+Additional smoke checks:
+
+1. Select a place from the home entry and enter one direct departure. Reload the
+   list, add another departure with the same name and a different travel mode,
+   and verify both origins/directions remain distinct in the result.
+2. Create a fixed-destination room and follow its invitation in another browser.
+   Verify the same destination appears before registration and after reload.
+   Only the host sees destination editing; origin editing remains own-only.
+3. Start calculation as host. Both browsers reach the same result, with no voting
+   or confirmation actions. Unavailable estimates still offer Kakao directions.
+4. Change the destination from the host's result and recalculate. The old result
+   is marked outdated, and the new result uses the new destination. Exercise
+   retry after an API failure and reject late results from an older run.
+5. Repeat input, destination editing, result sharing and directions at 320px,
+   landscape and desktop widths in both themes. Test actual installed-app and
+   missing-app handoff separately from browser fixtures.
+
+Apply `20261104090000_fixed_meeting_destination.sql`, then deploy the
+`location-destination` Edge Function before using the new frontend entry.
+The existing production workflow applies migrations before deploying functions;
+Vercel and Supabase workflows run independently, so verify both deployments after
+merge. No new provider secrets are required. The existing five-minute room lease
+and participant edit capabilities remain in force. Route computations accept at
+most 50 participants and use at most four provider requests concurrently.

@@ -5,11 +5,13 @@ import { ReactNode } from 'react';
 interface SearchTypeSelectorProps {
   type: 'individual' | 'together';
   icon: ReactNode;
+  href?: string;
 }
 
 export default function SearchTypeSelector({
   type,
   icon,
+  href,
 }: SearchTypeSelectorProps) {
   const titleText = type === 'individual' ? '직접' : '함께';
   const description =
@@ -18,7 +20,7 @@ export default function SearchTypeSelector({
       : '각각 자신의\n출발지를 입력해요';
 
   return (
-    <Container href={`/search/${type}`}>
+    <Container href={href ?? `/search/${type}`}>
       <AvatarBox aria-hidden="true">{icon}</AvatarBox>
       <Title>{`${titleText}\n입력하기`}</Title>
       <Description>{description}</Description>

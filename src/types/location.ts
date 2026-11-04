@@ -1,5 +1,9 @@
 import { MeetingPurpose } from './meetingPurpose';
 import { RecommendationOptions, TravelMode } from './recommendationOptions';
+import type {
+  MeetingDestination,
+  DestinationRoute,
+} from './meetingDestination';
 
 export type ResultLocationType = 'station' | 'terminal' | 'local_area' | 'city';
 
@@ -40,6 +44,9 @@ export interface StationPlaceQuality {
 
 export interface RequestInfo {
   participant: Participant[];
+  meetingDestination?: MeetingDestination;
+  destinationRoutes?: DestinationRoute[];
+  destinationRoom?: { roomId: string; runId: string };
   meetingPurpose?: MeetingPurpose;
   recommendationOptions?: RecommendationOptions;
   resultType?: ResultLocationType;

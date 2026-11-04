@@ -2,6 +2,8 @@ import styled from 'styled-components';
 import { useAtom } from 'jotai';
 import { useEffect } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
+import { ChevronRight, MapPin } from 'lucide-react';
 
 import PageHeader from '@/components/PageHeader';
 
@@ -9,13 +11,16 @@ import SearchTypeSelector from '@/components/SearchTypeSelector';
 import { PeopleIcon } from '@/assets/icons/People';
 import { PlusIcon } from '@/assets/icons/Plus';
 import { searchState } from '@/jotai/global/store';
+import { meetingDestinationState } from '@/jotai/meeting/store';
 
 export default function MainView() {
   const [, setSearchList] = useAtom(searchState);
+  const [, setDestination] = useAtom(meetingDestinationState);
 
   useEffect(() => {
     setSearchList([]);
-  }, [setSearchList]);
+    setDestination(null);
+  }, [setSearchList, setDestination]);
 
   return (
     <Container>
@@ -36,16 +41,27 @@ export default function MainView() {
           만나기 편한 중간지점을 추천해드려요.
         </Description>
       </Introduction>
-      <SearchTypeSelectorBox aria-label="출발지 입력 방식">
-        <SearchTypeSelector
-          type="individual"
-          icon={<PlusIcon width="42" height="42" />}
-        />
-        <SearchTypeSelector
-          type="together"
-          icon={<PeopleIcon width="42" height="42" />}
-        />
-      </SearchTypeSelectorBox>
+      <EntrySection>
+        <SectionLabel>중간지점 찾기</SectionLabel>
+        <SearchTypeSelectorBox aria-label="출발지 입력 방식">
+          <SearchTypeSelector
+            type="individual"
+            icon={<PlusIcon width="42" height="42" />}
+          />
+          <SearchTypeSelector
+            type="together"
+            icon={<PeopleIcon width="42" height="42" />}
+          />
+        </SearchTypeSelectorBox>
+        <DestinationEntry href="/meeting">
+          <MapPin size={24} aria-hidden="true" />
+          <span>
+            <strong>정해진 장소로 모이기</strong>
+            <small>약속 장소까지 이동시간을 확인해요</small>
+          </span>
+          <ChevronRight size={18} aria-hidden="true" />
+        </DestinationEntry>
+      </EntrySection>
     </Container>
   );
 }
@@ -113,5 +129,57 @@ const SearchTypeSelectorBox = styled.nav`
 
   @media (max-width: 359px) {
     gap: 16px;
+  }
+`;
+
+const EntrySection = styled.section`
+  width: 100%;
+  max-width: 324px;
+`;
+const SectionLabel = styled.h2`
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 12px;
+`;
+const DestinationEntry = styled(Link)`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 24px;
+  padding: 18px 0 4px;
+  border-top: 1px solid var(--border-strong);
+  min-height: 82px;
+  color: var(--text-primary);
+  > svg {
+    flex-shrink: 0;
+  }
+  > svg:first-child {
+    color: var(--primary);
+  }
+  > span {
+    flex: 1;
+    min-width: 0;
+  }
+  strong {
+    display: block;
+    font-size: 18px;
+    line-height: 1.5;
+    font-weight: 600;
+    word-break: keep-all;
+  }
+  small {
+    display: block;
+    margin-top: 4px;
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.5;
+    word-break: keep-all;
+  }
+  &:hover {
+    background: var(--surface-muted);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 4px;
   }
 `;

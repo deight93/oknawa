@@ -1,4 +1,5 @@
-import type { StationInfo } from '@/types/location';
+import type { Participant, StationInfo } from '@/types/location';
+import type { MeetingDestination } from '@/types/meetingDestination';
 import { isTravelMode } from '@/types/recommendationOptions';
 import type {
   RecommendationOptions,
@@ -23,6 +24,29 @@ const validCoordinates = (x: number, y: number) =>
   Math.abs(x) <= 180 &&
   Math.abs(y) <= 90;
 
+export function buildKakaoDirections(
+  origin: Participant,
+  destination: MeetingDestination,
+  travelMode: TravelMode,
+): KakaoDirections | null {
+  if (
+    !validCoordinates(origin.start_x, origin.start_y) ||
+    !validCoordinates(destination.x, destination.y)
+  )
+    return null;
+
+  const mode = MODES[travelMode];
+  const start = `${origin.start_y},${origin.start_x}`;
+  const end = `${destination.y},${destination.x}`;
+  const originName =
+    origin.full_address?.trim() || origin.region_name || '출발지';
+  return {
+    travelMode,
+    webUrl: `https://map.kakao.com/link/by/${mode.web}/${encodeURIComponent(originName)},${start}/${encodeURIComponent(destination.name)},${end}`,
+    appUrl: `kakaomap://route?sp=${start}&ep=${end}&by=${mode.app}`,
+  };
+}
+
 export function getParticipantDirections(
   station: StationInfo,
   index: number,
@@ -42,25 +66,23 @@ export function getParticipantDirections(
       (item, i) =>
         item.name === participants[i]?.name &&
         item.region_name === participants[i]?.region_name,
-    ) ||
-    !validCoordinates(origin.start_x, origin.start_y) ||
-    !validCoordinates(station.end_x, station.end_y)
+    )
   )
     return null;
 
   const travelMode =
     [route.travel_mode, origin.travel_mode, groupMode].find(isTravelMode) ??
     'transit';
-  const mode = MODES[travelMode];
-  const start = `${origin.start_y},${origin.start_x}`;
-  const end = `${station.end_y},${station.end_x}`;
-  const originName =
-    origin.full_address?.trim() || origin.region_name || '출발지';
-  return {
+  return buildKakaoDirections(
+    origin,
+    {
+      name: station.station_name,
+      address: station.address_name,
+      x: station.end_x,
+      y: station.end_y,
+    },
     travelMode,
-    webUrl: `https://map.kakao.com/link/by/${mode.web}/${encodeURIComponent(originName)},${start}/${encodeURIComponent(station.station_name)},${end}`,
-    appUrl: `kakaomap://route?sp=${start}&ep=${end}&by=${mode.app}`,
-  };
+  );
 }
 
 export function getKakaoAppLaunchUrl(

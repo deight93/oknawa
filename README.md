@@ -106,6 +106,7 @@ pnpm lint
 pnpm build
 pnpm dlx deno@2.9.6 check --no-lock --config supabase/functions/location-points/deno.json \
   supabase/functions/location-points/index.ts \
+  supabase/functions/location-destination/index.ts \
   supabase/functions/location-meeting/index.ts \
   supabase/functions/location-meeting-terminal/index.ts \
   supabase/functions/location-point-place/index.ts
@@ -166,3 +167,17 @@ production credentials and live provider coverage are not validated by those tes
 The existing Google route display on a Kakao map and stored-result retention need a
 separate provider-policy review. This change preserves that map as requested and
 does not resolve those existing issues.
+
+## Fixed meeting destinations
+
+`정해진 장소로 모이기` on the home page opens place search, followed by direct
+or together departure entry. It calculates each participant's selected travel
+mode to that destination, with no candidate ranking, voting or confirmation.
+Partial failures remain `조회 불가`; valid origins still provide Kakao Map links.
+Direct input supports one or more origins. Together rooms store the destination
+on the server, allow only the host to change it, and validate each published
+result against its active run and participant snapshot. Computations support up
+to 50 participants. Existing midpoint flows and invitation URLs remain supported.
+
+See [the fixed-destination rollout and smoke checks](docs/agent-harness.md#fixed-meeting-destinations)
+for migration, Edge Function and frontend deployment ordering.

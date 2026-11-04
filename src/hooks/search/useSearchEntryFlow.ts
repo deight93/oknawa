@@ -16,6 +16,7 @@ import {
 import useModal from '@/hooks/common/useModal';
 import { getApiErrorMessage } from '@/api/errors';
 import { assertBrowserStorageWritable } from '@/utils/browserStorage';
+import type { MeetingDestination } from '@/types/meetingDestination';
 
 type SearchViewType = 'individual' | 'together';
 
@@ -47,6 +48,8 @@ export default function useSearchEntryFlow(
   type: SearchViewType,
   shareRoomId: string | null,
   resetForm: () => void,
+  destination?: MeetingDestination,
+  createNewRoom = false,
 ) {
   const router = useRouter();
   const [searchList, setSearchList] = useAtom(searchState);
@@ -67,7 +70,7 @@ export default function useSearchEntryFlow(
     store.set(participantEditCapabilityState(roomId, id), token);
   };
 
-  const { mutateAsync: makeRoom } = useMakeRoomMutation();
+  const { mutateAsync: makeRoom } = useMakeRoomMutation(destination);
   const { mutateAsync: submitDeparturePoint } =
     useSubmitDeparturePointMutation();
   const { setModalContents } = useModal();
@@ -85,7 +88,7 @@ export default function useSearchEntryFlow(
       // A response belongs only to the form/invitation that submitted it.
       formVersion.current = currentFormVersion + 1;
     };
-  }, [type, shareRoomId]);
+  }, [type, shareRoomId, createNewRoom]);
 
   const isIndividualView = type === 'individual';
   const searchCount = searchList.length;
@@ -101,10 +104,10 @@ export default function useSearchEntryFlow(
       toSearchStateSnapshot(searchForm),
     ]);
 
-    if (searchCount >= 1) {
+    if (destination || searchCount >= 1) {
       inFlight.current = true;
       setIsSubmitting(true);
-      router.push('/search/list');
+      router.push(destination ? '/meeting/list' : '/search/list');
       return;
     }
 
@@ -119,7 +122,8 @@ export default function useSearchEntryFlow(
     try {
       assertBrowserStorageWritable('local');
       const targetRoomId =
-        shareRoomId || (searchCount > 0 ? storageRoomData.roomId : '');
+        shareRoomId ||
+        (!createNewRoom && searchCount > 0 ? storageRoomData.roomId : '');
       if (targetRoomId) {
         const data = await submitDeparturePoint({
           requestBody: toDeparturePointRequestBody(targetRoomId, searchForm),

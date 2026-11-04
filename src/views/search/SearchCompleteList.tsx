@@ -16,6 +16,8 @@ import MeetingPurposeSelector from './components/MeetingPurposeSelector';
 import RecommendationOptionSelector from './components/RecommendationOptionSelector';
 
 import { useAtom } from 'jotai';
+import { meetingDestinationState } from '@/jotai/meeting/store';
+import MeetingDestinationField from './components/MeetingDestinationField';
 import { searchState } from '@/jotai/global/store';
 
 import { Button as FloatingButton } from '@nextui-org/react';
@@ -27,10 +29,17 @@ import {
   RecommendationOptions,
 } from '@/types/recommendationOptions';
 
-export default function SearchCompleteList() {
+export default function SearchCompleteList({
+  destinationMode = false,
+}: {
+  destinationMode?: boolean;
+}) {
   const router = useRouter();
 
   const [searchList, setSearchList] = useAtom(searchState);
+  const [destination, setDestination] = useAtom(meetingDestinationState);
+  const [changingDestination, setChangingDestination] = useState(false);
+  const minimumParticipants = destinationMode ? 1 : 2;
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [meetingPurpose, setMeetingPurpose] = useState<MeetingPurpose>();
   const [recommendationOptions, setRecommendationOptions] =
@@ -38,8 +47,23 @@ export default function SearchCompleteList() {
   const { requestResult, isLoading, loadingPhase } = useCreateResultFlow();
 
   const handleSearchBtnClick = () => {
-    if (editingIndex !== null || isLoading) return;
-    requestResult(searchList, meetingPurpose, undefined, recommendationOptions);
+    if (
+      editingIndex !== null ||
+      isLoading ||
+      changingDestination ||
+      searchList.length < minimumParticipants ||
+      (destinationMode && !destination)
+    )
+      return;
+    requestResult(
+      searchList,
+      destinationMode ? undefined : meetingPurpose,
+      undefined,
+      recommendationOptions,
+      destinationMode && destination
+        ? { meetingDestination: destination }
+        : undefined,
+    );
   };
 
   const handleDeleteIconClick = (index: number) => {
@@ -64,6 +88,26 @@ export default function SearchCompleteList() {
               ? '함께 만날 친구들의\n출발지를 추가해주세요.'
               : '입력이 완료된\n출발지 목록입니다.'}
           </Title>
+          {destinationMode && destination && (
+            <MeetingDestinationField
+              destination={destination}
+              onChange={value => setDestination(value)}
+              disabled={isLoading || editingIndex !== null}
+              onBusyChange={setChangingDestination}
+            />
+          )}
+          {destinationMode && !destination && (
+            <Hint>
+              모임 장소를 먼저 선택해주세요.{' '}
+              <button
+                type="button"
+                className="min-h-11 underline"
+                onClick={() => router.push('/meeting')}
+              >
+                장소 선택하기
+              </button>
+            </Hint>
+          )}
           {searchList.map((search, index) => {
             return (
               <Fragment key={index}>
@@ -113,36 +157,55 @@ export default function SearchCompleteList() {
         <AddButton
           type="button"
           disabled={editingIndex !== null || isLoading}
-          onClick={() => router.push('/search/individual')}
+          onClick={() =>
+            router.push(
+              destinationMode ? '/meeting/individual' : '/search/individual',
+            )
+          }
         >
           출발지 추가하기 <CirclePlus size={18} aria-hidden="true" />
         </AddButton>
-        <MeetingPurposeSelector
-          value={meetingPurpose}
-          onChange={setMeetingPurpose}
-        />
-        <RecommendationOptionSelector
-          value={recommendationOptions}
-          onChange={setRecommendationOptions}
-        />
+        {!destinationMode && (
+          <>
+            <MeetingPurposeSelector
+              value={meetingPurpose}
+              onChange={setMeetingPurpose}
+            />
+            <RecommendationOptionSelector
+              value={recommendationOptions}
+              onChange={setRecommendationOptions}
+            />
+          </>
+        )}
       </Wrapper>
       <Footer>
-        {searchList.length < 2 && (
-          <Hint>추천을 받으려면 출발지를 두 곳 이상 추가해주세요.</Hint>
+        {searchList.length < minimumParticipants && (
+          <Hint>
+            {destinationMode
+              ? '이동시간을 확인할 출발지를 추가해주세요.'
+              : '추천을 받으려면 출발지를 두 곳 이상 추가해주세요.'}
+          </Hint>
         )}
         <SubmitButton
           size="lg"
           color="success"
           onClick={handleSearchBtnClick}
           isDisabled={
-            searchList.length < 2 || isLoading || editingIndex !== null
+            searchList.length < minimumParticipants ||
+            isLoading ||
+            editingIndex !== null ||
+            changingDestination ||
+            (destinationMode && !destination)
           }
         >
-          이대로 추천 받기
+          {destinationMode
+            ? '이 장소까지 이동시간 확인하기'
+            : '이대로 추천 받기'}
         </SubmitButton>
       </Footer>
       {isLoading && (
         <SearchLoading
+          destinationMode={destinationMode}
           phase={loadingPhase}
           recommendationOptions={recommendationOptions}
         />
