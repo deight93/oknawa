@@ -47,6 +47,35 @@ const assertNotIncludes = (path, pattern, message) => {
 
 const staticContracts = [
   {
+    name: 'walking route segments preserve geometry and participant styling',
+    run: () => {
+      for (const path of [
+        'src/types/location.ts',
+        'supabase/functions/lib/location-types.ts',
+      ])
+        assertIncludes(
+          path,
+          'segments?: RouteSegment[]',
+          'segment geometry must be optional for saved legacy routes',
+        );
+      assertIncludes(
+        'supabase/functions/lib/route-providers.ts',
+        'routes.legs.steps.polyline.encodedPolyline',
+        'transit requests must include the actual geometry of each step',
+      );
+      assertIncludes(
+        'tests/meeting-map.test.tsx',
+        'walking segments are dashed without painting a solid route underneath',
+        'map regression tests must cover distinct walking and transit styles',
+      );
+      assertIncludes(
+        'supabase/functions/tests/mapapi.test.ts',
+        'Google transit requires steps in every leg before publishing segments',
+        'provider tests must cover incomplete segment data',
+      );
+    },
+  },
+  {
     name: 'fixed destinations have isolated routes and executable permission coverage',
     run: () => {
       for (const path of [

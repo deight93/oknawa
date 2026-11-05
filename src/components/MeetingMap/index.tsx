@@ -58,7 +58,12 @@ const toMapPoint = (lat: unknown, lng: unknown): MapPoint | null => {
   const parsedLat = toFiniteNumber(lat);
   const parsedLng = toFiniteNumber(lng);
 
-  if (parsedLat === null || parsedLng === null) {
+  if (
+    parsedLat === null ||
+    parsedLng === null ||
+    Math.abs(parsedLat) > 90 ||
+    Math.abs(parsedLng) > 180
+  ) {
     return null;
   }
 
@@ -97,12 +102,34 @@ export default function MeetingMap({
         ),
     [participants],
   );
-  const polylines = useMemo(
+  const routeLines = useMemo(
     () =>
-      itinerary.map(user =>
-        toValidPolyline(user?.itinerary?.total_polyline ?? []),
-      ),
-    [itinerary],
+      itinerary.map((user, participantIndex) => {
+        const segments = user?.itinerary?.segments;
+        if (segments?.length) {
+          const lines = segments.map(segment => ({
+            mode: segment.mode,
+            path: toValidPolyline(segment.polyline),
+          }));
+          if (
+            lines.every(
+              (line, index) =>
+                ['walk', 'transit', 'car'].includes(line.mode) &&
+                line.path.length >= 2 &&
+                line.path.length === segments[index].polyline.length,
+            )
+          )
+            return lines;
+        }
+
+        const path = toValidPolyline(user?.itinerary?.total_polyline ?? []);
+        const mode =
+          user?.travel_mode ??
+          participants[participantIndex]?.travel_mode ??
+          'transit';
+        return path.length >= 2 ? [{ mode, path }] : [];
+      }),
+    [itinerary, participants],
   );
   const canRenderMap = loaded && Boolean(center);
 
@@ -116,14 +143,16 @@ export default function MeetingMap({
     });
 
     bounds.extend(new kakao.maps.LatLng(center.lat, center.lng));
-    polylines.forEach(polyline => {
-      polyline.forEach(point =>
-        bounds.extend(new kakao.maps.LatLng(point.lat, point.lng)),
-      );
-    });
+    routeLines.forEach(lines =>
+      lines.forEach(line =>
+        line.path.forEach(point =>
+          bounds.extend(new kakao.maps.LatLng(point.lat, point.lng)),
+        ),
+      ),
+    );
 
     return bounds;
-  }, [center, map, validParticipants, polylines]);
+  }, [center, map, validParticipants, routeLines]);
 
   const handleMarkerClick = (marker: kakao.maps.Marker, index: number) => {
     if (!map) return;
@@ -181,18 +210,18 @@ export default function MeetingMap({
       <CustomOverlayMap position={center}>
         <CenterMarker>{stationName}</CenterMarker>
       </CustomOverlayMap>
-      {polylines.map(
-        (polyline, index) =>
-          polyline.length > 0 && (
-            <Polyline
-              key={index}
-              path={polyline}
-              strokeWeight={selectedParticipant === index ? 7 : 6}
-              strokeOpacity={1}
-              strokeColor={getStrokeColor(index)}
-              zIndex={selectedParticipant === index ? 1 : 0}
-            />
-          ),
+      {routeLines.flatMap((lines, participantIndex) =>
+        lines.map((line, segmentIndex) => (
+          <Polyline
+            key={`${participantIndex}-${segmentIndex}`}
+            path={line.path}
+            strokeStyle={line.mode === 'walk' ? 'shortdash' : 'solid'}
+            strokeWeight={selectedParticipant === participantIndex ? 7 : 6}
+            strokeOpacity={1}
+            strokeColor={getStrokeColor(participantIndex)}
+            zIndex={selectedParticipant === participantIndex ? 1 : 0}
+          />
+        )),
       )}
     </Map>
   );

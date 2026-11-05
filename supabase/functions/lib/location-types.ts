@@ -62,6 +62,11 @@ export interface PolylinePoint {
   lng: number;
 }
 
+export interface RouteSegment {
+  mode: TravelMode;
+  polyline: PolylinePoint[];
+}
+
 export interface RouteItinerary {
   name: string;
   region_name: string;
@@ -72,6 +77,7 @@ export interface RouteItinerary {
     walkingDistance?: number;
     walkingTime?: number;
     total_polyline: PolylinePoint[];
+    segments?: RouteSegment[];
   };
 }
 
