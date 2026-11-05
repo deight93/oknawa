@@ -5,7 +5,7 @@ import { act, create, ReactTestRenderer } from 'react-test-renderer';
 import useKakaoPlaceService from '../src/hooks/common/useKakaoPlaceService';
 import Address from '../src/components/Address';
 import { Provider, createStore } from 'jotai';
-import BaseHead from '../src/app/head';
+import KakaoScripts from '../src/components/KakaoScripts';
 import MeetingMap from '../src/components/MeetingMap';
 
 type SearchCallback = Parameters<
@@ -26,7 +26,7 @@ const originalStorage = Object.getOwnPropertyDescriptor(
   'localStorage',
 );
 const originalReact = Object.getOwnPropertyDescriptor(globalThis, 'React');
-const mapsScript = () => BaseHead().props.children[0];
+const mapsScript = () => KakaoScripts().props.children[0];
 
 function Probe({ query }: { query: string }) {
   current = useKakaoPlaceService(query);

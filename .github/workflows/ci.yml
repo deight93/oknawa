@@ -76,6 +76,9 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Verify rendered SEO metadata
+        run: node scripts/check-seo.mjs
+
   supabase-functions:
     name: Supabase functions check
     runs-on: ubuntu-latest
