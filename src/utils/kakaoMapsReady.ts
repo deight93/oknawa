@@ -12,7 +12,7 @@ export const onKakaoMapsScriptError = () => {
   listeners.forEach(listener => listener());
 };
 
-// BaseHead owns the only SDK script, including the services library. Consumers
+// KakaoScripts owns the only SDK script, including the services library. Consumers
 // may mount before that script or its internal libraries have finished loading.
 export const waitForKakaoMaps = (): Promise<void> => {
   if (pending) return pending;

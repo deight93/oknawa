@@ -86,6 +86,11 @@ responses are controlled by an Axios adapter. Deno tests additionally cover empt
 routes, provider failures, incomplete group routes, and transit request options.
 Local and CI Edge Function checks use Deno 2.9.6.
 
+After the production build, `node scripts/check-seo.mjs` verifies the rendered
+home metadata/content, noindex on input and shared-result pages, and the public
+robots.txt/sitemap.xml. See [search registration and measurement](seo.md) for
+the separate post-deployment account steps.
+
 ## Fixed meeting destinations
 
 The home entry `정해진 장소로 모이기` uses dedicated `/meeting` routes for

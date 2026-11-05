@@ -439,6 +439,7 @@ const commands = isFull
       ['pnpm', ['test:app']],
       ['pnpm', ['lint']],
       ['pnpm', ['build']],
+      ['node', ['scripts/check-seo.mjs']],
       [
         'pnpm',
         [

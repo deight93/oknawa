@@ -1,3 +1,5 @@
+'use client';
+
 import styled from 'styled-components';
 import { useAtom } from 'jotai';
 import { useEffect } from 'react';
@@ -36,9 +38,9 @@ export default function MainView() {
         />
         <Title>{'우리,\n어디서 만날까요?'}</Title>
         <Description>
-          출발지를 알려주면
+          각자의 출발지로 중간지점을 찾고,
           <br />
-          만나기 편한 중간지점을 추천해드려요.
+          만나기 편한 약속장소를 정해보세요.
         </Description>
       </Introduction>
       <EntrySection>
@@ -62,6 +64,56 @@ export default function MainView() {
           <ChevronRight size={18} aria-hidden="true" />
         </DestinationEntry>
       </EntrySection>
+      <Guide aria-labelledby="meeting-guide-title">
+        <h2 id="meeting-guide-title">약속장소 정하기, 이렇게 해보세요</h2>
+        <p>
+          사는 곳이 다른 친구들과 만날 때, 오케이나와에서 각자의 이동시간을
+          비교해보세요. 회원가입 없이 중간지점을 찾을 수 있어요.
+        </p>
+        <ol>
+          <li>
+            <strong>출발지를 입력해요</strong>
+            <p>한 사람이 직접 입력하거나, 모임 링크를 공유해 각자 입력해요.</p>
+          </li>
+          <li>
+            <strong>이동시간을 비교해요</strong>
+            <p>
+              참가자마다 대중교통·자동차·도보를 선택하고, 추천 장소까지 걸리는
+              시간을 확인해요.
+            </p>
+          </li>
+          <li>
+            <strong>만날 장소를 함께 골라요</strong>
+            <p>
+              추천 후보에 투표해 약속장소를 확정하고, 주변 카페나 식당을
+              찾아봐요.
+            </p>
+          </li>
+        </ol>
+        <h2>중간지점 찾기, 궁금한 점</h2>
+        <details>
+          <summary>지도에서 딱 가운데인 곳을 추천하나요?</summary>
+          <p>
+            위치 기준과 이동시간 기준 중에서 선택할 수 있어요. 이동시간 기준은
+            각자의 교통수단으로 걸리는 시간을 비교해 만날 후보 장소를 추천해요.
+          </p>
+        </details>
+        <details>
+          <summary>이미 약속장소를 정했다면요?</summary>
+          <p>
+            ‘정해진 장소로 모이기’에서 목적지를 먼저 선택하세요. 각 출발지에서
+            그 장소까지의 예상 이동시간과 경로를 확인할 수 있어요.
+          </p>
+        </details>
+        <details>
+          <summary>이동시간은 실제와 같나요?</summary>
+          <p>
+            경로 제공사의 예상 시간이며, 출발 시각과 교통 상황에 따라 달라질 수
+            있어요. 출발 전 카카오맵 길찾기로 다시 확인해주세요.
+          </p>
+        </details>
+      </Guide>
+      <Footer>오케이나와 · OKNAWA</Footer>
     </Container>
   );
 }
@@ -182,4 +234,62 @@ const DestinationEntry = styled(Link)`
     outline: 2px solid var(--primary);
     outline-offset: 4px;
   }
+`;
+const Guide = styled.section`
+  width: 100%;
+  max-width: 324px;
+  margin-top: 20px;
+  padding-top: 28px;
+  border-top: 1px solid var(--border-strong);
+  font-size: var(--font-body);
+  line-height: 1.7;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+
+  h2 {
+    margin-bottom: 12px;
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.5;
+    text-wrap: balance;
+  }
+  p {
+    color: var(--text-secondary);
+  }
+  ol {
+    margin: 24px 0 36px;
+    padding-left: 22px;
+  }
+  li + li {
+    margin-top: 20px;
+  }
+  li p {
+    margin-top: 4px;
+  }
+  strong {
+    font-weight: 600;
+  }
+  details {
+    border-bottom: 1px solid var(--border);
+  }
+  summary {
+    padding: 16px 0;
+    cursor: pointer;
+    font-weight: 600;
+    &:hover {
+      color: var(--primary);
+    }
+    &:focus-visible {
+      outline: 2px solid var(--primary);
+      outline-offset: 3px;
+    }
+  }
+  details p {
+    padding-bottom: 20px;
+  }
+`;
+
+const Footer = styled.footer`
+  color: var(--text-secondary);
+  font-size: var(--font-caption);
 `;
