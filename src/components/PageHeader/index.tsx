@@ -1,6 +1,7 @@
 'use client';
 
 import { ArrowLeft, Home } from 'lucide-react';
+import Image from 'next/image';
 import { ReactNode } from 'react';
 import styled from 'styled-components';
 import ThemeToggle from '@/components/ThemeToggle';
@@ -28,7 +29,14 @@ export default function PageHeader({
           <Icon size={20} aria-hidden="true" />
         </BackButton>
       ) : (
-        <Brand>OKNAWA</Brand>
+        <Brand
+          src="/images/brand-logo.png"
+          alt="OK, 나와!"
+          width={444}
+          height={132}
+          sizes="108px"
+          priority
+        />
       )}
       <Actions>
         {children}
@@ -61,11 +69,11 @@ const BackButton = styled.button`
   }
 `;
 
-const Brand = styled.span`
-  color: var(--text-secondary);
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+const Brand = styled(Image)`
+  display: block;
+  flex-shrink: 0;
+  width: 108px;
+  height: auto;
 `;
 
 const Actions = styled.div`
