@@ -227,3 +227,132 @@ test('overview bounds include route detours as well as all departures and the de
     );
   }
 });
+
+const segments = [
+  { mode: 'walk' as const, polyline: path.slice(0, 2) },
+  {
+    mode: 'transit' as const,
+    polyline: [path[1], { lat: 37.65, lng: 127.25 }],
+  },
+  {
+    mode: 'walk' as const,
+    polyline: [{ lat: 37.65, lng: 127.25 }, path[2]],
+  },
+];
+const segmentedRoute = () => ({
+  ...route(),
+  travel_mode: 'transit' as const,
+  itinerary: {
+    ...route().itinerary,
+    segments: segments.map(segment => ({
+      ...segment,
+      polyline: [...segment.polyline],
+    })),
+  },
+});
+
+test('walking segments are dashed without painting a solid route underneath', async () => {
+  const root = await mount({ itinerary: [null, segmentedRoute()] });
+  const lines = root.findAllByType(Line);
+  assert.equal(lines.length, 3);
+  assert.deepEqual(
+    lines.map(line => line.props.path),
+    segments.map(s => s.polyline),
+  );
+  assert.deepEqual(
+    lines.map(line => [line.props.strokeStyle, line.props.strokeColor]),
+    [
+      ['shortdash', '#8B5CCC'],
+      ['solid', '#8B5CCC'],
+      ['shortdash', '#8B5CCC'],
+    ],
+  );
+});
+
+test('legacy transit stays solid and explicitly walking routes are dashed', async () => {
+  const transit = {
+    ...route(),
+    itinerary: { ...route().itinerary, walkingTime: 300 },
+  };
+  const walking = { ...route(), travel_mode: 'walk' as const };
+  const car = { ...route(), travel_mode: 'car' as const };
+  const root = await mount({ itinerary: [transit, walking, car] });
+  assert.deepEqual(
+    root.findAllByType(Line).map(line => line.props.strokeStyle),
+    ['solid', 'shortdash', 'solid'],
+  );
+});
+
+for (const invalidPath of [
+  [],
+  [path[0]],
+  [{ lat: NaN, lng: 127 }, path[0]],
+  [{ lat: 200, lng: 127 }, path[0]],
+]) {
+  test(`incomplete segment geometry falls back to the whole route (${JSON.stringify(invalidPath)})`, async () => {
+    const itinerary = segmentedRoute();
+    itinerary.itinerary.segments[1] = {
+      mode: 'transit',
+      polyline: invalidPath,
+    };
+    const root = await mount({ itinerary: [itinerary] });
+    const lines = root.findAllByType(Line);
+    assert.equal(lines.length, 1);
+    assert.deepEqual(lines[0].props.path, path);
+    assert.equal(lines[0].props.strokeStyle, 'solid');
+  });
+}
+
+test('selecting a participant highlights every segment in that route only', async () => {
+  const root = await mount({ itinerary: [null, segmentedRoute(), route()] });
+  act(() =>
+    root.findByType(MapSurface).props.onCreate({
+      setLevel() {},
+      setCenter() {},
+      panTo() {},
+    }),
+  );
+  act(() =>
+    root.findAllByType(Marker)[1].props.onClick({
+      getPosition: () => new LatLng(37.501, 127.101),
+    }),
+  );
+  assert.deepEqual(
+    root
+      .findAllByType(Line)
+      .map(line => [line.props.strokeWeight, line.props.zIndex]),
+    [
+      [7, 1],
+      [7, 1],
+      [7, 1],
+      [6, 0],
+    ],
+  );
+});
+
+test('overview includes segment geometry even when the legacy whole-route path is absent', async () => {
+  const itinerary = segmentedRoute();
+  itinerary.itinerary.total_polyline = [];
+  const root = await mount({ focusMode: 'overview', itinerary: [itinerary] });
+  let bounds: Bounds | undefined;
+  act(() =>
+    root.findByType(MapSurface).props.onCreate({
+      setBounds: (value: Bounds) => {
+        bounds = value;
+      },
+    }),
+  );
+  const points = bounds!.points;
+  for (const point of segments.flatMap(segment => segment.polyline)) {
+    assert.ok(
+      points.some(
+        actual => actual.lat === point.lat && actual.lng === point.lng,
+      ),
+    );
+  }
+});
+
+test('an empty or single-point route never invents a visible line', async () => {
+  const root = await mount({ itinerary: [null, route([]), route([path[0]])] });
+  assert.equal(root.findAllByType(Line).length, 0);
+});

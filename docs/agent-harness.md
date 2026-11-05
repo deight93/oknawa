@@ -54,6 +54,38 @@ Run these manually when UI or routing changes:
     preference results, like and confirm buttons. Verify the station title wraps
     normally and every action remains reachable.
 
+## Walking route lines
+
+For newly calculated routes, the map uses the ordered geometry of each walking
+and transit step. Walking uses a short dashed line; transit and car use solid
+lines. Participant colors and marker selection apply to all of that person's
+segments. The same map is used for midpoint candidates, confirmed results and
+fixed destinations.
+
+Saved results without segment data keep their whole-route geometry. An explicitly
+walking-only route can be dashed from its known travel mode; a legacy transit
+route stays solid because its walking sections cannot be inferred from the total
+walking time. Missing or invalid segment geometry falls back to the whole route,
+and empty or single-point paths do not draw a line.
+
+Additional smoke checks for issue #21:
+
+1. Calculate a transit journey with walking at the start and end. Check that only
+   those portions are dashed, without a solid line showing through the gaps.
+2. Mix transit, walking and car participants. Keep each participant's color and
+   marker number when another participant's route is unavailable.
+3. Select a participant marker. Every segment in that route should become thicker
+   without changing its line style or creating extra lines.
+4. Check both themes, 320px width, landscape and desktop. The overview must include
+   all segment detours, and existing map controls must remain reachable.
+5. Open an existing saved result without segment data and a response with missing
+   step geometry. Show the original full path instead of guessed walking sections.
+
+Deploy the Edge Functions that import `lib/route-providers.ts` to return segment
+data for new calculations. Existing saved result JSON is not backfilled, and no
+database migration is required. Provider fixtures and mock map renderers do not
+verify live route-provider coverage or actual Kakao map tiles.
+
 ## Departure editing rollout
 
 Apply `supabase/migrations/20261103090000_participant_edit.sql` before deploying

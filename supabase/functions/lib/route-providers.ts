@@ -6,6 +6,7 @@ import type {
   PopularMeetingLocation,
   RouteItinerary,
   RouteParticipant,
+  RouteSegment,
   TravelMode,
 } from './location-types.ts';
 import { fetchJson } from './utils.ts';
@@ -18,6 +19,7 @@ interface GoogleRoute {
       travelMode?: string;
       staticDuration?: string;
       distanceMeters?: number;
+      polyline?: { encodedPolyline?: string };
     }>;
   }>;
 }
@@ -49,6 +51,46 @@ function point(lng: number, lat: number): PolylinePoint[] {
     : [];
 }
 
+function decodePolyline(encoded: unknown): Array<[number, number]> {
+  if (typeof encoded !== 'string' || !encoded) return [];
+  try {
+    const coordinates = polyline.decode(encoded);
+    if (
+      coordinates.some(
+        ([lat, lng]) => !Number.isFinite(lat) || !Number.isFinite(lng),
+      )
+    )
+      return [];
+    // The decoder tolerates truncated strings; reject those before drawing.
+    return polyline.encode(coordinates) === encoded ? coordinates : [];
+  } catch {
+    return [];
+  }
+}
+
+function googleSegments(legs: GoogleRoute['legs']): RouteSegment[] | undefined {
+  if (!Array.isArray(legs) || legs.length === 0) return undefined;
+  const segments: RouteSegment[] = [];
+  for (const leg of legs) {
+    if (!Array.isArray(leg?.steps) || leg.steps.length === 0) return undefined;
+    for (const step of leg.steps) {
+      const mode =
+        step?.travelMode === 'WALK'
+          ? 'walk'
+          : step?.travelMode === 'TRANSIT'
+            ? 'transit'
+            : undefined;
+      if (!mode) return undefined;
+      const coordinates = decodePolyline(step.polyline?.encodedPolyline);
+      const points = coordinates.flatMap(([lat, lng]) => point(lng, lat));
+      if (points.length < 2 || points.length !== coordinates.length)
+        return undefined;
+      segments.push({ mode, polyline: points });
+    }
+  }
+  return segments;
+}
+
 async function googleTransit(
   participant: RouteParticipant,
   station: PopularMeetingLocation,
@@ -62,7 +104,7 @@ async function googleTransit(
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': getEnv('GOOGLE_API_KEY'),
         'X-Goog-FieldMask':
-          'routes.duration,routes.legs.steps.distanceMeters,routes.legs.steps.staticDuration,routes.legs.steps.travelMode,routes.polyline.encodedPolyline',
+          'routes.duration,routes.legs.steps.distanceMeters,routes.legs.steps.staticDuration,routes.legs.steps.travelMode,routes.legs.steps.polyline.encodedPolyline,routes.polyline.encodedPolyline',
       },
       body: JSON.stringify({
         origin: {
@@ -92,13 +134,16 @@ async function googleTransit(
   const route = json.routes?.[0];
   const totalTime = duration(route?.duration);
   if (!route || totalTime === null) return null;
-  const steps = route.legs?.flatMap(leg => leg.steps ?? []) ?? [];
-  const walking = steps.filter(step => step.travelMode === 'WALK');
+  const steps = Array.isArray(route.legs)
+    ? route.legs.flatMap(leg => (Array.isArray(leg?.steps) ? leg.steps : []))
+    : [];
+  const walking = steps.filter(step => step?.travelMode === 'WALK');
+  const segments = googleSegments(route.legs);
   return {
     totalTime,
     transferCount: Math.max(
       0,
-      steps.filter(step => step.travelMode === 'TRANSIT').length - 1,
+      steps.filter(step => step?.travelMode === 'TRANSIT').length - 1,
     ),
     walkingTime: walking.reduce(
       (sum, step) => sum + (duration(step.staticDuration) ?? 0),
@@ -109,11 +154,10 @@ async function googleTransit(
         sum + (nonnegative(step.distanceMeters) ? step.distanceMeters : 0),
       0,
     ),
-    total_polyline: route.polyline?.encodedPolyline
-      ? polyline
-          .decode(route.polyline.encodedPolyline)
-          .flatMap(([lat, lng]) => point(lng, lat))
-      : [],
+    total_polyline: decodePolyline(route.polyline?.encodedPolyline).flatMap(
+      ([lat, lng]) => point(lng, lat),
+    ),
+    ...(segments ? { segments } : {}),
   };
 }
 
@@ -143,23 +187,31 @@ async function kakaoRoute(
     const route = json.routes?.[0];
     if (route?.result_code !== 0 || !nonnegative(route.summary?.duration))
       return null;
-    const total_polyline =
-      route.sections?.flatMap(
-        section =>
-          section.roads?.flatMap(road => {
-            const vertices = road.vertexes ?? [];
-            const points: PolylinePoint[] = [];
-            for (let i = 0; i + 1 < vertices.length; i += 2)
-              points.push(...point(vertices[i], vertices[i + 1]));
-            return points;
-          }) ?? [],
-      ) ?? [];
+    const total_polyline: PolylinePoint[] = [];
+    let completePath = true;
+    const sections = Array.isArray(route.sections) ? route.sections : [];
+    for (const section of sections) {
+      const roads = Array.isArray(section?.roads) ? section.roads : [];
+      if (roads.length === 0) completePath = false;
+      for (const road of roads) {
+        const vertices = Array.isArray(road?.vertexes) ? road.vertexes : [];
+        const points: PolylinePoint[] = [];
+        for (let i = 0; i + 1 < vertices.length; i += 2)
+          points.push(...point(vertices[i], vertices[i + 1]));
+        if (vertices.length === 0 || points.length * 2 !== vertices.length)
+          completePath = false;
+        total_polyline.push(...points);
+      }
+    }
     return {
       totalTime: route.summary.duration,
       transferCount: 0,
       walkingTime: 0,
       walkingDistance: 0,
       total_polyline,
+      ...(completePath && total_polyline.length >= 2
+        ? { segments: [{ mode, polyline: total_polyline }] }
+        : {}),
     };
   }
   const params = new URLSearchParams({
@@ -194,19 +246,36 @@ async function kakaoRoute(
     !nonnegative(route?.properties?.totalDistance)
   )
     return null;
+  const total_polyline: PolylinePoint[] = [];
+  let completePath = true;
+  const legs = Array.isArray(route.legs) ? route.legs : [];
+  for (const leg of legs) {
+    const steps = Array.isArray(leg?.steps) ? leg.steps : [];
+    if (steps.length === 0) completePath = false;
+    for (const step of steps) {
+      const coordinates = Array.isArray(step?.path?.points)
+        ? step.path.points
+        : [];
+      if (coordinates.length === 0) completePath = false;
+      for (const coordinate of coordinates) {
+        const points = Array.isArray(coordinate)
+          ? point(coordinate[0], coordinate[1])
+          : [];
+        if (coordinate?.length !== 2 || points.length === 0)
+          completePath = false;
+        total_polyline.push(...points);
+      }
+    }
+  }
   return {
     totalTime: route.properties.totalTime,
     walkingTime: route.properties.totalTime,
     walkingDistance: route.properties.totalDistance,
     transferCount: 0,
-    total_polyline:
-      route.legs?.flatMap(
-        leg =>
-          leg.steps?.flatMap(
-            step =>
-              step.path?.points?.flatMap(([lng, lat]) => point(lng, lat)) ?? [],
-          ) ?? [],
-      ) ?? [],
+    total_polyline,
+    ...(completePath && total_polyline.length >= 2
+      ? { segments: [{ mode, polyline: total_polyline }] }
+      : {}),
   };
 }
 
