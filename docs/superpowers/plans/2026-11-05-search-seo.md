@@ -40,7 +40,7 @@ design gains explanatory content, with build-output checks guarding search behav
 - [x] Run full harness and browser smoke for direct/together, midpoint/confirmation, themes,
   mobile/desktop, JavaScript-disabled content, keyboard FAQ, and SDK network loading.
 - [x] Conduct one independent code review, fix material findings and validate affected paths.
-- [ ] Commit scoped changes and create a PR with evidence and remaining account-dependent steps.
+- [x] Commit scoped changes and create a PR with evidence and remaining account-dependent steps.
 
 ## Execution record
 
@@ -63,3 +63,6 @@ The checker also now handles a server that has already exited during cleanup.
 The user delegated search registration. Existing browser sessions allowed Google URL-prefix
 property creation and Google/Naver HTML token issuance. Public tokens were added to the PR;
 ownership completion, sitemap submission and indexing requests await production deployment.
+
+Published as PR #25. Rebased onto main `84e2b34` to retain the restored brand logo;
+the combined build, SEO checker and home browser checks passed again.
