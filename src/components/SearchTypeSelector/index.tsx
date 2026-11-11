@@ -39,9 +39,42 @@ const Container = styled(Link)`
   white-space: pre-line;
   word-break: keep-all;
   cursor: pointer;
+  box-shadow: inset 0 0 0 1px var(--border);
+  transition:
+    background-color 180ms ease,
+    box-shadow 180ms ease;
 
   &:hover {
     background-color: var(--surface-muted);
+    box-shadow:
+      inset 0 0 0 1px var(--primary),
+      0 8px 20px rgba(0, 0, 0, 0.12);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    transition:
+      transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+      background-color 180ms ease,
+      box-shadow 180ms ease;
+
+    > div {
+      transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    @media (hover: hover) {
+      &:hover {
+        transform: translateY(-5px);
+      }
+
+      &:hover > div {
+        transform: translateY(-3px) rotate(-5deg);
+      }
+    }
+
+    &:active {
+      transform: translateY(0) scale(0.97);
+      transition-duration: 100ms;
+    }
   }
 
   &:focus-visible {

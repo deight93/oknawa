@@ -200,6 +200,43 @@ test('renders nothing for no participants', () => {
   assert.equal(tree?.toJSON(), null);
 });
 
+test('only transfers with valid coordinates offer a native map-focus button', () => {
+  const selected: number[] = [];
+  const root = mount({ onSelectTransfer: step => selected.push(step) });
+  const buttons = root.findAllByType('button');
+  assert.equal(buttons.length, 1);
+  assert.equal(buttons[0].props.type, 'button');
+  assert.match(buttons[0].props['aria-label'], /환승 1.*교대역.*지도/);
+  assert.equal(buttons[0].props['aria-pressed'], false);
+  act(() => buttons[0].props.onClick());
+  assert.deepEqual(selected, [3]);
+  assert.match(text(root.findAllByType('li')[4]), /환승 2/);
+  assert.equal(root.findAllByType('li')[4].findAllByType('button').length, 0);
+});
+
+test('a map selection opens the disclosure and marks only the corresponding step', () => {
+  const root = mount({
+    selectedTransfer: { stepIndex: 3, source: 'map' },
+    onSelectTransfer: () => {},
+  });
+  assert.equal(root.findByType('details').props.open, true);
+  assert.equal(root.findByType('button').props['aria-pressed'], true);
+  assert.equal(
+    root.findAllByType('li').filter(li => li.props['data-selected']).length,
+    1,
+  );
+  act(() =>
+    tree?.update(
+      <RouteDetails
+        {...defaultProps}
+        selectedTransfer={null}
+        onSelectTransfer={() => {}}
+      />,
+    ),
+  );
+  assert.equal(root.findByType('button').props['aria-pressed'], false);
+});
+
 test('replaces old guidance on rerender without keeping stale lines, stops or transfers', () => {
   const root = mount();
   assert.match(text(root), /환승 2/);

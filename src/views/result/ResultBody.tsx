@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import styled from 'styled-components';
 import DistanceSummary from './components/DistanceSummary';
 import MeetingMap from '@/components/MeetingMap';
@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@nextui-org/react';
 import useResultPageState from '@/hooks/result/useResultPageState';
 import DestinationResult from './DestinationResult';
+import useRouteInteraction from '@/hooks/result/useRouteInteraction';
 
 interface ResultBodyProps {
   queryMapId: string | null;
@@ -17,7 +18,6 @@ interface ResultBodyProps {
 
 export default function ResultBody({ queryMapId }: ResultBodyProps) {
   const router = useRouter();
-  const [selectedParticipant, setSelectedParticipant] = useState(0);
   const {
     activeMapId,
     activeMapHostId,
@@ -35,8 +35,24 @@ export default function ResultBody({ queryMapId }: ResultBodyProps) {
     handlePrev,
     handleSelectStation,
   } = useResultPageState(queryMapId);
-  const selectedParticipantIndex =
-    selectedParticipant < participants.length ? selectedParticipant : 0;
+  const routeKey = JSON.stringify([
+    activeMapId,
+    currentStation?.shareKey,
+    currentStation?.station.end_x,
+    currentStation?.station.end_y,
+  ]);
+  const {
+    selectedParticipantIndex,
+    isRouteFocused,
+    selectedTransfer,
+    selectParticipant,
+    selectTransfer,
+    showOverview,
+  } = useRouteInteraction({
+    resultKey: routeKey,
+    participants,
+    itinerary: currentStation?.itinerary ?? [],
+  });
 
   useEffect(() => {
     if (!confirmedShareKey) return;
@@ -79,6 +95,7 @@ export default function ResultBody({ queryMapId }: ResultBodyProps) {
     <>
       <Container>
         <DistanceSummary
+          selectedTransfer={selectedTransfer}
           station={currentStation}
           stations={distanceSummaries}
           activeMapId={activeMapId}
@@ -101,17 +118,24 @@ export default function ResultBody({ queryMapId }: ResultBodyProps) {
             participants={participants}
             itinerary={currentStation.itinerary}
             selectedParticipantIndex={selectedParticipantIndex}
-            onSelectParticipant={setSelectedParticipant}
+            onSelectParticipant={selectParticipant}
+            selectedTransfer={selectedTransfer}
+            onSelectTransfer={selectTransfer}
           />
         </DistanceSummary>
         <MeetingMap
+          routeKey={routeKey}
           stationName={currentStation.stationName}
           endX={currentStation.station.end_x}
           endY={currentStation.station.end_y}
           participants={participants}
           itinerary={currentStation.itinerary}
           selectedParticipantIndex={selectedParticipantIndex}
-          onSelectParticipant={setSelectedParticipant}
+          onSelectParticipant={selectParticipant}
+          isRouteFocused={isRouteFocused}
+          selectedTransfer={selectedTransfer}
+          onSelectTransfer={stepIndex => selectTransfer(stepIndex, 'map')}
+          onShowOverview={showOverview}
         />
       </Container>
     </>

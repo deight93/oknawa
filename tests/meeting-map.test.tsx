@@ -8,6 +8,8 @@ import type {
   PolylinePoint,
 } from '../src/types/location';
 import { onKakaoMapsScriptLoad } from '../src/utils/kakaoMapsReady';
+import RouteDetails from '../src/components/RouteDetails';
+import useRouteInteraction from '../src/hooks/result/useRouteInteraction';
 
 // Keep the real MeetingMap component; replace only the external map renderer.
 const sdk =
@@ -149,7 +151,7 @@ const transferRoute = (): ItineraryItem => ({
   },
 });
 
-test('resizing the map panel relayouts tiles before fitting transfer bounds and cleans up on unmount', async () => {
+test('resizing preserves the user map center without refitting routes and cleans up on unmount', async () => {
   let resize: (() => void) | undefined;
   let observed: unknown;
   let disconnected = false;
@@ -174,9 +176,15 @@ test('resizing the map panel relayouts tiles before fitting transfer bounds and 
   const container = {};
   const calls: string[] = [];
   let fitted: Bounds | undefined;
+  const userCenter = new LatLng(37.7, 127.3);
   act(() =>
     root.findByType(MapSurface).props.onCreate({
       getNode: () => container,
+      getCenter: () => userCenter,
+      setCenter: (point: LatLng) => {
+        assert.equal(point, userCenter);
+        calls.push('center');
+      },
       relayout: () => calls.push('relayout'),
       setBounds: (bounds: Bounds) => {
         calls.push('bounds');
@@ -188,7 +196,7 @@ test('resizing the map panel relayouts tiles before fitting transfer bounds and 
   calls.length = 0;
   assert.ok(resize);
   act(() => resize!());
-  assert.deepEqual(calls, ['relayout', 'bounds']);
+  assert.deepEqual(calls, ['relayout', 'center']);
   assert.ok(
     fitted?.points.some(point => point.lat === 37.476 && point.lng === 126.981),
   );
@@ -203,7 +211,7 @@ test('transfer markers use the selected participant boarding stop and preserve m
     selectedParticipantIndex: 1,
   });
   const transfers = root.findAll(
-    node => node.type === 'span' && node.props['data-route-transfer'] === 1,
+    node => node.type === 'button' && node.props['data-route-transfer'] === 1,
   );
   assert.equal(transfers.length, 1);
   assert.match(transfers[0].props['aria-label'], /2번.*환승 1.*사당역.*4호선/);
@@ -217,7 +225,7 @@ test('transfer markers disappear when a new result has no step details', async (
   await mount({ itinerary: [transferRoute()], selectedParticipantIndex: 0 });
   assert.equal(
     tree!.root.findAll(
-      node => node.type === 'span' && node.props['data-route-transfer'] === 1,
+      node => node.type === 'button' && node.props['data-route-transfer'] === 1,
     ).length,
     1,
   );
@@ -297,7 +305,7 @@ test('invalid stop coordinates are omitted and later transfers retain their ordi
   ];
   const root = await mount({ itinerary: [item], selectedParticipantIndex: 0 });
   const transfers = root.findAll(
-    node => node.type === 'span' && node.props['data-route-transfer'],
+    node => node.type === 'button' && node.props['data-route-transfer'],
   );
   assert.deepEqual(
     transfers.map(marker => marker.props['data-route-transfer']),
@@ -539,3 +547,266 @@ test('an empty or single-point route never invents a visible line', async () => 
   const root = await mount({ itinerary: [null, route([]), route([path[0]])] });
   assert.equal(root.findAllByType(Line).length, 0);
 });
+
+test('the same candidate preserves user pan on equivalent rerenders, while a different candidate at the same destination restores overview', async () => {
+  const props = {
+    stationName: '서울역',
+    endX: 126.972,
+    endY: 37.554,
+    participants,
+    itinerary: [transferRoute(), route()],
+    selectedParticipantIndex: 0,
+    routeKey: 'candidate-a',
+  };
+  const root = await mount(props);
+  const fitted: Bounds[] = [];
+  act(() =>
+    root.findByType(MapSurface).props.onCreate({
+      setBounds: (bounds: Bounds) => fitted.push(bounds),
+      panTo() {},
+    }),
+  );
+  assert.equal(fitted.length, 1);
+  act(() =>
+    root.findAllByType(Marker)[1].props.onClick({
+      getPosition: () => new LatLng(37.5, 127.1),
+    }),
+  );
+  act(() =>
+    tree?.update(
+      <MeetingMap
+        {...props}
+        participants={participants.map(p => ({ ...p }))}
+        itinerary={[transferRoute(), route()]}
+      />,
+    ),
+  );
+  assert.equal(fitted.length, 1, 'a refreshed array must not reset a user pan');
+  act(() => tree?.update(<MeetingMap {...props} routeKey="candidate-b" />));
+  assert.equal(
+    fitted.length,
+    2,
+    'candidate identity must reset even at the same coordinates',
+  );
+});
+
+interface InteractionProps {
+  resultKey?: string;
+  people?: Participant[];
+  routes?: (ItineraryItem | null)[];
+  endX?: number;
+}
+
+function InteractiveResult({
+  resultKey = 'candidate-a',
+  people = participants,
+  routes = [transferRoute(), transferRoute(), route()],
+  endX = 126.972,
+}: InteractionProps) {
+  const routeKey = JSON.stringify([resultKey, endX]);
+  const interaction = useRouteInteraction({
+    resultKey: routeKey,
+    participants: people,
+    itinerary: routes,
+  });
+  return (
+    <>
+      <MeetingMap
+        stationName="서울역"
+        endX={endX}
+        endY={37.554}
+        routeKey={routeKey}
+        participants={people}
+        itinerary={routes}
+        selectedParticipantIndex={interaction.selectedParticipantIndex}
+        isRouteFocused={interaction.isRouteFocused}
+        selectedTransfer={interaction.selectedTransfer}
+        onSelectParticipant={interaction.selectParticipant}
+        onSelectTransfer={step => interaction.selectTransfer(step, 'map')}
+        onShowOverview={interaction.showOverview}
+      />
+      <RouteDetails
+        participants={people}
+        itinerary={routes}
+        selectedParticipantIndex={interaction.selectedParticipantIndex}
+        selectedTransfer={interaction.selectedTransfer}
+        onSelectParticipant={interaction.selectParticipant}
+        onSelectTransfer={interaction.selectTransfer}
+      />
+    </>
+  );
+}
+
+async function mountInteraction(props: InteractionProps = {}) {
+  await act(async () => {
+    tree = create(<InteractiveResult {...props} />);
+  });
+  assert.ok(tree);
+  const pans: LatLng[] = [];
+  const levels: number[] = [];
+  const bounds: Bounds[] = [];
+  act(() =>
+    tree!.root.findByType(MapSurface).props.onCreate({
+      panTo: (point: LatLng) => pans.push(point),
+      setLevel: (level: number) => levels.push(level),
+      setBounds: (value: Bounds) => bounds.push(value),
+    }),
+  );
+  return { root: tree.root, pans, levels, bounds };
+}
+
+test('native map and detail buttons share transfer selection, dim other routes and restore a full overview', async () => {
+  const { root, pans, levels, bounds } = await mountInteraction();
+  assert.ok(
+    root.findAllByType(Line).every(line => line.props.strokeOpacity === 1),
+  );
+  const transfer = () =>
+    root
+      .findAllByType('button')
+      .find(button => button.props['data-route-transfer'] === 1)!;
+  const detail = () => root.findByType(RouteDetails).findByType('button');
+  assert.equal(transfer().props.type, 'button');
+  act(() => transfer().props.onClick());
+  assert.equal(root.findByType('details').props.open, true);
+  assert.equal(detail().props['aria-pressed'], true);
+  assert.equal(transfer().props['aria-pressed'], true);
+  assert.deepEqual(pans, [new LatLng(37.476, 126.981)]);
+  assert.deepEqual(levels, [4]);
+  assert.deepEqual(
+    root.findAllByType(Line).map(line => line.props.strokeOpacity),
+    [1, 0.25, 0.25],
+  );
+  assert.deepEqual(
+    root.findAllByType(Line).map(line => line.props.strokeWeight),
+    [7, 6, 6],
+  );
+
+  act(() => detail().props.onClick());
+  assert.equal(
+    pans.length,
+    2,
+    'selecting the same transfer again recenters after a manual pan',
+  );
+  assert.equal(
+    root.findByType(MeetingMap).props.selectedTransfer.source,
+    'details',
+  );
+  act(() => tree!.update(<InteractiveResult />));
+  assert.equal(
+    pans.length,
+    2,
+    'an incidental render cannot repeat the transfer pan',
+  );
+  assert.equal(bounds.length, 1);
+
+  const overview = root
+    .findAllByType('button')
+    .find(button => button.children.includes('전체 경로 보기'))!;
+  act(() => overview.props.onClick());
+  assert.equal(bounds.length, 2);
+  assert.ok(
+    root
+      .findAllByType(Line)
+      .every(
+        line => line.props.strokeOpacity === 1 && line.props.strokeWeight === 6,
+      ),
+  );
+  assert.equal(transfer().props['aria-pressed'], false);
+  assert.equal(detail().props['aria-pressed'], false);
+});
+
+test('participant selection clears the previous transfer before reading another route', async () => {
+  const { root, pans, bounds } = await mountInteraction();
+  act(() => root.findByType(RouteDetails).findByType('button').props.onClick());
+  act(() =>
+    root.findByType('select').props.onChange({ target: { value: '1' } }),
+  );
+  assert.equal(root.findByType('select').props.value, 1);
+  assert.equal(root.findByType(MeetingMap).props.selectedTransfer, null);
+  assert.ok(
+    root
+      .findAllByType('button')
+      .every(button => button.props['aria-pressed'] !== true),
+  );
+  assert.equal(
+    pans.length,
+    1,
+    'participant selection must not pan to the previous transfer',
+  );
+  assert.deepEqual(
+    root.findAllByType(Line).map(line => line.props.strokeOpacity),
+    [0.25, 1, 0.25],
+  );
+  assert.equal(
+    bounds.length,
+    2,
+    'switching participant must leave the old transfer zoom',
+  );
+  assert.ok(
+    bounds[1].points.some(
+      point =>
+        point.lat === participants[1].start_y &&
+        point.lng === participants[1].start_x,
+    ),
+  );
+  assert.ok(
+    !bounds[1].points.some(
+      point =>
+        point.lat === participants[0].start_y &&
+        point.lng === participants[0].start_x,
+    ),
+  );
+  act(() => tree!.update(<InteractiveResult />));
+  assert.equal(
+    bounds.length,
+    2,
+    'ordinary vote refreshes must preserve the selected route viewport',
+  );
+  act(() =>
+    root.findByType('select').props.onChange({ target: { value: '0' } }),
+  );
+  assert.equal(root.findByType(MeetingMap).props.selectedTransfer, null);
+  assert.equal(bounds.length, 3);
+});
+
+const movedTransfer = transferRoute();
+for (const step of movedTransfer.itinerary.steps ?? []) {
+  if (step.mode === 'transit' && step.transit?.departureStop)
+    step.transit.departureStop.location = { lat: 37.55, lng: 127.15 };
+}
+
+for (const [label, changed] of [
+  [
+    'candidate key with unchanged destination and geometry',
+    { resultKey: 'candidate-b' },
+  ],
+  ['destination coordinates', { endX: 127.2 }],
+  [
+    'participant identity at the same index',
+    {
+      people: [
+        { ...participants[0], name: '새 참가자' },
+        ...participants.slice(1),
+      ],
+    },
+  ],
+  [
+    'transfer coordinates within the same route',
+    { routes: [movedTransfer, transferRoute(), route()] },
+  ],
+] satisfies [string, InteractionProps][]) {
+  test(`${label} clears transfer scope without resurrecting the old selection on return`, async () => {
+    const { root, pans } = await mountInteraction();
+    act(() =>
+      root.findByType(RouteDetails).findByType('button').props.onClick(),
+    );
+    assert.equal(pans.length, 1);
+    act(() => tree!.update(<InteractiveResult {...changed} />));
+    assert.equal(root.findByType(MeetingMap).props.selectedTransfer, null);
+    assert.equal(root.findByType(MeetingMap).props.isRouteFocused, false);
+    assert.equal(pans.length, 1);
+    act(() => tree!.update(<InteractiveResult />));
+    assert.equal(root.findByType(MeetingMap).props.selectedTransfer, null);
+    assert.equal(pans.length, 1);
+  });
+}

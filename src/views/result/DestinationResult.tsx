@@ -11,6 +11,7 @@ import MeetingMap from '@/components/MeetingMap';
 import RouteDetails from '@/components/RouteDetails';
 import MeetingDestinationField from '@/views/search/components/MeetingDestinationField';
 import useKakaoDirections from '@/hooks/result/useKakaoDirections';
+import useRouteInteraction from '@/hooks/result/useRouteInteraction';
 import useModal from '@/hooks/common/useModal';
 import { useInputStatusListQuery } from '@/hooks/query/search';
 import { searchState } from '@/jotai/global/store';
@@ -52,7 +53,6 @@ export default function DestinationResult({
   const [busy, setBusy] = useState(false);
   const [fieldBusy, setFieldBusy] = useState(false);
   const [error, setError] = useState('');
-  const [selectedParticipant, setSelectedParticipant] = useState(0);
   const pending = useRef<symbol | null>(null);
   const {
     meetingDestination: destination,
@@ -61,8 +61,6 @@ export default function DestinationResult({
     participant: participants,
     recommendationOptions,
   } = result.request_info;
-  const selectedParticipantIndex =
-    selectedParticipant < participants.length ? selectedParticipant : 0;
   const mapItinerary = useMemo(
     () =>
       participants.map((_, index) => {
@@ -73,6 +71,19 @@ export default function DestinationResult({
       }),
     [participants, destinationRoutes],
   );
+  const routeKey = JSON.stringify([activeMapId, destination]);
+  const {
+    selectedParticipantIndex,
+    isRouteFocused,
+    selectedTransfer,
+    selectParticipant,
+    selectTransfer,
+    showOverview,
+  } = useRouteInteraction({
+    resultKey: routeKey,
+    participants,
+    itinerary: mapItinerary,
+  });
   const { data: roomStatus } = useInputStatusListQuery(
     destinationRoom?.roomId ?? '',
   );
@@ -247,6 +258,7 @@ export default function DestinationResult({
       )}
       <MapFrame id="destination-map" aria-label="출발지와 모임 장소 지도">
         <MeetingMap
+          routeKey={routeKey}
           stationName={destination.name}
           endX={destination.x}
           endY={destination.y}
@@ -254,14 +266,20 @@ export default function DestinationResult({
           itinerary={mapItinerary}
           focusMode="overview"
           selectedParticipantIndex={selectedParticipantIndex}
-          onSelectParticipant={setSelectedParticipant}
+          onSelectParticipant={selectParticipant}
+          isRouteFocused={isRouteFocused}
+          selectedTransfer={selectedTransfer}
+          onSelectTransfer={stepIndex => selectTransfer(stepIndex, 'map')}
+          onShowOverview={showOverview}
         />
       </MapFrame>
       <RouteDetails
         participants={participants}
         itinerary={mapItinerary}
         selectedParticipantIndex={selectedParticipantIndex}
-        onSelectParticipant={setSelectedParticipant}
+        onSelectParticipant={selectParticipant}
+        selectedTransfer={selectedTransfer}
+        onSelectTransfer={selectTransfer}
       />
       <SectionTitle>참가자별 예상 이동시간</SectionTitle>
       {destinationRoutes?.some(route => route.status === 'unavailable') && (

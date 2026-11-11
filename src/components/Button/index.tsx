@@ -1,5 +1,40 @@
 import { ReactNode } from 'react';
-import styled from 'styled-components';
+import styled, { css } from 'styled-components';
+
+export const buttonFeedback = css`
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    transform 100ms ease;
+
+  &:focus-visible {
+    outline: 2px solid
+      color-mix(in srgb, var(--primary) 65%, var(--text-primary));
+    outline-offset: 3px;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    transform: none;
+    transition: none;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    &:not(:disabled):active {
+      transform: scale(0.98);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+    &,
+    &:active,
+    &[data-pressed='true'] {
+      transform: none;
+    }
+  }
+`;
 
 interface ButtonProps {
   label?: string;
@@ -70,6 +105,15 @@ const Container = styled.button<{
   border-radius: 8px;
   color: ${({ disabled }) =>
     disabled ? 'var(--text-muted)' : 'var(--text-primary)'};
+  cursor: pointer;
+  ${buttonFeedback}
+
+  @media (hover: hover) and (pointer: fine) {
+    &:not(:disabled):hover {
+      background-color: var(--surface-raised);
+      border-color: var(--text-muted);
+    }
+  }
 `;
 
 const Text = styled.span`
