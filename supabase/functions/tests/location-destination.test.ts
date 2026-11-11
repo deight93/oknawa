@@ -438,6 +438,7 @@ Deno.test(
                   walkingTime: 0,
                   walkingDistance: 0,
                   total_polyline: [],
+                  steps: [{ mode: 'car', durationSeconds: 1500 }],
                 },
               },
             },

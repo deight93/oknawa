@@ -67,6 +67,25 @@ export interface RouteSegment {
   polyline: PolylinePoint[];
 }
 
+export interface TransitStop {
+  name?: string;
+  location?: PolylinePoint;
+}
+
+export interface TransitDetails {
+  lineName?: string;
+  vehicleType?: string;
+  headsign?: string;
+  departureStop?: TransitStop;
+  arrivalStop?: TransitStop;
+  stopCount?: number;
+}
+
+export type RouteStep = {
+  durationSeconds?: number;
+  distanceMeters?: number;
+} & ({ mode: 'walk' | 'car' } | { mode: 'transit'; transit?: TransitDetails });
+
 export interface RouteItinerary {
   name: string;
   region_name: string;
@@ -78,6 +97,7 @@ export interface RouteItinerary {
     walkingTime?: number;
     total_polyline: PolylinePoint[];
     segments?: RouteSegment[];
+    steps?: RouteStep[];
   };
 }
 

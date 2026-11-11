@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import DistanceSummary from './components/DistanceSummary';
 import MeetingMap from '@/components/MeetingMap';
+import RouteDetails from '@/components/RouteDetails';
 
 import { useRouter } from 'next/navigation';
 import { Button } from '@nextui-org/react';
@@ -16,6 +17,7 @@ interface ResultBodyProps {
 
 export default function ResultBody({ queryMapId }: ResultBodyProps) {
   const router = useRouter();
+  const [selectedParticipant, setSelectedParticipant] = useState(0);
   const {
     activeMapId,
     activeMapHostId,
@@ -33,6 +35,8 @@ export default function ResultBody({ queryMapId }: ResultBodyProps) {
     handlePrev,
     handleSelectStation,
   } = useResultPageState(queryMapId);
+  const selectedParticipantIndex =
+    selectedParticipant < participants.length ? selectedParticipant : 0;
 
   useEffect(() => {
     if (!confirmedShareKey) return;
@@ -92,13 +96,22 @@ export default function ResultBody({ queryMapId }: ResultBodyProps) {
           onNext={handleNext}
           onPrev={handlePrev}
           onSelectStation={handleSelectStation}
-        />
+        >
+          <RouteDetails
+            participants={participants}
+            itinerary={currentStation.itinerary}
+            selectedParticipantIndex={selectedParticipantIndex}
+            onSelectParticipant={setSelectedParticipant}
+          />
+        </DistanceSummary>
         <MeetingMap
           stationName={currentStation.stationName}
           endX={currentStation.station.end_x}
           endY={currentStation.station.end_y}
           participants={participants}
           itinerary={currentStation.itinerary}
+          selectedParticipantIndex={selectedParticipantIndex}
+          onSelectParticipant={setSelectedParticipant}
         />
       </Container>
     </>

@@ -1,5 +1,7 @@
 'use client';
 
+import type { ReactNode } from 'react';
+
 import { useRouter } from 'next/navigation';
 import { Check, Share2 } from 'lucide-react';
 
@@ -31,6 +33,7 @@ import {
 } from '../style';
 
 interface DistanceSummaryProps {
+  children?: ReactNode;
   activeMapId: string;
   stationName: string;
   shareKey: string;
@@ -40,6 +43,7 @@ interface DistanceSummaryProps {
 }
 
 export default function DistanceSummary({
+  children,
   activeMapId,
   stationName,
   shareKey,
@@ -106,6 +110,7 @@ export default function DistanceSummary({
               </RetrySelectButton>
             )}
           </SummaryRow>
+          {children}
         </ContentWrapper>
       </ExpandBody>
     </Container>

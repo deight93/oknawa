@@ -123,6 +123,29 @@ home metadata/content, noindex on input and shared-result pages, and the public
 robots.txt/sitemap.xml. See [search registration and measurement](seo.md) for
 the separate post-deployment account steps.
 
+## Walking and transit journey details
+
+In recommendation, confirmed and fixed-destination results, open
+`이동 구간·환승 안내` and select a participant. Check that walking, boarding,
+numbered transfers and alighting appear in order, with stop/line/direction,
+duration, distance and stop count only when provided. The same numbered
+transfers must appear on the map for the selected participant, using that
+participant's color. Origin-marker selection must update the participant selector.
+
+Exercise two transit legs separated by walking, adjacent transit legs, a direct
+transit journey, walking/car-only journeys, duplicate participant names, an
+unavailable first route, old saved results without steps and a transfer without
+stop coordinates. Missing geometry must not erase otherwise available guidance;
+missing stop coordinates must not produce a fabricated marker. Change candidate
+and destination and reopen a shared/confirmed result to check for stale markers.
+
+Repeat disclosure, participant selection and keyboard navigation at 320px,
+390px, landscape and desktop widths in both themes. Long stop/line names must
+wrap. Confirm that the surrounding vote, confirm, retry, sharing and external
+directions controls remain reachable. New optional step metadata requires the
+Edge Function deployment; saved results are not rewritten. Fixture/provider
+tests do not verify live timetable coverage or current service conditions.
+
 ## Fixed meeting destinations
 
 The home entry `정해진 장소로 모이기` uses dedicated `/meeting` routes for

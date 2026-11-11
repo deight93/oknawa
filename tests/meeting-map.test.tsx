@@ -35,6 +35,10 @@ before(async () => {
 
 const originalReact = Object.getOwnPropertyDescriptor(globalThis, 'React');
 const originalKakao = Object.getOwnPropertyDescriptor(globalThis, 'kakao');
+const originalResizeObserver = Object.getOwnPropertyDescriptor(
+  globalThis,
+  'ResizeObserver',
+);
 let tree: ReactTestRenderer | undefined;
 class LatLng {
   constructor(
@@ -72,6 +76,7 @@ afterEach(() => {
   for (const [key, descriptor] of [
     ['React', originalReact],
     ['kakao', originalKakao],
+    ['ResizeObserver', originalResizeObserver],
   ] as const) {
     if (descriptor) Object.defineProperty(globalThis, key, descriptor);
     else Reflect.deleteProperty(globalThis, key);
@@ -119,6 +124,184 @@ test('empty routes do not shift the next participant route color or marker numbe
   assert.deepEqual(
     root.findAllByType(Marker).map(marker => marker.props.image.src),
     ['/images/marker0.svg', '/images/marker1.svg', '/images/marker2.svg'],
+  );
+});
+
+const transferRoute = (): ItineraryItem => ({
+  ...route(),
+  itinerary: {
+    ...route().itinerary,
+    steps: [
+      { mode: 'walk', durationSeconds: 60 },
+      { mode: 'transit', transit: { lineName: '2호선' } },
+      { mode: 'walk', durationSeconds: 180 },
+      {
+        mode: 'transit',
+        transit: {
+          lineName: '4호선',
+          departureStop: {
+            name: '사당역',
+            location: { lat: 37.476, lng: 126.981 },
+          },
+        },
+      },
+    ],
+  },
+});
+
+test('resizing the map panel relayouts tiles before fitting transfer bounds and cleans up on unmount', async () => {
+  let resize: (() => void) | undefined;
+  let observed: unknown;
+  let disconnected = false;
+  Object.defineProperty(globalThis, 'ResizeObserver', {
+    configurable: true,
+    value: class {
+      constructor(callback: () => void) {
+        resize = callback;
+      }
+      observe(node: unknown) {
+        observed = node;
+      }
+      disconnect() {
+        disconnected = true;
+      }
+    },
+  });
+  const root = await mount({
+    itinerary: [transferRoute()],
+    selectedParticipantIndex: 0,
+  });
+  const container = {};
+  const calls: string[] = [];
+  let fitted: Bounds | undefined;
+  act(() =>
+    root.findByType(MapSurface).props.onCreate({
+      getNode: () => container,
+      relayout: () => calls.push('relayout'),
+      setBounds: (bounds: Bounds) => {
+        calls.push('bounds');
+        fitted = bounds;
+      },
+    }),
+  );
+  assert.equal(observed, container);
+  calls.length = 0;
+  assert.ok(resize);
+  act(() => resize!());
+  assert.deepEqual(calls, ['relayout', 'bounds']);
+  assert.ok(
+    fitted?.points.some(point => point.lat === 37.476 && point.lng === 126.981),
+  );
+  act(() => tree!.unmount());
+  tree = undefined;
+  assert.equal(disconnected, true);
+});
+
+test('transfer markers use the selected participant boarding stop and preserve missing route slots', async () => {
+  const root = await mount({
+    itinerary: [null, transferRoute(), transferRoute()],
+    selectedParticipantIndex: 1,
+  });
+  const transfers = root.findAll(
+    node => node.type === 'span' && node.props['data-route-transfer'] === 1,
+  );
+  assert.equal(transfers.length, 1);
+  assert.match(transfers[0].props['aria-label'], /2번.*환승 1.*사당역.*4호선/);
+  const overlays = root.findAllByType(Overlay);
+  assert.deepEqual(overlays[1].props.position, { lat: 37.476, lng: 126.981 });
+  assert.equal(root.findAllByType(Line)[0].props.strokeColor, '#8B5CCC');
+  assert.equal(root.findAllByType(Line)[0].props.strokeWeight, 7);
+});
+
+test('transfer markers disappear when a new result has no step details', async () => {
+  await mount({ itinerary: [transferRoute()], selectedParticipantIndex: 0 });
+  assert.equal(
+    tree!.root.findAll(
+      node => node.type === 'span' && node.props['data-route-transfer'] === 1,
+    ).length,
+    1,
+  );
+  await act(async () =>
+    tree!.update(
+      <MeetingMap
+        stationName="새 목적지"
+        endX={127}
+        endY={37.5}
+        participants={participants}
+        itinerary={[route()]}
+        selectedParticipantIndex={0}
+      />,
+    ),
+  );
+  assert.equal(
+    tree!.root.findAllByProps({ 'data-route-transfer': 1 }).length,
+    0,
+  );
+});
+
+test('missing transfer coordinates do not invent markers from route geometry', async () => {
+  const item = transferRoute();
+  item.itinerary.steps = [
+    { mode: 'transit' },
+    { mode: 'transit', transit: { departureStop: { name: '환승역' } } },
+  ];
+  const root = await mount({ itinerary: [item], selectedParticipantIndex: 0 });
+  assert.equal(root.findAllByType(Overlay).length, 1);
+});
+
+test('controlled selection reports origin clicks and includes transfer stops in map bounds', async () => {
+  const selected: number[] = [];
+  const bounds: Bounds[] = [];
+  const root = await mount({
+    itinerary: [null, transferRoute()],
+    selectedParticipantIndex: 1,
+    onSelectParticipant: index => selected.push(index),
+  });
+  act(() =>
+    root.findByType(MapSurface).props.onCreate({
+      setBounds: (value: Bounds) => bounds.push(value),
+      panTo() {},
+    }),
+  );
+  assert(
+    bounds[0].points.some(
+      point => point.lat === 37.476 && point.lng === 126.981,
+    ),
+  );
+  act(() =>
+    root
+      .findAllByType(Marker)[2]
+      .props.onClick({ getPosition: () => new LatLng(37.5, 127) }),
+  );
+  assert.deepEqual(selected, [2]);
+});
+
+test('invalid stop coordinates are omitted and later transfers retain their ordinal', async () => {
+  const item = transferRoute();
+  item.itinerary.steps = [
+    { mode: 'transit' },
+    {
+      mode: 'transit',
+      transit: { departureStop: { location: { lat: NaN, lng: 127 } } },
+    },
+    { mode: 'walk' },
+    {
+      mode: 'transit',
+      transit: {
+        departureStop: {
+          name: '서울역',
+          location: { lat: 37.554, lng: 126.972 },
+        },
+      },
+    },
+  ];
+  const root = await mount({ itinerary: [item], selectedParticipantIndex: 0 });
+  const transfers = root.findAll(
+    node => node.type === 'span' && node.props['data-route-transfer'],
+  );
+  assert.deepEqual(
+    transfers.map(marker => marker.props['data-route-transfer']),
+    [2],
   );
 });
 

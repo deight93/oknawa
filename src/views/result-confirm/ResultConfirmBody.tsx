@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+
 import { useSetAtom } from 'jotai';
 import { bottomSheetState } from '@/jotai/global/store';
 
@@ -7,6 +9,7 @@ import styled from 'styled-components';
 import DistanceSummary from './components/DistanceSummary';
 import HotPlaceModal from '@/components/HotPlaceModal';
 import MeetingMap from '@/components/MeetingMap';
+import RouteDetails from '@/components/RouteDetails';
 
 import { Button } from '@nextui-org/react';
 
@@ -20,6 +23,7 @@ interface ResultConfirmBodyProps {
 export default function ResultConfirmBody({
   queryShareKey,
 }: ResultConfirmBodyProps) {
+  const [selectedParticipant, setSelectedParticipant] = useState(0);
   const setBottomSheet = useSetAtom(bottomSheetState);
   const {
     resultConfirm,
@@ -33,6 +37,9 @@ export default function ResultConfirmBody({
   } = useConfirmedResult(queryShareKey);
 
   const { itinerary, request_info, end_x, end_y } = resultConfirm;
+  const participants = request_info?.participant ?? [];
+  const selectedParticipantIndex =
+    selectedParticipant < participants.length ? selectedParticipant : 0;
   const shouldShowHotPlaceButton = !isCarRecommendation(recommendationOptions);
 
   const handleHotplaceBtnClick = () => {
@@ -76,7 +83,14 @@ export default function ResultConfirmBody({
           averageTravelTime={averageTravelTime}
           recommendationOptions={recommendationOptions}
           resultType={resultType}
-        />
+        >
+          <RouteDetails
+            participants={participants}
+            itinerary={itinerary}
+            selectedParticipantIndex={selectedParticipantIndex}
+            onSelectParticipant={setSelectedParticipant}
+          />
+        </DistanceSummary>
         <MapBackground>
           <MeetingMap
             stationName={stationName}
@@ -84,6 +98,8 @@ export default function ResultConfirmBody({
             endY={end_y}
             participants={request_info?.participant}
             itinerary={itinerary}
+            selectedParticipantIndex={selectedParticipantIndex}
+            onSelectParticipant={setSelectedParticipant}
           />
           {shouldShowHotPlaceButton && (
             <FloatingButton

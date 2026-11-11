@@ -47,6 +47,31 @@ const assertNotIncludes = (path, pattern, message) => {
 
 const staticContracts = [
   {
+    name: 'transit guidance is optional and shared across all result flows',
+    run: () => {
+      for (const path of [
+        'src/types/location.ts',
+        'supabase/functions/lib/location-types.ts',
+      ])
+        assertIncludes(
+          path,
+          'steps?: RouteStep[]',
+          'legacy routes must remain readable without journey metadata',
+        );
+      for (const path of [
+        'src/views/result/ResultBody.tsx',
+        'src/views/result/DestinationResult.tsx',
+        'src/views/result-confirm/ResultConfirmBody.tsx',
+      ])
+        assertIncludes(
+          path,
+          '<RouteDetails',
+          'all result flows must expose walking and transfer guidance',
+        );
+      requireFile('tests/route-details.test.tsx');
+    },
+  },
+  {
     name: 'walking route segments preserve geometry and participant styling',
     run: () => {
       for (const path of [
