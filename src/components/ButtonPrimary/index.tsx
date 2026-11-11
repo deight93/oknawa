@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import styled from 'styled-components';
+import { buttonFeedback } from '../Button';
 
 interface ButtonProps {
   label?: string;
@@ -40,19 +41,21 @@ const Container = styled.button<{
   align-items: center;
   width: ${({ $widthFull }) => ($widthFull ? '100%' : 'fit-content')};
   gap: 8px;
-  /* padding: 14px 0; */
   padding: 16px;
   height: 44px;
 
   border-radius: 8px;
   color: ${({ disabled }) =>
     disabled ? 'var(--text-muted)' : 'var(--button-text-on-primary)'};
-  background-color: var(--primary);
+  background-color: ${({ disabled }) =>
+    disabled ? 'var(--surface-strong)' : 'var(--primary)'};
   cursor: pointer;
+  ${buttonFeedback}
 
-  &:hover {
-    background-color: ${({ disabled }) =>
-      disabled ? 'initial' : 'var(--primary-hover)'};
+  @media (hover: hover) and (pointer: fine) {
+    &:not(:disabled):hover {
+      background-color: var(--primary-hover);
+    }
   }
 `;
 

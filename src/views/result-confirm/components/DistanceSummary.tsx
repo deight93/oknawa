@@ -88,17 +88,17 @@ export default function DistanceSummary({
           공유하기
         </SharingButton>
       </Header>
+      <TitleWrapper>
+        <StationName>{title}</StationName>
+        <ConfirmedLabel>
+          <span aria-hidden="true">
+            <Check size={13} strokeWidth={3} />
+          </span>
+          장소 확정
+        </ConfirmedLabel>
+      </TitleWrapper>
       <ExpandBody>
         <ContentWrapper>
-          <TitleWrapper>
-            <StationName>{title}</StationName>
-            <ConfirmedLabel>
-              <span aria-hidden="true">
-                <Check size={13} strokeWidth={3} />
-              </span>
-              장소 확정
-            </ConfirmedLabel>
-          </TitleWrapper>
           <SummaryRow>
             <AverageArrivalTime>
               도착하는데 평균{' '}

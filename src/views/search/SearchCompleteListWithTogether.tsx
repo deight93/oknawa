@@ -1,7 +1,8 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useReducedMotion } from 'framer-motion';
 import styled from 'styled-components';
 import { atom, useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { useQueryClient } from '@tanstack/react-query';
@@ -12,9 +13,9 @@ import { Button as FloatingButton } from '@nextui-org/react';
 import PageHeader from '@/components/PageHeader';
 import { SearchState, searchState } from '@/jotai/global/store';
 import { useInputStatusListQuery } from '@/hooks/query/search';
-import PeopleCard from './components/PeopleCard';
+import PeopleCard, { ParticipantRow } from './components/PeopleCard';
 import DepartureEditor from './components/DepartureEditor';
-import Button from '@/components/Button';
+import Button, { buttonFeedback } from '@/components/Button';
 import { APP_BASE_URL } from '@/config/env';
 import SearchLoading from './components/SearchLoading';
 import MeetingPurposeSelector from './components/MeetingPurposeSelector';
@@ -57,6 +58,7 @@ const toRecommendationOptions = (
 
 export default function SearchCompleteListWithTogetherView() {
   const router = useRouter();
+  const reduceMotion = useReducedMotion();
   const queryClient = useQueryClient();
 
   const setSearchList = useSetAtom(searchState);
@@ -116,6 +118,9 @@ export default function SearchCompleteListWithTogetherView() {
     roomStatus?.recommendation_status !== 'completed';
   const editingParticipantId =
     editing?.roomId === storageRoomData.roomId ? editing.participantId : null;
+  const layoutDependency = `${storageRoomData.roomId}:${participantList
+    .map(participant => participant.id)
+    .join(',')}:${editingParticipantId}`;
 
   useEffect(() => {
     setChangingDestinationRoom(null);
@@ -297,7 +302,10 @@ export default function SearchCompleteListWithTogetherView() {
         <div className="flex flex-col gap-3">
           {participantList.map((participant, index) => {
             return (
-              <Fragment key={participant.id ?? index}>
+              <ParticipantRow
+                key={`${storageRoomData.roomId}:${participant.id ?? index}`}
+                layoutDependency={layoutDependency}
+              >
                 <PeopleCard
                   name={participant.name}
                   place={participant.region_name}
@@ -340,7 +348,7 @@ export default function SearchCompleteListWithTogetherView() {
                     }}
                   />
                 )}
-              </Fragment>
+              </ParticipantRow>
             );
           })}
         </div>
@@ -390,6 +398,8 @@ export default function SearchCompleteListWithTogetherView() {
           방 나가기
         </QuitRoom>
         <SubmitButton
+          disableAnimation={Boolean(reduceMotion)}
+          disableRipple
           size="lg"
           color="success"
           onClick={handleSearchBtnClick}
@@ -478,6 +488,7 @@ const ButtonWrapper = styled.div`
 `;
 
 const SubmitButton = styled(FloatingButton)`
+  ${buttonFeedback}
   min-height: 48px;
   height: auto;
   padding: 12px 16px;
@@ -486,6 +497,11 @@ const SubmitButton = styled(FloatingButton)`
   color: var(--button-text-on-primary);
   font-weight: 600;
   white-space: normal;
+  @media (hover: hover) and (pointer: fine) {
+    &:not(:disabled):hover {
+      background: var(--primary-hover);
+    }
+  }
 `;
 
 const Footer = styled.div`
@@ -501,9 +517,12 @@ const QuitRoom = styled.button`
   padding: 8px 0;
   font-size: var(--font-body);
   color: var(--text-secondary);
+  ${buttonFeedback}
 
-  &:hover {
-    opacity: 0.7;
+  @media (hover: hover) and (pointer: fine) {
+    &:not(:disabled):hover {
+      color: var(--text-primary);
+    }
   }
 `;
 

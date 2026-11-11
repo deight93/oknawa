@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useId } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
+import type { TransferSelection } from '@/hooks/result/useRouteInteraction';
 import type { ItineraryItem, Participant, RouteStep } from '@/types/location';
 import {
   getRouteTransfers,
@@ -14,6 +15,8 @@ interface Props {
   itinerary: (ItineraryItem | null)[];
   selectedParticipantIndex: number;
   onSelectParticipant: (index: number) => void;
+  selectedTransfer?: TransferSelection | null;
+  onSelectTransfer?: (stepIndex: number) => void;
 }
 
 function readableText(value: unknown) {
@@ -39,9 +42,13 @@ function formatDistance(meters: unknown) {
 function StepDetails({
   step,
   transferNumber,
+  selected,
+  onSelect,
 }: {
   step: RouteStep;
   transferNumber?: number;
+  selected: boolean;
+  onSelect?: () => void;
 }) {
   const transit = step.mode === 'transit' ? step.transit : undefined;
   const lineName = readableText(transit?.lineName);
@@ -77,8 +84,24 @@ function StepDetails({
   }
 
   return (
-    <li>
-      <h3>{title}</h3>
+    <li data-selected={selected || undefined}>
+      <h3>
+        {onSelect ? (
+          <button
+            type="button"
+            aria-label={`${title} · ${departureName ?? '승차 지점'} 지도에서 보기`}
+            aria-pressed={selected}
+            onClick={onSelect}
+          >
+            <span>{title}</span>
+            <span className="route-map-label" aria-hidden="true">
+              {selected ? '지도에서 보는 중' : '지도 보기'}
+            </span>
+          </button>
+        ) : (
+          title
+        )}
+      </h3>
       {step.mode === 'transit' && (
         <>
           <p>
@@ -99,9 +122,12 @@ export default function RouteDetails({
   itinerary,
   selectedParticipantIndex,
   onSelectParticipant,
+  selectedTransfer,
+  onSelectTransfer,
 }: Props) {
   const selectId = useId();
-  if (participants.length === 0) return null;
+  const disclosureRef = useRef<HTMLDetailsElement>(null);
+  const [open, setOpen] = useState(false);
 
   const route = itinerary[selectedParticipantIndex];
   const steps = route?.itinerary.steps;
@@ -119,9 +145,40 @@ export default function RouteDetails({
   const hasTransferCoordinates = transfers.some(transfer =>
     isRoutePoint(transfer.transit?.departureStop?.location),
   );
+  const selectedStepIndex = transfers.find(
+    transfer =>
+      transfer.stepIndex === selectedTransfer?.stepIndex &&
+      isRoutePoint(transfer.transit?.departureStop?.location),
+  )?.stepIndex;
+
+  useEffect(() => {
+    if (selectedStepIndex !== undefined) setOpen(true);
+  }, [selectedTransfer, selectedStepIndex]);
+
+  useEffect(() => {
+    if (
+      !open ||
+      selectedStepIndex === undefined ||
+      selectedTransfer?.source !== 'map'
+    )
+      return;
+    disclosureRef.current?.querySelector('[data-selected]')?.scrollIntoView({
+      block: 'nearest',
+      behavior: 'instant',
+    });
+    disclosureRef.current
+      ?.querySelector<HTMLButtonElement>('[data-selected] button')
+      ?.focus({ preventScroll: true });
+  }, [open, selectedTransfer, selectedStepIndex]);
+
+  if (participants.length === 0) return null;
 
   return (
-    <Disclosure>
+    <Disclosure
+      ref={disclosureRef}
+      open={open}
+      onToggle={event => setOpen(event.currentTarget.open)}
+    >
       <summary>이동 구간·환승 안내</summary>
       <div className="route-details-body">
         <label htmlFor={selectId}>경로를 볼 참가자</label>
@@ -153,6 +210,17 @@ export default function RouteDetails({
                 <StepDetails
                   key={stepIndex}
                   step={step}
+                  selected={selectedStepIndex === stepIndex}
+                  onSelect={
+                    onSelectTransfer &&
+                    transfers.some(
+                      transfer =>
+                        transfer.stepIndex === stepIndex &&
+                        isRoutePoint(transfer.transit?.departureStop?.location),
+                    )
+                      ? () => onSelectTransfer(stepIndex)
+                      : undefined
+                  }
                   transferNumber={
                     transfers.find(transfer => transfer.stepIndex === stepIndex)
                       ?.number
@@ -170,6 +238,8 @@ export default function RouteDetails({
                 <p>
                   좌표가 있는 환승 지점만 선택한 참가자의 지도에 번호로
                   표시돼요.
+                  {onSelectTransfer &&
+                    ' 환승 번호를 누르면 지도와 상세 안내가 함께 선택돼요.'}
                 </p>
               )}
             </div>

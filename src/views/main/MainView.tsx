@@ -1,6 +1,6 @@
 'use client';
 
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
 import { useAtom } from 'jotai';
 import { useEffect } from 'react';
 import Image from 'next/image';
@@ -28,15 +28,22 @@ export default function MainView() {
     <Container>
       <PageHeader />
       <Introduction>
-        <MeetingIllustration
-          src="/images/meeting-friends.webp"
-          alt=""
-          width={680}
-          height={340}
-          sizes="(max-width: 378px) calc(100vw - 38px), 340px"
-          priority
-        />
-        <Title>{'우리,\n어디서 만날까요?'}</Title>
+        <IllustrationScene aria-hidden="true">
+          <MeetingIllustration
+            src="/images/meeting-friends.webp"
+            alt=""
+            width={680}
+            height={340}
+            sizes="(max-width: 378px) calc(100vw - 40px), 340px"
+            priority
+          />
+        </IllustrationScene>
+        <Title>
+          <span>우리,</span>
+          <span>
+            <em>어디서</em> 만날까요?
+          </span>
+        </Title>
         <Description>
           각자의 출발지로 중간지점을 찾고,
           <br />
@@ -118,6 +125,27 @@ export default function MainView() {
   );
 }
 
+const enter = keyframes`
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+`;
+
+const arrive = keyframes`
+  0% { opacity: 0; transform: translateY(24px) scale(0.94); }
+  70% { opacity: 1; transform: translateY(-8px) scale(1.015); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+`;
+
+const float = keyframes`
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+`;
+
+const ripple = keyframes`
+  from { opacity: 0.65; transform: translateX(-50%) scale(0.6); }
+  to { opacity: 0; transform: translateX(-50%) scale(2.2); }
+`;
+
 const Container = styled.main`
   display: flex;
   flex-direction: column;
@@ -140,14 +168,46 @@ const Introduction = styled.header`
   text-align: center;
 `;
 
-const MeetingIllustration = styled(Image)`
-  display: block;
+const IllustrationScene = styled.div`
+  position: relative;
   width: min(100%, clamp(224px, 40dvh, 340px));
-  height: auto;
   margin: 0 auto 12px;
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 2%;
+    width: 64px;
+    height: 20px;
+    border: 2px solid var(--primary);
+    border-radius: 50%;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    &::after {
+      animation: ${ripple} 1.4s ease-out 0.7s 2;
+    }
+  }
 
   @media (max-width: 500px) and (max-height: 640px) {
     margin-bottom: 16px;
+  }
+`;
+
+const MeetingIllustration = styled(Image)`
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: auto;
+
+  @media (prefers-reduced-motion: no-preference) {
+    animation:
+      ${arrive} 700ms cubic-bezier(0.22, 1, 0.36, 1) both,
+      ${float} 1.8s ease-in-out 700ms 2;
   }
 `;
 
@@ -156,6 +216,25 @@ const Title = styled.h1`
   font-weight: 700;
   white-space: pre-line;
   line-height: 43px;
+
+  > span {
+    display: block;
+  }
+
+  em {
+    color: var(--primary);
+    color: color-mix(in srgb, var(--primary) 70%, var(--text-primary));
+    font-style: normal;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    > span {
+      animation: ${enter} 600ms cubic-bezier(0.22, 1, 0.36, 1) 100ms both;
+    }
+    > span:last-child {
+      animation-delay: 180ms;
+    }
+  }
 
   @media (max-width: 500px) and (max-height: 640px) {
     font-size: 30px;
@@ -170,6 +249,10 @@ const Description = styled.p`
   font-size: var(--font-body);
   line-height: 1.6;
   word-break: keep-all;
+
+  @media (prefers-reduced-motion: no-preference) {
+    animation: ${enter} 600ms cubic-bezier(0.22, 1, 0.36, 1) 240ms both;
+  }
 `;
 
 const SearchTypeSelectorBox = styled.nav`
@@ -178,6 +261,15 @@ const SearchTypeSelectorBox = styled.nav`
   width: 100%;
   max-width: 324px;
   gap: 20px;
+
+  @media (prefers-reduced-motion: no-preference) {
+    > a {
+      animation: ${enter} 600ms cubic-bezier(0.22, 1, 0.36, 1) 300ms backwards;
+    }
+    > a:last-child {
+      animation-delay: 380ms;
+    }
+  }
 
   @media (max-width: 359px) {
     gap: 16px;
@@ -192,6 +284,10 @@ const SectionLabel = styled.h2`
   font-size: 16px;
   font-weight: 600;
   margin-bottom: 12px;
+
+  @media (prefers-reduced-motion: no-preference) {
+    animation: ${enter} 600ms cubic-bezier(0.22, 1, 0.36, 1) 280ms both;
+  }
 `;
 const DestinationEntry = styled(Link)`
   display: flex;
@@ -204,6 +300,7 @@ const DestinationEntry = styled(Link)`
   color: var(--text-primary);
   > svg {
     flex-shrink: 0;
+    transition: transform 180ms ease;
   }
   > svg:first-child {
     color: var(--primary);
@@ -230,6 +327,23 @@ const DestinationEntry = styled(Link)`
   &:hover {
     background: var(--surface-muted);
   }
+
+  @media (prefers-reduced-motion: no-preference) {
+    animation: ${enter} 600ms cubic-bezier(0.22, 1, 0.36, 1) 440ms backwards;
+    transition:
+      transform 160ms ease,
+      background-color 160ms ease;
+
+    &:active {
+      transform: scale(0.98);
+    }
+
+    &:hover > svg:last-child,
+    &:focus-visible > svg:last-child {
+      transform: translateX(4px);
+    }
+  }
+
   &:focus-visible {
     outline: 2px solid var(--primary);
     outline-offset: 4px;

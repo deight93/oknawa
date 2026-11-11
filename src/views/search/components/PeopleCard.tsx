@@ -3,6 +3,31 @@ import Avatar, { AVATAR_COLORS } from '@/components/Avatar';
 import styled from 'styled-components';
 import { TRAVEL_MODE_OPTIONS, TravelMode } from '@/types/recommendationOptions';
 import TravelModeSelector from './TravelModeSelector';
+import { ReactNode } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
+import { buttonFeedback } from '@/components/Button';
+
+export function ParticipantRow({
+  children,
+  layoutDependency,
+}: {
+  children: ReactNode;
+  layoutDependency: string;
+}) {
+  const reduceMotion = useReducedMotion();
+
+  return (
+    <AnimatedRow
+      layout={reduceMotion ? false : 'position'}
+      layoutDependency={layoutDependency}
+      initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: reduceMotion ? 0 : 0.18, ease: 'easeOut' }}
+    >
+      {children}
+    </AnimatedRow>
+  );
+}
 
 interface PeopleCardProps {
   name: string;
@@ -108,6 +133,17 @@ const Container = styled.div<{ $hasModeSelector: boolean }>`
   }
 `;
 
+// Rows unmount immediately on removal, so deleted controls cannot stay active.
+const AnimatedRow = styled(motion.div)`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  @media (prefers-reduced-motion: reduce) {
+    transform: none !important;
+  }
+`;
+
 const Wrapper = styled.div`
   flex: 1 1 120px;
   display: flex;
@@ -194,9 +230,12 @@ const RemoveButton = styled.button`
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
-  &:hover {
-    color: var(--text-primary);
-    background: var(--surface-muted);
+  ${buttonFeedback}
+  @media (hover: hover) and (pointer: fine) {
+    &:not(:disabled):hover {
+      color: var(--text-primary);
+      background: var(--surface-muted);
+    }
   }
   &:focus-visible {
     outline: 2px solid

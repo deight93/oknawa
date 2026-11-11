@@ -1,9 +1,20 @@
-import styled from 'styled-components';
+import styled, { css, keyframes } from 'styled-components';
 import PageHeader from '@/components/PageHeader';
 
 interface ExpandProps {
   $isExpand?: boolean;
 }
+
+const candidateEnter = keyframes`
+  from { opacity: 0.6; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+`;
+const candidateTransition = css`
+  animation: ${candidateEnter} 160ms ease-out;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+`;
 
 export const Container = styled.div`
   --result-muted: color-mix(
@@ -103,6 +114,7 @@ export const CandidateMeta = styled.div`
 `;
 
 export const TitleWrapper = styled.div`
+  ${candidateTransition}
   min-width: 0;
   flex: 1 1 13rem;
   display: flex;
@@ -111,6 +123,7 @@ export const TitleWrapper = styled.div`
 `;
 
 export const StationName = styled.h2<ExpandProps>`
+  ${({ $isExpand = true }) => $isExpand && candidateTransition}
   word-break: keep-all;
   overflow-wrap: anywhere;
   line-height: 1.4;
@@ -244,6 +257,7 @@ export const ConditionBadge = styled.span`
 `;
 
 export const SummaryMetrics = styled.div`
+  ${candidateTransition}
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NextUIProvider } from '@nextui-org/react';
 import { ThemeProvider as NextThemesProvider } from 'next-themes';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { MotionConfig } from 'framer-motion';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -26,7 +27,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         enableSystem={false}
       >
         <QueryClientProvider client={queryClient}>
-          {children}
+          <MotionConfig reducedMotion="user">{children}</MotionConfig>
           {/* <ReactQueryDevtools initialIsOpen={false} position="bottom" /> */}
         </QueryClientProvider>
       </NextThemesProvider>

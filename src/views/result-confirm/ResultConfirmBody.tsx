@@ -1,7 +1,5 @@
 'use client';
 
-import { useState } from 'react';
-
 import { useSetAtom } from 'jotai';
 import { bottomSheetState } from '@/jotai/global/store';
 
@@ -14,6 +12,7 @@ import RouteDetails from '@/components/RouteDetails';
 import { Button } from '@nextui-org/react';
 
 import useConfirmedResult from '@/hooks/result/useConfirmedResult';
+import useRouteInteraction from '@/hooks/result/useRouteInteraction';
 import { isCarRecommendation } from '@/utils/recommendationDisplay';
 
 interface ResultConfirmBodyProps {
@@ -23,7 +22,6 @@ interface ResultConfirmBodyProps {
 export default function ResultConfirmBody({
   queryShareKey,
 }: ResultConfirmBodyProps) {
-  const [selectedParticipant, setSelectedParticipant] = useState(0);
   const setBottomSheet = useSetAtom(bottomSheetState);
   const {
     resultConfirm,
@@ -38,8 +36,24 @@ export default function ResultConfirmBody({
 
   const { itinerary, request_info, end_x, end_y } = resultConfirm;
   const participants = request_info?.participant ?? [];
-  const selectedParticipantIndex =
-    selectedParticipant < participants.length ? selectedParticipant : 0;
+  const routeKey = JSON.stringify([
+    resultConfirm.map_id,
+    shareKey,
+    end_x,
+    end_y,
+  ]);
+  const {
+    selectedParticipantIndex,
+    isRouteFocused,
+    selectedTransfer,
+    selectParticipant,
+    selectTransfer,
+    showOverview,
+  } = useRouteInteraction({
+    resultKey: routeKey,
+    participants,
+    itinerary,
+  });
   const shouldShowHotPlaceButton = !isCarRecommendation(recommendationOptions);
 
   const handleHotplaceBtnClick = () => {
@@ -88,18 +102,25 @@ export default function ResultConfirmBody({
             participants={participants}
             itinerary={itinerary}
             selectedParticipantIndex={selectedParticipantIndex}
-            onSelectParticipant={setSelectedParticipant}
+            onSelectParticipant={selectParticipant}
+            selectedTransfer={selectedTransfer}
+            onSelectTransfer={selectTransfer}
           />
         </DistanceSummary>
         <MapBackground>
           <MeetingMap
+            routeKey={routeKey}
             stationName={stationName}
             endX={end_x}
             endY={end_y}
             participants={request_info?.participant}
             itinerary={itinerary}
             selectedParticipantIndex={selectedParticipantIndex}
-            onSelectParticipant={setSelectedParticipant}
+            onSelectParticipant={selectParticipant}
+            isRouteFocused={isRouteFocused}
+            selectedTransfer={selectedTransfer}
+            onSelectTransfer={stepIndex => selectTransfer(stepIndex, 'map')}
+            onShowOverview={showOverview}
           />
           {shouldShowHotPlaceButton && (
             <FloatingButton
@@ -126,12 +147,17 @@ const Container = styled.main`
   width: 100%;
   height: 100vh;
   height: 100dvh;
+
+  @media (orientation: landscape) and (max-height: 500px) {
+    flex-direction: row;
+  }
 `;
 
 const MapBackground = styled.div`
   position: relative;
   flex: 1;
   min-height: 180px;
+  min-width: 0;
 `;
 
 const FloatingButton = styled(Button)`

@@ -120,7 +120,11 @@ const SelectedMark = styled.span`
   border-radius: 50%;
   color: var(--button-text-on-primary);
   background: var(--primary);
-  visibility: hidden;
+  opacity: 0;
+  transition: opacity 140ms ease;
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
 `;
 
 const ChoiceContent = styled.span`
@@ -138,8 +142,12 @@ const ChoiceContent = styled.span`
   font-size: var(--font-label);
   font-weight: 600;
   transition:
-    border-color 150ms ease,
-    background-color 150ms ease;
+    border-color 140ms ease,
+    background-color 140ms ease,
+    transform 100ms ease;
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
   @media (max-width: 480px) and (max-height: 640px) {
     min-height: 80px;
     padding-block: 10px;
@@ -160,15 +168,29 @@ const Radio = styled.input`
     background: var(--primary-soft);
   }
   &:checked + ${ChoiceContent} ${SelectedMark} {
-    visibility: visible;
+    opacity: 1;
   }
   &:focus-visible + ${ChoiceContent} {
     outline: 2px solid
       color-mix(in srgb, var(--primary) 65%, var(--text-primary));
     outline-offset: 4px;
   }
-  &:hover + ${ChoiceContent} {
-    border-color: var(--primary);
+  @media (hover: hover) and (pointer: fine) {
+    &:not(:disabled):hover + ${ChoiceContent} {
+      border-color: var(--primary);
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    &:not(:disabled):active + ${ChoiceContent} {
+      transform: scale(0.98);
+    }
+  }
+  &:disabled {
+    cursor: not-allowed;
+  }
+  &:disabled + ${ChoiceContent} {
+    transform: none;
+    transition: none;
   }
 `;
 
@@ -202,6 +224,25 @@ const Select = styled.select`
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:not(:disabled):hover {
+      border-color: var(--text-muted);
+      background: var(--surface-strong);
+    }
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    transition: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
 
   &:focus-visible {
     outline: 2px solid

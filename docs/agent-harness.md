@@ -54,6 +54,26 @@ Run these manually when UI or routing changes:
     preference results, like and confirm buttons. Verify the station title wraps
     normally and every action remains reachable.
 
+## Motion and route interactions
+
+- Open home in both themes at 320px, 390px and desktop widths. The original
+  illustration, title and entry cards animate once on entry, and links remain
+  usable immediately. Check keyboard focus and the system's reduced-motion mode.
+- Add, edit and delete departures, including duplicate names. Surviving cards
+  should move into place without losing their input values or focus. Deleted
+  controls must disappear immediately; changing travel mode must not replay entry.
+- In candidate, confirmed and fixed-destination results, select a participant,
+  then a transfer in the details. Verify the selected route is emphasized and the
+  map focuses that transfer. Select a map transfer to reveal its matching detail.
+- Use `전체 경로 보기`, switch candidate, and change participant. Check that old
+  transfer highlights disappear and ordinary vote refreshes preserve the map
+  viewport. Transfers without coordinates must remain readable without a map link.
+- Repeat with reduced motion enabled. Card transforms, candidate slides and map
+  panning should stop while the same controls and selection states still work.
+- In the confirmed result, scroll the route details and select a map transfer.
+  The confirmed place and header should remain visible above the scrolling body.
+  Check long names and short landscape screens without hiding share/retry controls.
+
 ## Walking route lines
 
 For newly calculated routes, the map uses the ordered geometry of each walking

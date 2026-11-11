@@ -19,6 +19,7 @@ export const Disclosure = styled.details`
   }
 
   summary:focus-visible,
+  button:focus-visible,
   select:focus-visible {
     outline: 2px solid
       color-mix(in srgb, var(--primary) 65%, var(--text-primary));
@@ -64,7 +65,41 @@ export const Disclosure = styled.details`
 
   li {
     min-width: 0;
-    padding-inline-start: 4px;
+    padding-inline-start: 8px;
+    border-inline-start: 2px solid transparent;
+  }
+
+  li[data-selected] {
+    border-inline-start-color: var(--primary);
+  }
+
+  h3 button {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+    min-height: 44px;
+    width: 100%;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .route-map-label {
+    flex-shrink: 0;
+    padding: 1px 6px;
+    border: 1px solid var(--border-strong);
+    border-radius: 5px;
+    color: var(--text-secondary);
+    font-size: var(--font-caption);
+    font-weight: 500;
+  }
+
+  h3 button:hover .route-map-label,
+  h3 button[aria-pressed='true'] .route-map-label {
+    background: var(--surface-muted);
+    color: var(--text-primary);
   }
 
   li::marker {

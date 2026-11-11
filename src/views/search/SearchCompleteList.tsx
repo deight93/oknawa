@@ -4,12 +4,13 @@ import PageHeader from '@/components/PageHeader';
 
 import { useRouter } from 'next/navigation';
 
-import { Fragment, useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import styled from 'styled-components';
 import { CirclePlus } from 'lucide-react';
 
-import PeopleCard from './components/PeopleCard';
+import PeopleCard, { ParticipantRow } from './components/PeopleCard';
+import { buttonFeedback } from '@/components/Button';
 import DepartureEditor from './components/DepartureEditor';
 import SearchLoading from './components/SearchLoading';
 import MeetingPurposeSelector from './components/MeetingPurposeSelector';
@@ -18,7 +19,8 @@ import RecommendationOptionSelector from './components/RecommendationOptionSelec
 import { useAtom } from 'jotai';
 import { meetingDestinationState } from '@/jotai/meeting/store';
 import MeetingDestinationField from './components/MeetingDestinationField';
-import { searchState } from '@/jotai/global/store';
+import { searchState, SearchState } from '@/jotai/global/store';
+import { useReducedMotion } from 'framer-motion';
 
 import { Button as FloatingButton } from '@nextui-org/react';
 
@@ -35,12 +37,30 @@ export default function SearchCompleteList({
   destinationMode?: boolean;
 }) {
   const router = useRouter();
+  const reduceMotion = useReducedMotion();
 
   const [searchList, setSearchList] = useAtom(searchState);
   const [destination, setDestination] = useAtom(meetingDestinationState);
   const [changingDestination, setChangingDestination] = useState(false);
   const minimumParticipants = destinationMode ? 1 : 2;
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editingParticipantKey, setEditingParticipantKey] = useState<
+    string | null
+  >(null);
+  // UI keys stay local; duplicate names and the stored/request payload stay intact.
+  const participantKeys = useRef(new WeakMap<SearchState, string>());
+  const nextParticipantKey = useRef(0);
+  const rows = searchList.map(search => {
+    let key = participantKeys.current.get(search);
+    if (key === undefined) {
+      key = String(nextParticipantKey.current++);
+      participantKeys.current.set(search, key);
+    }
+    return { key, search };
+  });
+  const editingKey = rows.some(row => row.key === editingParticipantKey)
+    ? editingParticipantKey
+    : null;
+  const layoutDependency = `${rows.map(row => row.key).join(',')}:${editingKey}`;
   const [meetingPurpose, setMeetingPurpose] = useState<MeetingPurpose>();
   const [recommendationOptions, setRecommendationOptions] =
     useState<RecommendationOptions>(DEFAULT_RECOMMENDATION_OPTIONS);
@@ -48,7 +68,7 @@ export default function SearchCompleteList({
 
   const handleSearchBtnClick = () => {
     if (
-      editingIndex !== null ||
+      editingKey !== null ||
       isLoading ||
       changingDestination ||
       searchList.length < minimumParticipants ||
@@ -66,8 +86,24 @@ export default function SearchCompleteList({
     );
   };
 
-  const handleDeleteIconClick = (index: number) => {
-    setSearchList(prevList => prevList.filter((_, i) => i !== index));
+  const updateParticipant = (
+    key: string,
+    update: (person: SearchState) => SearchState,
+  ) => {
+    setSearchList(list =>
+      list.map(person => {
+        if (participantKeys.current.get(person) !== key) return person;
+        const next = update(person);
+        participantKeys.current.set(next, key);
+        return next;
+      }),
+    );
+  };
+
+  const handleDeleteIconClick = (key: string) => {
+    setSearchList(list =>
+      list.filter(person => participantKeys.current.get(person) !== key),
+    );
   };
 
   useEffect(() => {
@@ -92,7 +128,7 @@ export default function SearchCompleteList({
             <MeetingDestinationField
               destination={destination}
               onChange={value => setDestination(value)}
-              disabled={isLoading || editingIndex !== null}
+              disabled={isLoading || editingKey !== null}
               onBusyChange={setChangingDestination}
             />
           )}
@@ -108,55 +144,50 @@ export default function SearchCompleteList({
               </button>
             </Hint>
           )}
-          {searchList.map((search, index) => {
+          {rows.map(({ search, key }, index) => {
             return (
-              <Fragment key={index}>
+              <ParticipantRow key={key} layoutDependency={layoutDependency}>
                 <PeopleCard
                   name={search.name}
                   place={search.address.regionName}
                   index={index}
                   travelMode={search.travelMode ?? 'transit'}
                   onEdit={
-                    editingIndex === null && !isLoading
-                      ? () => setEditingIndex(index)
+                    editingKey === null && !isLoading
+                      ? () => setEditingParticipantKey(key)
                       : undefined
                   }
                   onTravelModeChange={
-                    editingIndex === null && !isLoading
+                    editingKey === null && !isLoading
                       ? mode =>
-                          setSearchList(list =>
-                            list.map((person, i) =>
-                              i === index
-                                ? { ...person, travelMode: mode }
-                                : person,
-                            ),
-                          )
+                          updateParticipant(key, person => ({
+                            ...person,
+                            travelMode: mode,
+                          }))
                       : undefined
                   }
                   onDeleteIconClick={
-                    editingIndex === null && !isLoading
-                      ? () => handleDeleteIconClick(index)
+                    editingKey === null && !isLoading
+                      ? () => handleDeleteIconClick(key)
                       : undefined
                   }
                 />
-                {editingIndex === index && (
+                {editingKey === key && (
                   <DepartureEditor
                     initialValue={search}
-                    onCancel={() => setEditingIndex(null)}
+                    onCancel={() => setEditingParticipantKey(null)}
                     onSave={value => {
-                      setSearchList(list =>
-                        list.map((person, i) => (i === index ? value : person)),
-                      );
+                      updateParticipant(key, () => value);
                     }}
                   />
                 )}
-              </Fragment>
+              </ParticipantRow>
             );
           })}
         </Section>
         <AddButton
           type="button"
-          disabled={editingIndex !== null || isLoading}
+          disabled={editingKey !== null || isLoading}
           onClick={() =>
             router.push(
               destinationMode ? '/meeting/individual' : '/search/individual',
@@ -187,13 +218,15 @@ export default function SearchCompleteList({
           </Hint>
         )}
         <SubmitButton
+          disableAnimation={Boolean(reduceMotion)}
+          disableRipple
           size="lg"
           color="success"
           onClick={handleSearchBtnClick}
           isDisabled={
             searchList.length < minimumParticipants ||
             isLoading ||
-            editingIndex !== null ||
+            editingKey !== null ||
             changingDestination ||
             (destinationMode && !destination)
           }
@@ -265,8 +298,16 @@ const AddButton = styled.button`
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
-  &:hover {
-    background: var(--surface-raised);
+  ${buttonFeedback}
+  @media (hover: hover) and (pointer: fine) {
+    &:not(:disabled):hover {
+      background: var(--surface-raised);
+      border-color: var(--text-primary);
+    }
+  }
+  &:disabled {
+    color: var(--text-muted);
+    border-color: var(--border);
   }
   &:focus-visible {
     outline: 2px solid
@@ -288,6 +329,7 @@ const Hint = styled.p`
 `;
 
 const SubmitButton = styled(FloatingButton)`
+  ${buttonFeedback}
   width: 100%;
   min-height: 48px;
   border-radius: 10px;
@@ -295,6 +337,11 @@ const SubmitButton = styled(FloatingButton)`
   color: var(--button-text-on-primary);
   font-size: 16px;
   font-weight: 600;
+  @media (hover: hover) and (pointer: fine) {
+    &:not(:disabled):hover {
+      background: var(--primary-hover);
+    }
+  }
   &:focus-visible {
     outline: 2px solid
       color-mix(in srgb, var(--primary) 65%, var(--text-primary));

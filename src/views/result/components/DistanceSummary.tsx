@@ -2,7 +2,8 @@
 
 import { useRouter } from 'next/navigation';
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import type { TransferSelection } from '@/hooks/result/useRouteInteraction';
 import {
   ChevronDown as DisclosureChevron,
   ExternalLink,
@@ -223,6 +224,7 @@ const getVisiblePreferences = (
 
 interface DistanceSummaryProps {
   children?: ReactNode;
+  selectedTransfer?: TransferSelection | null;
   station: DistanceSummaryItem;
   stations: DistanceSummaryItem[];
   activeMapId: string;
@@ -244,6 +246,7 @@ interface DistanceSummaryProps {
 
 export default function DistanceSummary({
   children,
+  selectedTransfer,
   station,
   stations,
   activeMapId,
@@ -267,6 +270,9 @@ export default function DistanceSummary({
   const reset = useResetAtom(modalState);
 
   const [isExpandTail, setExpandTail] = useState(false);
+  useEffect(() => {
+    if (selectedTransfer) setExpandTail(selectedTransfer.source === 'map');
+  }, [selectedTransfer]);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isComparisonOpen, setIsComparisonOpen] = useState(false);
   const [openedCompareShareKey, setOpenedCompareShareKey] = useState<
@@ -332,7 +338,7 @@ export default function DistanceSummary({
         <>
           <ExpandBody id="expanded-result">
             <ContentWrapper>
-              <StationName>{stationName}</StationName>
+              <StationName key={shareKey}>{stationName}</StationName>
               <CandidateMeta>
                 <Label>{resultTitleLabel}</Label>
                 <IndicatorWrapper>
@@ -356,7 +362,7 @@ export default function DistanceSummary({
                 </IndicatorWrapper>
               </CandidateMeta>
             </ContentWrapper>
-            <SummaryMetrics>
+            <SummaryMetrics key={shareKey}>
               <SummaryMetric>
                 <SummaryMetricLabel>평균</SummaryMetricLabel>
                 <SummaryMetricValue>
@@ -764,7 +770,7 @@ export default function DistanceSummary({
               >
                 <ChevronLeft />
               </ChevronWrapper>
-              <TitleWrapper>
+              <TitleWrapper key={shareKey}>
                 <StationName $isExpand={isExpandTail}>
                   {stationName}
                 </StationName>

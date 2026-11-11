@@ -1,6 +1,7 @@
 'use client';
 
 import styled from 'styled-components';
+import { buttonFeedback } from '@/components/Button';
 
 import {
   MEETING_PURPOSE_OPTIONS,
@@ -98,8 +99,11 @@ const OptionButton = styled.button<{ $isActive: boolean }>`
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
-  &:hover {
-    border-color: var(--primary);
+  ${buttonFeedback}
+  @media (hover: hover) and (pointer: fine) {
+    &:not(:disabled):hover {
+      border-color: var(--primary);
+    }
   }
   &:focus-visible {
     outline: 2px solid
