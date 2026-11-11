@@ -10,6 +10,7 @@ import {
 import type {
   PopularMeetingLocation,
   RouteSegment,
+  RouteStep,
   TravelMode,
 } from '../lib/location-types.ts';
 
@@ -174,9 +175,41 @@ const googleSegments: RouteSegment[] = [
     ],
   },
 ];
+const googleGuidance = [
+  { mode: 'walk', durationSeconds: 61, distanceMeters: 150 },
+  { mode: 'transit', durationSeconds: 600, distanceMeters: 5000 },
+  { mode: 'walk', durationSeconds: 120, distanceMeters: 300 },
+] satisfies RouteStep[];
+const transitDetails = {
+  stopDetails: {
+    departureStop: {
+      name: ' 강남역 ',
+      location: { latLng: { latitude: 37.501, longitude: 127.001 } },
+    },
+    arrivalStop: {
+      name: '역삼역',
+      location: { latLng: { latitude: 37.505, longitude: 127.012 } },
+    },
+  },
+  transitLine: {
+    nameShort: ' 2호선 ',
+    name: '서울 지하철 2호선',
+    vehicle: { type: 'SUBWAY' },
+  },
+  headsign: ' 성수 방면 ',
+  stopCount: 4,
+};
+const transitGuidance = {
+  lineName: '2호선',
+  vehicleType: 'SUBWAY',
+  headsign: '성수 방면',
+  departureStop: { name: '강남역', location: { lat: 37.501, lng: 127.001 } },
+  arrivalStop: { name: '역삼역', location: { lat: 37.505, lng: 127.012 } },
+  stopCount: 4,
+};
 
 Deno.test(
-  'Google transit requests step polylines without extra requests',
+  'Google transit requests step polylines and only required guidance fields without extra requests',
   async () => {
     const fieldMasks: Array<string | null> = [];
     await withApi(
@@ -196,6 +229,15 @@ Deno.test(
             'routes.legs.steps.travelMode',
             'routes.legs.steps.polyline.encodedPolyline',
             'routes.polyline.encodedPolyline',
+            'routes.legs.steps.transitDetails.stopDetails.departureStop.name',
+            'routes.legs.steps.transitDetails.stopDetails.departureStop.location.latLng',
+            'routes.legs.steps.transitDetails.stopDetails.arrivalStop.name',
+            'routes.legs.steps.transitDetails.stopDetails.arrivalStop.location.latLng',
+            'routes.legs.steps.transitDetails.transitLine.nameShort',
+            'routes.legs.steps.transitDetails.transitLine.name',
+            'routes.legs.steps.transitDetails.transitLine.vehicle.type',
+            'routes.legs.steps.transitDetails.headsign',
+            'routes.legs.steps.transitDetails.stopCount',
           ]),
         );
       },
@@ -213,7 +255,11 @@ Deno.test(
           [participants[0], { ...participants[0], name: 'Duplicate origin' }],
           [stations[0]],
         );
-        const expected = { ...googleSummary, segments: googleSegments };
+        const expected = {
+          ...googleSummary,
+          segments: googleSegments,
+          steps: googleGuidance,
+        };
         assertEquals(result[0].itinerary.length, 2);
         for (const item of result[0].itinerary) {
           assertEquals(item.travel_mode, 'transit');
@@ -257,6 +303,12 @@ Deno.test(
             googleSegments[1],
             googleSegments[1],
             googleSegments[2],
+          ],
+          steps: [
+            googleGuidance[0],
+            googleGuidance[1],
+            googleGuidance[1],
+            googleGuidance[2],
           ],
         };
         assertEquals(result[0].itinerary[0].itinerary, expected);
@@ -313,7 +365,17 @@ Deno.test(
               [stations[0]],
             );
             assertEquals(result[0].itinerary.length, 1);
-            assertEquals(result[0].itinerary[0].itinerary, googleSummary);
+            const knownMode =
+              typeof step === 'object' &&
+              step !== null &&
+              'travelMode' in step &&
+              step.travelMode === 'WALK';
+            assertEquals<unknown>(result[0].itinerary[0].itinerary, {
+              ...googleSummary,
+              ...(knownMode
+                ? { steps: [...googleGuidance, { mode: 'walk' }] }
+                : {}),
+            });
           },
         );
       });
@@ -378,9 +440,447 @@ Deno.test(
               ...googleSummary,
               total_polyline: [],
               segments: googleSegments,
+              steps: googleGuidance,
             };
             assertEquals(result[0].itinerary.length, 1);
             assertEquals(result[0].itinerary[0].itinerary, expected);
+          },
+        );
+      });
+    }
+  },
+);
+
+Deno.test(
+  'Google guidance preserves stops and ordered modes independently of step geometry',
+  async t => {
+    for (const fixture of [
+      { name: 'complete geometry', polyline: googleSteps[0].polyline },
+      { name: 'missing walking geometry', polyline: undefined },
+      {
+        name: 'malformed walking geometry',
+        polyline: { encodedPolyline: '???' },
+      },
+    ]) {
+      await t.step(fixture.name, async () => {
+        await withApi(
+          () =>
+            response([
+              {
+                ...segmentedGoogleRoute,
+                legs: [
+                  {
+                    steps: [
+                      { ...googleSteps[0], polyline: fixture.polyline },
+                      { ...googleSteps[1], transitDetails },
+                    ],
+                  },
+                  { steps: [googleSteps[2]] },
+                ],
+              },
+            ]),
+          async () => {
+            const result = await callRouteItineraries(
+              [participants[0]],
+              [stations[0]],
+            );
+            assertEquals<unknown>(result[0].itinerary[0].itinerary, {
+              ...googleSummary,
+              ...(fixture.name === 'complete geometry'
+                ? { segments: googleSegments }
+                : {}),
+              steps: [
+                googleGuidance[0],
+                { ...googleGuidance[1], transit: transitGuidance },
+                googleGuidance[2],
+              ],
+            });
+          },
+        );
+      });
+    }
+  },
+);
+
+Deno.test(
+  'Google guidance validates partial transit metadata without inventing stop names or coordinates',
+  async t => {
+    const cases: Array<{ name: string; details: unknown; expected?: unknown }> =
+      [
+        {
+          name: 'all metadata with no geometry',
+          details: transitDetails,
+          expected: transitGuidance,
+        },
+        { name: 'missing details', details: undefined },
+        { name: 'null details', details: null },
+        { name: 'string details', details: '2호선' },
+        { name: 'array details', details: [] },
+        {
+          name: 'empty objects',
+          details: {
+            transitLine: { vehicle: {} },
+            stopDetails: { departureStop: {}, arrivalStop: {} },
+          },
+        },
+        {
+          name: 'fallback line name and zero count',
+          details: {
+            transitLine: { nameShort: '  ', name: ' 서울 지하철 2호선 ' },
+            stopCount: 0,
+          },
+          expected: { lineName: '서울 지하철 2호선', stopCount: 0 },
+        },
+        {
+          name: 'stop name without any location',
+          details: { stopDetails: { departureStop: { name: ' 강남역 ' } } },
+          expected: { departureStop: { name: '강남역' } },
+        },
+        {
+          name: 'zero coordinates without a name',
+          details: {
+            stopDetails: {
+              arrivalStop: {
+                location: { latLng: { latitude: 0, longitude: 0 } },
+              },
+            },
+          },
+          expected: { arrivalStop: { location: { lat: 0, lng: 0 } } },
+        },
+        {
+          name: 'coordinate limits',
+          details: {
+            stopDetails: {
+              departureStop: {
+                location: { latLng: { latitude: -90, longitude: -180 } },
+              },
+              arrivalStop: {
+                location: { latLng: { latitude: 90, longitude: 180 } },
+              },
+            },
+          },
+          expected: {
+            departureStop: { location: { lat: -90, lng: -180 } },
+            arrivalStop: { location: { lat: 90, lng: 180 } },
+          },
+        },
+        {
+          name: 'non-string text and malformed nested records',
+          details: {
+            transitLine: {
+              nameShort: 2,
+              name: ['2호선'],
+              vehicle: { type: {} },
+            },
+            headsign: false,
+            stopDetails: { departureStop: '강남역', arrivalStop: [] },
+            stopCount: '4',
+          },
+        },
+        {
+          name: 'control characters are not display text',
+          details: {
+            transitLine: {
+              nameShort: '2\u0000호선',
+              name: '2호선',
+              vehicle: { type: 'SUB\u007fWAY' },
+            },
+            headsign: '성수\n방면',
+            stopDetails: { departureStop: { name: '강남\u0085역' } },
+          },
+          expected: { lineName: '2호선' },
+        },
+        {
+          name: 'blank strings',
+          details: {
+            transitLine: { nameShort: '', name: ' ', vehicle: { type: '\t' } },
+            headsign: ' ',
+            stopDetails: { departureStop: { name: ' ' } },
+          },
+        },
+        ...[
+          ['string latitude', { latitude: '37.5', longitude: 127 }],
+          ['string longitude', { latitude: 37.5, longitude: '127' }],
+          ['missing longitude', { latitude: 37.5 }],
+          ['latitude above range', { latitude: 90.1, longitude: 127 }],
+          ['latitude below range', { latitude: -90.1, longitude: 127 }],
+          ['longitude above range', { latitude: 37.5, longitude: 180.1 }],
+          ['longitude below range', { latitude: 37.5, longitude: -180.1 }],
+          ['null coordinate', { latitude: null, longitude: 127 }],
+          ['array coordinate', [37.5, 127]],
+        ].map(([name, latLng]) => ({
+          name: String(name),
+          details: {
+            stopDetails: {
+              departureStop: { name: '강남역', location: { latLng } },
+            },
+          },
+          expected: { departureStop: { name: '강남역' } },
+        })),
+        {
+          name: 'no inferred coordinates from other provider fields',
+          details: {
+            stopDetails: {
+              departureStop: { latLng: { latitude: 37.5, longitude: 127 } },
+              arrivalStop: { location: { latitude: 37.5, longitude: 127 } },
+            },
+          },
+        },
+        ...[-1, 1.5, Number.MAX_SAFE_INTEGER + 1].map(stopCount => ({
+          name: `invalid stop count ${stopCount}`,
+          details: { stopCount, headsign: '성수 방면' },
+          expected: { headsign: '성수 방면' },
+        })),
+      ];
+    for (const fixture of cases) {
+      await t.step(fixture.name, async () => {
+        await withApi(
+          () =>
+            response([
+              {
+                duration: '1800s',
+                legs: [
+                  {
+                    steps: [
+                      {
+                        travelMode: 'TRANSIT',
+                        staticDuration: '0s',
+                        distanceMeters: 0,
+                        transitDetails: fixture.details,
+                      },
+                    ],
+                  },
+                ],
+              },
+            ]),
+          async () => {
+            const result = await callRouteItineraries(
+              [participants[0]],
+              [stations[0]],
+            );
+            assertEquals<unknown>(result[0].itinerary[0].itinerary, {
+              totalTime: 1800,
+              transferCount: 0,
+              walkingTime: 0,
+              walkingDistance: 0,
+              total_polyline: [],
+              steps: [
+                {
+                  mode: 'transit',
+                  durationSeconds: 0,
+                  distanceMeters: 0,
+                  ...(fixture.expected ? { transit: fixture.expected } : {}),
+                },
+              ],
+            });
+          },
+        );
+      });
+    }
+  },
+);
+
+Deno.test(
+  'Google guidance keeps zero metrics and omits unsafe optional durations and distances',
+  async t => {
+    const cases = [
+      {
+        name: 'zero',
+        staticDuration: '0s',
+        distanceMeters: 0,
+        expected: { durationSeconds: 0, distanceMeters: 0 },
+      },
+      {
+        name: 'fractional seconds',
+        staticDuration: '0.2s',
+        distanceMeters: 1.5,
+        expected: { durationSeconds: 1, distanceMeters: 1.5 },
+      },
+      {
+        name: 'missing',
+        staticDuration: undefined,
+        distanceMeters: undefined,
+        expected: {},
+      },
+      {
+        name: 'null',
+        staticDuration: null,
+        distanceMeters: null,
+        expected: {},
+      },
+      {
+        name: 'wrong types',
+        staticDuration: 20,
+        distanceMeters: '15',
+        expected: {},
+      },
+      {
+        name: 'negative',
+        staticDuration: '-1s',
+        distanceMeters: -1,
+        expected: {},
+      },
+      {
+        name: 'malformed',
+        staticDuration: '10seconds',
+        distanceMeters: {},
+        expected: {},
+      },
+      {
+        name: 'unsafe range',
+        staticDuration: '9007199254740992s',
+        distanceMeters: Number.MAX_SAFE_INTEGER + 1,
+        expected: {},
+      },
+      {
+        name: 'nonfinite',
+        staticDuration: '9'.repeat(400) + 's',
+        distanceMeters: Infinity,
+        expected: {},
+      },
+    ];
+    for (const fixture of cases) {
+      await t.step(fixture.name, async () => {
+        await withApi(
+          () =>
+            response([
+              {
+                duration: '1800s',
+                legs: [
+                  {
+                    steps: [
+                      {
+                        travelMode: 'TRANSIT',
+                        staticDuration: fixture.staticDuration,
+                        distanceMeters: fixture.distanceMeters,
+                      },
+                    ],
+                  },
+                ],
+              },
+            ]),
+          async () => {
+            const result = await callRouteItineraries(
+              [participants[0]],
+              [stations[0]],
+            );
+            const itinerary = result[0].itinerary[0].itinerary;
+            assert('steps' in itinerary);
+            assertEquals(itinerary.steps, [
+              { mode: 'transit', ...fixture.expected },
+            ]);
+          },
+        );
+      });
+    }
+  },
+);
+
+Deno.test(
+  'Google guidance is absent for empty legs or an unknown mode anywhere in the journey',
+  async t => {
+    const validLeg = { steps: [{ ...googleSteps[1], transitDetails }] };
+    const cases: Array<[string, unknown]> = [
+      ['missing legs', undefined],
+      ['null legs', null],
+      ['empty legs', []],
+      ['non-array legs', {}],
+      ['empty leg', [validLeg, { steps: [] }]],
+      ['missing leg steps', [validLeg, {}]],
+      ['null leg', [validLeg, null]],
+      ['unknown mode', [validLeg, { steps: [{ travelMode: 'DRIVE' }] }]],
+      ['missing mode', [validLeg, { steps: [{ transitDetails }] }]],
+      ['null step', [validLeg, { steps: [null] }]],
+    ];
+    for (const [name, legs] of cases) {
+      await t.step(name, async () => {
+        await withApi(
+          () => response([{ ...segmentedGoogleRoute, legs }]),
+          async () => {
+            const result = await callRouteItineraries(
+              [participants[0]],
+              [stations[0]],
+            );
+            assertEquals(result[0].itinerary.length, 1);
+            assert(!('steps' in result[0].itinerary[0].itinerary));
+          },
+        );
+      });
+    }
+  },
+);
+
+Deno.test(
+  'Kakao guidance retains single-mode summaries when geometry is missing',
+  async t => {
+    for (const mode of ['walk', 'car'] satisfies TravelMode[]) {
+      for (const value of [0, 120]) {
+        await t.step(`${mode}: ${value}`, async () => {
+          await withApi(
+            () =>
+              Response.json(
+                mode === 'car'
+                  ? {
+                      routes: [
+                        {
+                          result_code: 0,
+                          summary: { duration: value, distance: value },
+                        },
+                      ],
+                    }
+                  : {
+                      status: 'OK',
+                      route: {
+                        properties: { totalTime: value, totalDistance: value },
+                      },
+                    },
+              ),
+            async () => {
+              const result = await callRouteItineraries(
+                [{ ...participants[0], travel_mode: mode }],
+                [stations[0]],
+              );
+              const itinerary = result[0].itinerary[0].itinerary;
+              assert('steps' in itinerary);
+              assertEquals(itinerary.steps, [
+                { mode, durationSeconds: value, distanceMeters: value },
+              ]);
+              assertEquals(itinerary.total_polyline, []);
+              assert(!('segments' in itinerary));
+            },
+          );
+        });
+      }
+    }
+  },
+);
+
+Deno.test(
+  'Kakao car guidance omits unknown or invalid summary distances',
+  async t => {
+    for (const distance of [
+      undefined,
+      null,
+      '7000',
+      -1,
+      Number.MAX_SAFE_INTEGER + 1,
+    ]) {
+      await t.step(String(distance), async () => {
+        await withApi(
+          () =>
+            Response.json({
+              routes: [{ result_code: 0, summary: { duration: 0, distance } }],
+            }),
+          async () => {
+            const result = await callRouteItineraries(
+              [{ ...participants[0], travel_mode: 'car' }],
+              [stations[0]],
+            );
+            const itinerary = result[0].itinerary[0].itinerary;
+            assert('steps' in itinerary);
+            assertEquals(itinerary.steps, [
+              { mode: 'car', durationSeconds: 0 },
+            ]);
           },
         );
       });
@@ -415,6 +915,13 @@ Deno.test(
               walkingDistance: mode === 'car' ? 0 : 1000,
               total_polyline: points,
               segments: [{ mode, polyline: points }],
+              steps: [
+                {
+                  mode,
+                  durationSeconds: mode === 'car' ? 1500 : 900,
+                  distanceMeters: mode === 'car' ? 7000 : 1000,
+                },
+              ],
             };
             assertEquals(calls, 1);
             assertEquals(result[0].itinerary[0].itinerary, expected);
@@ -506,6 +1013,13 @@ Deno.test(
                 walkingTime: mode === 'car' ? 0 : 900,
                 walkingDistance: mode === 'car' ? 0 : 1000,
                 total_polyline: fixture.expected,
+                steps: [
+                  {
+                    mode,
+                    durationSeconds: mode === 'car' ? 1500 : 900,
+                    distanceMeters: mode === 'car' ? 7000 : 1000,
+                  },
+                ],
               };
               assertEquals(result[0].itinerary[0].itinerary, expected);
             },
@@ -574,6 +1088,11 @@ Deno.test(
         { lat: 37.5, lng: 127.02 },
       ]);
       assert(!('segments' in same[0].itinerary[0].itinerary));
+      const itinerary = same[0].itinerary[0].itinerary;
+      assert('steps' in itinerary);
+      assertEquals(itinerary.steps, [
+        { mode: 'walk', durationSeconds: 0, distanceMeters: 0 },
+      ]);
     } finally {
       globalThis.fetch = originalFetch;
       Deno.env.get = originalEnv;

@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   ChevronDown as DisclosureChevron,
   ExternalLink,
@@ -222,6 +222,7 @@ const getVisiblePreferences = (
 ) => preferences.slice(0, visibleCount);
 
 interface DistanceSummaryProps {
+  children?: ReactNode;
   station: DistanceSummaryItem;
   stations: DistanceSummaryItem[];
   activeMapId: string;
@@ -242,6 +243,7 @@ interface DistanceSummaryProps {
 }
 
 export default function DistanceSummary({
+  children,
   station,
   stations,
   activeMapId,
@@ -485,6 +487,7 @@ export default function DistanceSummary({
                 })}
               </ParticipantList>
             </DetailSection>
+            {children}
             {isDetailOpen && (
               <DetailPanel id="route-details">
                 <DetailSection>

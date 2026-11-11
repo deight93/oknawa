@@ -15,6 +15,7 @@ import type { RoomStatusResponse } from '../src/services/search/types';
 import DestinationResult from '../src/views/result/DestinationResult';
 import MeetingDestinationField from '../src/views/search/components/MeetingDestinationField';
 import MeetingMap from '../src/components/MeetingMap';
+import RouteDetails from '../src/components/RouteDetails';
 import {
   onKakaoMapsScriptError,
   onKakaoMapsScriptLoad,
@@ -199,11 +200,31 @@ test('destination map is visible immediately with routes aligned to original par
     null,
   ]);
   assert.equal(
-    root.findAllByType('button').some(button =>
-      button.children.some(child => typeof child === 'string' && /지도/.test(child)),
-    ),
+    root
+      .findAllByType('button')
+      .some(button =>
+        button.children.some(
+          child => typeof child === 'string' && /지도/.test(child),
+        ),
+      ),
     false,
   );
+});
+
+test('journey selection and the map share participant indexes even with unavailable duplicate names', async () => {
+  const { root } = await mount();
+  const details = root.findByType(RouteDetails);
+  assert.deepEqual(
+    details.props.itinerary.map((item: unknown) => item === null),
+    [true, false, true],
+  );
+  act(() =>
+    root.findByType('select').props.onChange({ target: { value: '1' } }),
+  );
+  assert.equal(root.findByType(MeetingMap).props.selectedParticipantIndex, 1);
+  assert.equal(root.findByType(RouteDetails).props.selectedParticipantIndex, 1);
+  act(() => root.findByType(MeetingMap).props.onSelectParticipant(2));
+  assert.equal(root.findByType('select').props.value, 2);
 });
 
 test('partial and missing routes retain every origin, mapping duplicate names by participantIndex', async () => {

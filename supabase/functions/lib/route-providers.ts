@@ -7,6 +7,9 @@ import type {
   RouteItinerary,
   RouteParticipant,
   RouteSegment,
+  RouteStep,
+  TransitDetails,
+  TransitStop,
   TravelMode,
 } from './location-types.ts';
 import { fetchJson } from './utils.ts';
@@ -20,12 +23,13 @@ interface GoogleRoute {
       staticDuration?: string;
       distanceMeters?: number;
       polyline?: { encodedPolyline?: string };
+      transitDetails?: unknown;
     }>;
   }>;
 }
 interface KakaoCarRoute {
   result_code?: number;
-  summary?: { duration?: number };
+  summary?: { duration?: number; distance?: number };
   sections?: Array<{ roads?: Array<{ vertexes?: number[] }> }>;
 }
 interface KakaoWalkRoute {
@@ -49,6 +53,95 @@ function point(lng: number, lat: number): PolylinePoint[] {
     Math.abs(lat) <= 90
     ? [{ lat, lng }]
     : [];
+}
+
+const record = (value: unknown): Record<string, unknown> | undefined =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
+
+function displayText(value: unknown): string | undefined {
+  if (typeof value !== 'string' || /[\u0000-\u001f\u007f-\u009f]/.test(value))
+    return undefined;
+  return value.trim() || undefined;
+}
+
+const safeNonnegative = (value: unknown): value is number =>
+  nonnegative(value) && value <= Number.MAX_SAFE_INTEGER;
+
+function stepMetrics(
+  seconds: unknown,
+  meters: unknown,
+): Pick<RouteStep, 'durationSeconds' | 'distanceMeters'> {
+  return {
+    ...(safeNonnegative(seconds) ? { durationSeconds: seconds } : {}),
+    ...(safeNonnegative(meters) ? { distanceMeters: meters } : {}),
+  };
+}
+
+function googleStop(value: unknown): TransitStop | undefined {
+  const stop = record(value);
+  const name = displayText(stop?.name);
+  const latLng = record(record(stop?.location)?.latLng);
+  const location =
+    typeof latLng?.latitude === 'number' &&
+    typeof latLng?.longitude === 'number'
+      ? point(latLng.longitude, latLng.latitude)[0]
+      : undefined;
+  return name || location
+    ? { ...(name ? { name } : {}), ...(location ? { location } : {}) }
+    : undefined;
+}
+
+function googleTransitDetails(value: unknown): TransitDetails | undefined {
+  const raw = record(value);
+  const line = record(raw?.transitLine);
+  const stops = record(raw?.stopDetails);
+  const lineName = displayText(line?.nameShort) ?? displayText(line?.name);
+  const vehicleType = displayText(record(line?.vehicle)?.type);
+  const headsign = displayText(raw?.headsign);
+  const departureStop = googleStop(stops?.departureStop);
+  const arrivalStop = googleStop(stops?.arrivalStop);
+  const stopCount = raw?.stopCount;
+  const details: TransitDetails = {
+    ...(lineName ? { lineName } : {}),
+    ...(vehicleType ? { vehicleType } : {}),
+    ...(headsign ? { headsign } : {}),
+    ...(departureStop ? { departureStop } : {}),
+    ...(arrivalStop ? { arrivalStop } : {}),
+    ...(safeNonnegative(stopCount) && Number.isSafeInteger(stopCount)
+      ? { stopCount }
+      : {}),
+  };
+  return Object.keys(details).length > 0 ? details : undefined;
+}
+
+// Guidance does not depend on polylines, but must cover every step of every leg.
+function googleSteps(legs: GoogleRoute['legs']): RouteStep[] | undefined {
+  if (!Array.isArray(legs) || legs.length === 0) return undefined;
+  const steps: RouteStep[] = [];
+  for (const leg of legs) {
+    if (!Array.isArray(leg?.steps) || leg.steps.length === 0) return undefined;
+    for (const step of leg.steps) {
+      const mode =
+        step?.travelMode === 'WALK'
+          ? 'walk'
+          : step?.travelMode === 'TRANSIT'
+            ? 'transit'
+            : undefined;
+      if (!mode) return undefined;
+      const metrics = stepMetrics(
+        duration(step.staticDuration),
+        step.distanceMeters,
+      );
+      if (mode === 'walk') steps.push({ mode, ...metrics });
+      else {
+        const transit = googleTransitDetails(step.transitDetails);
+        steps.push({ mode, ...metrics, ...(transit ? { transit } : {}) });
+      }
+    }
+  }
+  return steps;
 }
 
 function decodePolyline(encoded: unknown): Array<[number, number]> {
@@ -103,8 +196,23 @@ async function googleTransit(
       headers: {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': getEnv('GOOGLE_API_KEY'),
-        'X-Goog-FieldMask':
-          'routes.duration,routes.legs.steps.distanceMeters,routes.legs.steps.staticDuration,routes.legs.steps.travelMode,routes.legs.steps.polyline.encodedPolyline,routes.polyline.encodedPolyline',
+        'X-Goog-FieldMask': [
+          'routes.duration',
+          'routes.legs.steps.distanceMeters',
+          'routes.legs.steps.staticDuration',
+          'routes.legs.steps.travelMode',
+          'routes.legs.steps.polyline.encodedPolyline',
+          'routes.polyline.encodedPolyline',
+          'routes.legs.steps.transitDetails.stopDetails.departureStop.name',
+          'routes.legs.steps.transitDetails.stopDetails.departureStop.location.latLng',
+          'routes.legs.steps.transitDetails.stopDetails.arrivalStop.name',
+          'routes.legs.steps.transitDetails.stopDetails.arrivalStop.location.latLng',
+          'routes.legs.steps.transitDetails.transitLine.nameShort',
+          'routes.legs.steps.transitDetails.transitLine.name',
+          'routes.legs.steps.transitDetails.transitLine.vehicle.type',
+          'routes.legs.steps.transitDetails.headsign',
+          'routes.legs.steps.transitDetails.stopCount',
+        ].join(','),
       },
       body: JSON.stringify({
         origin: {
@@ -139,6 +247,7 @@ async function googleTransit(
     : [];
   const walking = steps.filter(step => step?.travelMode === 'WALK');
   const segments = googleSegments(route.legs);
+  const guidance = googleSteps(route.legs);
   return {
     totalTime,
     transferCount: Math.max(
@@ -158,6 +267,7 @@ async function googleTransit(
       ([lat, lng]) => point(lng, lat),
     ),
     ...(segments ? { segments } : {}),
+    ...(guidance ? { steps: guidance } : {}),
   };
 }
 
@@ -209,6 +319,12 @@ async function kakaoRoute(
       walkingTime: 0,
       walkingDistance: 0,
       total_polyline,
+      steps: [
+        {
+          mode,
+          ...stepMetrics(route.summary.duration, route.summary.distance),
+        },
+      ],
       ...(completePath && total_polyline.length >= 2
         ? { segments: [{ mode, polyline: total_polyline }] }
         : {}),
@@ -237,6 +353,7 @@ async function kakaoRoute(
       walkingTime: 0,
       walkingDistance: 0,
       total_polyline: point(participant.start_x, participant.start_y),
+      steps: [{ mode, durationSeconds: 0, distanceMeters: 0 }],
     };
   }
   if (json.status !== 'OK') return null;
@@ -273,6 +390,15 @@ async function kakaoRoute(
     walkingDistance: route.properties.totalDistance,
     transferCount: 0,
     total_polyline,
+    steps: [
+      {
+        mode,
+        ...stepMetrics(
+          route.properties.totalTime,
+          route.properties.totalDistance,
+        ),
+      },
+    ],
     ...(completePath && total_polyline.length >= 2
       ? { segments: [{ mode, polyline: total_polyline }] }
       : {}),

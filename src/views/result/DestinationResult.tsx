@@ -8,6 +8,7 @@ import { Share2 } from 'lucide-react';
 import styled from 'styled-components';
 import PageHeader from '@/components/PageHeader';
 import MeetingMap from '@/components/MeetingMap';
+import RouteDetails from '@/components/RouteDetails';
 import MeetingDestinationField from '@/views/search/components/MeetingDestinationField';
 import useKakaoDirections from '@/hooks/result/useKakaoDirections';
 import useModal from '@/hooks/common/useModal';
@@ -51,6 +52,7 @@ export default function DestinationResult({
   const [busy, setBusy] = useState(false);
   const [fieldBusy, setFieldBusy] = useState(false);
   const [error, setError] = useState('');
+  const [selectedParticipant, setSelectedParticipant] = useState(0);
   const pending = useRef<symbol | null>(null);
   const {
     meetingDestination: destination,
@@ -59,6 +61,8 @@ export default function DestinationResult({
     participant: participants,
     recommendationOptions,
   } = result.request_info;
+  const selectedParticipantIndex =
+    selectedParticipant < participants.length ? selectedParticipant : 0;
   const mapItinerary = useMemo(
     () =>
       participants.map((_, index) => {
@@ -249,8 +253,16 @@ export default function DestinationResult({
           participants={participants}
           itinerary={mapItinerary}
           focusMode="overview"
+          selectedParticipantIndex={selectedParticipantIndex}
+          onSelectParticipant={setSelectedParticipant}
         />
       </MapFrame>
+      <RouteDetails
+        participants={participants}
+        itinerary={mapItinerary}
+        selectedParticipantIndex={selectedParticipantIndex}
+        onSelectParticipant={setSelectedParticipant}
+      />
       <SectionTitle>참가자별 예상 이동시간</SectionTitle>
       {destinationRoutes?.some(route => route.status === 'unavailable') && (
         <Description>

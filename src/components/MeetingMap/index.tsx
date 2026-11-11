@@ -13,6 +13,7 @@ import { ItineraryItem, Participant, PolylinePoint } from '@/types/location';
 import CenterMarker from './CenterMarker';
 import { waitForKakaoMaps } from '@/utils/kakaoMapsReady';
 import toast from 'react-hot-toast';
+import { getRouteTransfers, isRoutePoint } from '@/utils/routeSteps';
 
 interface MeetingMapProps {
   stationName: string;
@@ -22,6 +23,8 @@ interface MeetingMapProps {
   participants?: Participant[];
   // Each slot belongs to the participant at the same index, even without a route.
   itinerary?: (ItineraryItem | null)[];
+  selectedParticipantIndex?: number;
+  onSelectParticipant?: (index: number) => void;
 }
 
 interface MapPoint {
@@ -82,12 +85,24 @@ export default function MeetingMap({
   focusMode = 'destination',
   participants = [],
   itinerary = [],
+  selectedParticipantIndex,
+  onSelectParticipant,
 }: MeetingMapProps) {
   const [loaded, setLoaded] = useState(false);
   const [map, setMap] = useState<kakao.maps.Map | undefined>(undefined);
-  const [selectedParticipant, setSelectedParticipant] = useState<number | null>(
+  const [localParticipant, setSelectedParticipant] = useState<number | null>(
     null,
   );
+  const selectedParticipant = selectedParticipantIndex ?? localParticipant;
+  const transfers = useMemo(() => {
+    if (selectedParticipant === null) return [];
+    return getRouteTransfers(
+      itinerary[selectedParticipant]?.itinerary.steps,
+    ).flatMap(transfer => {
+      const point = transfer.transit?.departureStop?.location;
+      return isRoutePoint(point) ? [{ ...transfer, point }] : [];
+    });
+  }, [itinerary, selectedParticipant]);
 
   const center = useMemo(() => toMapPoint(endY, endX), [endX, endY]);
   const validParticipants = useMemo(
@@ -150,20 +165,24 @@ export default function MeetingMap({
         ),
       ),
     );
+    transfers.forEach(({ point }) =>
+      bounds.extend(new kakao.maps.LatLng(point.lat, point.lng)),
+    );
 
     return bounds;
-  }, [center, map, validParticipants, routeLines]);
+  }, [center, map, validParticipants, routeLines, transfers]);
 
   const handleMarkerClick = (marker: kakao.maps.Marker, index: number) => {
     if (!map) return;
     map.panTo(marker.getPosition());
     setSelectedParticipant(index);
+    onSelectParticipant?.(index);
   };
 
-  useEffect(() => {
+  const updateViewport = useCallback(() => {
     if (!map || !center) return;
 
-    if (focusMode === 'destination') {
+    if (focusMode === 'destination' && selectedParticipantIndex === undefined) {
       map.setLevel(6);
       map.setCenter(new kakao.maps.LatLng(center.lat, center.lng));
       return;
@@ -173,7 +192,19 @@ export default function MeetingMap({
     if (!bounds) return;
 
     map.setBounds(bounds);
-  }, [center, focusMode, getMapBounds, map]);
+  }, [center, focusMode, getMapBounds, map, selectedParticipantIndex]);
+
+  useEffect(updateViewport, [updateViewport]);
+
+  useEffect(() => {
+    if (!map || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => {
+      map.relayout();
+      updateViewport();
+    });
+    observer.observe(map.getNode());
+    return () => observer.disconnect();
+  }, [map, updateViewport]);
 
   useEffect(() => {
     let active = true;
@@ -223,6 +254,28 @@ export default function MeetingMap({
           />
         )),
       )}
+      {selectedParticipant !== null &&
+        transfers.map(transfer => {
+          const label = `${selectedParticipant + 1}번 ${participants[selectedParticipant]?.name ?? ''} 환승 ${transfer.number}: ${transfer.transit?.departureStop?.name ?? '승차 지점'} · ${transfer.transit?.lineName ?? '대중교통'}`;
+          return (
+            <CustomOverlayMap
+              key={transfer.stepIndex}
+              position={transfer.point}
+              zIndex={2}
+              yAnchor={1}
+            >
+              <TransferMarker
+                data-route-transfer={transfer.number}
+                role="img"
+                aria-label={label}
+                title={label}
+                $color={getStrokeColor(selectedParticipant)}
+              >
+                환승 {transfer.number}
+              </TransferMarker>
+            </CustomOverlayMap>
+          );
+        })}
     </Map>
   );
 }
@@ -230,4 +283,17 @@ export default function MeetingMap({
 const Map = styled(KakaoMap)`
   width: 100%;
   height: 100%;
+`;
+
+const TransferMarker = styled.span<{ $color: string }>`
+  display: block;
+  padding: 5px 8px;
+  border: 3px solid ${({ $color }) => $color};
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+  white-space: nowrap;
 `;
