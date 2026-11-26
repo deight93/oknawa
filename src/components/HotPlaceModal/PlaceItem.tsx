@@ -1,4 +1,5 @@
 import { ArrowUpRight, MapPin } from 'lucide-react';
+import { useState } from 'react';
 import styled from 'styled-components';
 
 import { CafeIcon } from '@/assets/icons/Cafe';
@@ -13,6 +14,23 @@ const categoryIcons: Record<string, JSX.Element> = {
   음식점: <RestaurantIcon color="currentColor" width="24" height="24" />,
   카페: <CafeIcon color="currentColor" width="24" height="24" />,
 };
+
+function PlacePhoto({ src }: { src: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return <MapPin size={24} />;
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt=""
+      width={64}
+      height={72}
+      loading="lazy"
+      onError={() => setFailed(true)}
+    />
+  );
+}
 
 export default function PlaceItem({ place }: PlaceItemProps) {
   const {
@@ -52,14 +70,7 @@ export default function PlaceItem({ place }: PlaceItemProps) {
       </CardContent>
       <ImageBox aria-hidden="true">
         {main_photo_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={main_photo_url}
-            alt=""
-            width={64}
-            height={72}
-            loading="lazy"
-          />
+          <PlacePhoto key={main_photo_url} src={main_photo_url} />
         ) : (
           (categoryIcons[category_group_name] ?? <MapPin size={24} />)
         )}

@@ -5,6 +5,7 @@ import React from 'react';
 import { act, create, ReactTestRenderer } from 'react-test-renderer';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { AxiosAdapter } from 'axios';
+import { MapPin } from 'lucide-react';
 import { api } from '../src/api/client';
 import type { HotPlace } from '../src/services/hot-place/types';
 
@@ -176,6 +177,25 @@ test('a place without a road address or business hours still has a usable addres
     tree.root.findByType('a').props.href,
     'https://place.map.kakao.com/123',
   );
+});
+
+test('a failed place photo becomes a map pin and a replacement URL can load', () => {
+  const cafe = { ...place('카페', '카페'), main_photo_url: '/first.jpg' };
+  act(() => {
+    tree = create(<PlaceItem place={cafe} />);
+  });
+  const photo = tree.root.findByType('img');
+  assert.equal(photo.props.src, cafe.main_photo_url);
+  act(() => photo.props.onError());
+  assert.equal(tree.root.findAllByType('img').length, 0);
+  assert.equal(tree.root.findAllByType(MapPin).length, 1);
+  assert.equal(tree.root.findByType('a').props.href, cafe.place_url);
+
+  act(() => {
+    tree.update(<PlaceItem place={{ ...cafe, main_photo_url: '/new.jpg' }} />);
+  });
+  assert.equal(tree.root.findByType('img').props.src, '/new.jpg');
+  assert.equal(tree.root.findAllByType(MapPin).length, 0);
 });
 
 test('activity selections survive collapsing and switching groups; collapsing does not search again', async () => {
