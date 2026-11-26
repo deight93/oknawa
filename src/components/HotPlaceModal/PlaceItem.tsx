@@ -39,7 +39,12 @@ export default function PlaceItem({ place }: PlaceItemProps) {
     >
       <CardContent>
         <PlaceName>{place_name}</PlaceName>
-        <Category>{category_group_name}</Category>
+        <Category>
+          {place.activity_label ||
+            category_group_name ||
+            place.category_name?.split(' > ').at(-1)}
+          {place.activity_label && place.distance && ` · ${place.distance}m`}
+        </Category>
         <Details>
           <CardBodyText>{road_address_name || address_name}</CardBodyText>
           <CardBodyText>{hoursLabel}</CardBodyText>

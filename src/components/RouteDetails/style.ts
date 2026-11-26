@@ -12,13 +12,42 @@ export const Disclosure = styled.details`
   overflow-wrap: anywhere;
 
   summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    list-style: none;
+    user-select: none;
     min-height: 44px;
     padding: 10px 0;
     font-weight: 600;
     cursor: pointer;
   }
 
-  summary:focus-visible,
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  summary::after {
+    content: '';
+    width: 9px;
+    height: 9px;
+    margin-inline-end: 5px;
+    flex-shrink: 0;
+    border: solid var(--text-secondary);
+    border-width: 0 1.75px 1.75px 0;
+    transform: translateY(-2px) rotate(45deg);
+  }
+
+  &[open] > summary::after {
+    transform: translateY(2px) rotate(225deg);
+  }
+
+  summary:focus-visible {
+    outline: none;
+  }
+
+  summary:focus-visible > span,
   button:focus-visible,
   select:focus-visible {
     outline: 2px solid

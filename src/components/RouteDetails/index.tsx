@@ -179,7 +179,9 @@ export default function RouteDetails({
       open={open}
       onToggle={event => setOpen(event.currentTarget.open)}
     >
-      <summary>이동 구간·환승 안내</summary>
+      <summary>
+        <span>이동 경로</span>
+      </summary>
       <div className="route-details-body">
         <label htmlFor={selectId}>경로를 볼 참가자</label>
         <select

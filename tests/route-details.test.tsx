@@ -93,7 +93,7 @@ test('provides a collapsed native disclosure and an explicitly labelled native s
   const details = root.findAllByType('details');
   assert.equal(details.length, 1);
   assert.ok(!details[0].props.open);
-  assert.equal(text(root.findByType('summary')), '이동 구간·환승 안내');
+  assert.equal(text(root.findByType('summary')), '이동 경로');
   const select = root.findByType('select');
   const label = root.findByType('label');
   assert.equal(text(label), '경로를 볼 참가자');

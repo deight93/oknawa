@@ -1,4 +1,5 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
+import { activityGroups } from '../lib/nearby-activities.ts';
 import { getEnv } from '../lib/env.ts';
 import type {
   KakaoPlaceDocument,
@@ -41,11 +42,12 @@ Deno.serve(async req => {
   try {
     const url = new URL(req.url);
     const pathParts = url.pathname.split('/').filter(Boolean);
-    let category = pathParts[pathParts.length - 1];
-
-    if (category === 'location-point-place') {
-      category = 'food';
-    } else if (!['food', 'cafe', 'drink'].includes(category)) {
+    const segment = pathParts[pathParts.length - 1];
+    const category = segment === 'location-point-place' ? 'food' : segment;
+    const activity = [...activityGroups.sport, ...activityGroups.play].find(
+      item => item.id === category,
+    );
+    if (!activity && !['food', 'cafe', 'drink'].includes(category)) {
       return responseApiError('invalid_category', 'Invalid category', 400);
     }
 
@@ -61,7 +63,7 @@ Deno.serve(async req => {
     }
 
     let category_group_code = '';
-    let query = '';
+    let query: string = activity?.keyword ?? '';
     if (category === 'food') {
       category_group_code = 'FD6';
       query = '음식점';
@@ -80,10 +82,12 @@ Deno.serve(async req => {
       radius,
       page,
       size,
-      sort,
-      category_group_code,
+      sort: activity ? 'distance' : sort,
       query,
     });
+
+    if (category_group_code)
+      kakaoParams.set('category_group_code', category_group_code);
 
     const kakaoHeaders = {
       Authorization: `KakaoAK ${KAKAO_REST_API_KEY}`,
@@ -97,7 +101,18 @@ Deno.serve(async req => {
         errorMessage: '카카오 장소 검색 실패',
       },
     );
-    const documents = kakaoData.documents ?? [];
+    const documents = (kakaoData.documents ?? []).filter(doc => {
+      if (!activity) return true;
+      if (typeof doc.category_name !== 'string') return false;
+      if (doc.category_name.includes(activity.industry)) return true;
+      // Kakao also files named badminton courts under generic sports facilities.
+      return (
+        activity.id === 'badminton' &&
+        doc.category_name.startsWith('스포츠,레저 > 스포츠시설') &&
+        typeof doc.place_name === 'string' &&
+        doc.place_name.includes('배드민턴')
+      );
+    });
     const meta = kakaoData.meta ?? {};
 
     const details = await Promise.all(
@@ -141,7 +156,9 @@ Deno.serve(async req => {
 
     return responseJson(
       {
-        documents: details,
+        documents: activity
+          ? details.map(doc => ({ ...doc, activity_label: activity.label }))
+          : details,
         meta,
       },
       200,
