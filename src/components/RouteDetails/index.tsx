@@ -39,18 +39,63 @@ function formatDistance(meters: unknown) {
   return `${distance.toLocaleString('ko-KR', { maximumFractionDigits: 1 })}${meters < 1000 ? 'm' : 'km'}`;
 }
 
+function groupWalkingSteps(steps: RouteStep[]) {
+  const groups: { stepIndex: number; steps: RouteStep[] }[] = [];
+  steps.forEach((step, stepIndex) => {
+    const previous = groups.at(-1);
+    if (step.mode === 'walk' && previous?.steps[0].mode === 'walk') {
+      previous.steps.push(step);
+    } else {
+      groups.push({ stepIndex, steps: [step] });
+    }
+  });
+  return groups;
+}
+
+function formatWalkingTotal(
+  steps: RouteStep[],
+  field: 'durationSeconds' | 'distanceMeters',
+) {
+  const values = steps.map(step => step[field]).filter(isNonnegativeNumber);
+  if (!values.length) return undefined;
+  const total = values.reduce((sum, value) => sum + value, 0);
+  const isTime = field === 'durationSeconds';
+  if (isTime && total === 0) return undefined;
+  const label = isTime ? formatDuration(total) : formatDistance(total);
+  if (!label || values.length === steps.length) return label;
+  return `확인 ${isTime ? '시간' : '거리'} ${label}`;
+}
+
 function StepDetails({
-  step,
+  steps,
   transferNumber,
   selected,
   onSelect,
 }: {
-  step: RouteStep;
+  steps: RouteStep[];
   transferNumber?: number;
   selected: boolean;
   onSelect?: () => void;
 }) {
-  const transit = step.mode === 'transit' ? step.transit : undefined;
+  const step = steps[0];
+  const mode = step.mode;
+  if (mode === 'walk') {
+    const metrics = [
+      formatWalkingTotal(steps, 'durationSeconds'),
+      formatWalkingTotal(steps, 'distanceMeters'),
+    ]
+      .filter(Boolean)
+      .join(' · ');
+    return (
+      <li>
+        <div className="walking-summary">
+          <h3>도보</h3>
+          {metrics && <span>{metrics}</span>}
+        </div>
+      </li>
+    );
+  }
+  const transit = mode === 'transit' ? step.transit : undefined;
   const lineName = readableText(transit?.lineName);
   const direction = readableText(transit?.headsign)?.replace(
     /(?:\s*방면)+$/,
@@ -70,10 +115,7 @@ function StepDetails({
     .join(' · ');
 
   let title: string;
-  switch (step.mode) {
-    case 'walk':
-      title = '도보';
-      break;
+  switch (mode) {
     case 'car':
       title = '자동차';
       break;
@@ -81,7 +123,7 @@ function StepDetails({
       title = `${transferNumber === undefined ? '승차' : `환승 ${transferNumber}`} · ${getTransitLabel(transit?.vehicleType)}${lineName ? ` ${lineName}` : ''}`;
       break;
     default: {
-      const exhaustive: never = step;
+      const exhaustive: never = mode;
       return exhaustive;
     }
   }
@@ -105,7 +147,7 @@ function StepDetails({
           title
         )}
       </h3>
-      {step.mode === 'transit' && (
+      {mode === 'transit' && (
         <>
           <p>
             {departureName ? `${departureName} 승차` : '승차 정류장 정보 없음'}
@@ -212,10 +254,10 @@ export default function RouteDetails({
         ) : (
           <>
             <ol aria-label="이동 구간">
-              {steps.map((step, stepIndex) => (
+              {groupWalkingSteps(steps).map(({ steps: group, stepIndex }) => (
                 <StepDetails
                   key={stepIndex}
-                  step={step}
+                  steps={group}
                   selected={selectedStepIndex === stepIndex}
                   onSelect={
                     onSelectTransfer &&
