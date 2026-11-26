@@ -142,6 +142,7 @@ export default function RouteDetails({
           step.mode === 'car'),
     );
   const transfers = getRouteTransfers(hasSteps ? steps : []);
+  const routeModes = new Set(hasSteps ? steps.map(step => step.mode) : []);
   const hasTransferCoordinates = transfers.some(transfer =>
     isRoutePoint(transfer.transit?.departureStop?.location),
   );
@@ -231,18 +232,29 @@ export default function RouteDetails({
               ))}
             </ol>
             <div className="route-details-notes">
-              <p>
-                이동 시간과 경로는 상황에 따라 달라질 수 있어요. 전체 이동
-                시간에는 대기 시간이 포함될 수 있어요.
-              </p>
-              <p>지도에서 도보는 점선, 대중교통·자동차는 실선으로 표시돼요.</p>
-              {hasTransferCoordinates && (
-                <p>
-                  좌표가 있는 환승 지점만 선택한 참가자의 지도에 번호로
-                  표시돼요.
-                  {onSelectTransfer &&
-                    ' 환승 번호를 누르면 지도와 상세 안내가 함께 선택돼요.'}
-                </p>
+              <div className="route-legend" role="group" aria-label="지도 범례">
+                {routeModes.has('walk') && (
+                  <span>
+                    <i className="walk-line" role="img" aria-label="점선" />
+                    도보
+                  </span>
+                )}
+                {routeModes.has('transit') && (
+                  <span>
+                    <i role="img" aria-label="실선" />
+                    대중교통
+                  </span>
+                )}
+                {routeModes.has('car') && (
+                  <span>
+                    <i role="img" aria-label="실선" />
+                    자동차
+                  </span>
+                )}
+                {hasTransferCoordinates && <span>번호 · 환승 지점</span>}
+              </div>
+              {routeModes.has('transit') && (
+                <p>대기 시간에 따라 총 소요 시간이 달라져요.</p>
               )}
             </div>
           </>
