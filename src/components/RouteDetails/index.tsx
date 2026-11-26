@@ -52,7 +52,10 @@ function StepDetails({
 }) {
   const transit = step.mode === 'transit' ? step.transit : undefined;
   const lineName = readableText(transit?.lineName);
-  const direction = readableText(transit?.headsign);
+  const direction = readableText(transit?.headsign)?.replace(
+    /(?:\s*방면)+$/,
+    '',
+  );
   const departureName = readableText(transit?.departureStop?.name);
   const arrivalName = readableText(transit?.arrivalStop?.name);
   const stopCount = transit?.stopCount;
