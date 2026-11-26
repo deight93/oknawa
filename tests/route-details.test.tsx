@@ -124,6 +124,26 @@ test('renders every mode in journey order and numbers transfers across walks and
   assert.match(text(steps[1]), /2\.3km/);
 });
 
+test('renders one direction suffix for bare and already formatted transit headsigns', () => {
+  const headsigns = ['온수역', ' 온수역 방면 ', '온수역 방면 방면'];
+  const steps = headsigns.map(
+    (headsign): RouteStep => ({
+      mode: 'transit',
+      transit: { headsign },
+    }),
+  );
+  const root = mount({ itinerary: [route(steps)] });
+  for (const step of root.findByType('ol').findAllByType('li')) {
+    assert.deepEqual(
+      step
+        .findAllByType('p')
+        .map(text)
+        .filter(label => label.includes('온수역')),
+      ['온수역 방면'],
+    );
+  }
+});
+
 test('keeps duplicate participant names and null route slots indexed during controlled selection', () => {
   const selected: number[] = [];
   const itinerary = [null, route([{ mode: 'car' }]), route([{ mode: 'walk' }])];
