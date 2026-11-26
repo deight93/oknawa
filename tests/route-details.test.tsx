@@ -380,13 +380,31 @@ test('makes the entire guidance unavailable for unrecognized or missing step mod
   }
 });
 
-test('explains estimates, waiting time, map line styles and selected-participant transfer numbers', () => {
+test('shows the selected route modes, line styles and mapped transfers in the legend', () => {
   const root = mount();
-  const notes = root.findAllByType('p').map(text).join(' ');
-  assert.match(notes, /상황에 따라 달라질 수/);
-  assert.match(notes, /전체 이동 시간.*대기 시간/);
-  assert.match(notes, /도보.*점선.*대중교통.*실선/);
-  assert.match(notes, /좌표가 있는 환승 지점만.*선택한 참가자.*지도.*번호/);
+  const legend = root.findByProps({ 'aria-label': '지도 범례' });
+  assert.deepEqual(
+    legend
+      .findAllByType('i')
+      .map(line => [line.props['aria-label'], text(line.parent!)]),
+    [
+      ['점선', '도보'],
+      ['실선', '대중교통'],
+      ['실선', '자동차'],
+    ],
+  );
+  assert.match(text(legend), /환승 지점/);
+  assert.match(text(root), /대기 시간/);
+  act(() =>
+    tree?.update(
+      <RouteDetails
+        {...defaultProps}
+        itinerary={[route([{ mode: 'walk' }])]}
+      />,
+    ),
+  );
+  assert.equal(text(legend), '도보');
+  assert.doesNotMatch(text(root), /대기 시간/);
 });
 
 test('does not promise map markers for transfers with absent or invalid stop coordinates', () => {
@@ -406,7 +424,7 @@ test('does not promise map markers for transfers with absent or invalid stop coo
       <RouteDetails {...defaultProps} itinerary={[route(steps)]} />,
     );
     assert.match(markup, /환승 1/);
-    assert.doesNotMatch(markup, /선택한 참가자의 지도에 번호로 표시/);
+    assert.doesNotMatch(markup, /환승 지점/);
   }
 });
 

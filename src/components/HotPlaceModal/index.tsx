@@ -19,10 +19,23 @@ interface HotPlaceModalProps {
   y: number;
 }
 
-const diningIcons = {
+const categoryIcons = {
   food: <RestaurantIcon color="currentColor" />,
   cafe: <CafeIcon color="currentColor" />,
   drink: <DrinkIcon color="currentColor" />,
+  sport: (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+      <path d="M1.1 5a5 5 0 0 1 3.9-3.9A4.5 4.5 0 0 1 1.1 5ZM1 6.2A5.7 5.7 0 0 0 6.2 1a5 5 0 0 1 4.8 4.8A5.7 5.7 0 0 0 5.8 11 5 5 0 0 1 1 6.2ZM7 10.9A4.5 4.5 0 0 1 10.9 7 5 5 0 0 1 7 10.9Z" />
+    </svg>
+  ),
+  play: (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+      <path
+        fillRule="evenodd"
+        d="M3 1h6a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2Zm.5 1.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2ZM6 5a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm2.5 2.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z"
+      />
+    </svg>
+  ),
 };
 
 const HOT_PLACE_CATEGORY: { title: string; category: HotPlaceCategory }[] = [
@@ -153,13 +166,9 @@ export default function HotPlaceModal({ x, y }: HotPlaceModalProps) {
             }
             onClick={() => selectCategory(c.category)}
           >
-            {(c.category === 'food' ||
-              c.category === 'cafe' ||
-              c.category === 'drink') && (
-              <span className="category-icon" aria-hidden="true">
-                {diningIcons[c.category]}
-              </span>
-            )}
+            <span className="category-icon" aria-hidden="true">
+              {categoryIcons[c.category]}
+            </span>
             {c.title}
             {c.category === category &&
               group &&
@@ -253,9 +262,12 @@ const Container = styled.div`
 
 const Category = styled.div`
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr)) repeat(2, minmax(0, 1.4fr));
+  grid-template-columns: repeat(5, minmax(max-content, 1fr));
   gap: 4px;
   margin-bottom: 12px;
+  @container (max-width: 270px) {
+    grid-template-columns: repeat(3, minmax(max-content, 1fr));
+  }
 `;
 
 const CategoryButton = styled.button<{ $selected: boolean }>`
@@ -281,14 +293,18 @@ const CategoryButton = styled.button<{ $selected: boolean }>`
   white-space: nowrap;
   .category-icon {
     display: inline-flex;
-    margin-right: 3px;
+    align-items: center;
+    margin-right: 1px;
   }
-  @container (max-width: 335px) {
+  @container (max-width: 355px) {
+    font-size: 13px;
+    gap: 1px;
+    padding-inline: 1px;
     .category-icon {
-      display: none;
+      margin-right: 0;
     }
   }
-  &[aria-expanded='true'] svg {
+  &[aria-expanded='true'] > svg {
     transform: rotate(180deg);
   }
   small {

@@ -151,9 +151,29 @@ export const Disclosure = styled.details`
 
   .route-details-notes {
     display: grid;
-    gap: 8px;
-    padding-top: 12px;
-    border-top: 1px solid var(--border);
+    gap: 4px;
+    color: var(--text-secondary);
     font-size: var(--font-caption);
+  }
+
+  .route-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+  }
+
+  .route-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .route-legend i {
+    width: 18px;
+    border-top: 2px solid currentColor;
+  }
+
+  .route-legend .walk-line {
+    border-top-style: dashed;
   }
 `;
