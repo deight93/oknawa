@@ -1,9 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import styled from 'styled-components';
 
+import { RestaurantIcon } from '@/assets/icons/Restaurant';
 import { CafeIcon } from '@/assets/icons/Cafe';
 import { DrinkIcon } from '@/assets/icons/Drink';
-import { RestaurantIcon } from '@/assets/icons/Restaurant';
+import { Check, ChevronDown } from 'lucide-react';
+import {
+  activityGroups,
+  type ActivityGroup,
+  type Activity,
+} from '../../../supabase/functions/lib/nearby-activities';
 import { useHotPlaceQuery } from '@/hooks/query/hot-place';
 import { HotPlaceCategory } from '@/services/hot-place/types';
 import PlaceItem from './PlaceItem';
@@ -13,20 +19,62 @@ interface HotPlaceModalProps {
   y: number;
 }
 
+const diningIcons = {
+  food: <RestaurantIcon color="currentColor" />,
+  cafe: <CafeIcon color="currentColor" />,
+  drink: <DrinkIcon color="currentColor" />,
+};
+
 const HOT_PLACE_CATEGORY: { title: string; category: HotPlaceCategory }[] = [
   { title: '맛집', category: 'food' },
   { title: '카페', category: 'cafe' },
   { title: '술집', category: 'drink' },
+  { title: '운동', category: 'sport' },
+  { title: '놀거리', category: 'play' },
 ];
-
-const categoryIcons: Record<HotPlaceCategory, JSX.Element> = {
-  food: <RestaurantIcon color="currentColor" width="16" height="16" />,
-  cafe: <CafeIcon color="currentColor" width="16" height="16" />,
-  drink: <DrinkIcon color="currentColor" width="16" height="16" />,
-};
 
 export default function HotPlaceModal({ x, y }: HotPlaceModalProps) {
   const [category, setCategory] = useState<HotPlaceCategory>('food');
+  const [expanded, setExpanded] = useState(false);
+  const [selections, setSelections] = useState<
+    Record<ActivityGroup, Activity['id'][]>
+  >({ sport: [], play: [] });
+  const group = category === 'sport' || category === 'play' ? category : null;
+  const chosen = group ? selections[group] : [];
+  const options: readonly Activity[] = group ? activityGroups[group] : [];
+  const kinds =
+    category === 'sport' || category === 'play'
+      ? options
+          .filter(option => !chosen.length || chosen.includes(option.id))
+          .map(option => option.id)
+      : [category];
+  const panelId = useId();
+
+  function selectCategory(next: HotPlaceCategory) {
+    setExpanded(
+      next === 'sport' || next === 'play'
+        ? next !== category || !expanded
+        : false,
+    );
+    setCategory(next);
+  }
+
+  function toggleActivity(id?: Activity['id']) {
+    if (!group) return;
+    setSelections(previous => {
+      const selected = previous[group];
+      const next = !id
+        ? []
+        : selected.includes(id)
+          ? selected.filter(item => item !== id)
+          : [...selected, id];
+      return {
+        ...previous,
+        [group]: next.length === options.length ? [] : next,
+      };
+    });
+  }
+
   const loaderRef = useRef<HTMLDivElement | null>(null);
   const {
     data,
@@ -38,13 +86,26 @@ export default function HotPlaceModal({ x, y }: HotPlaceModalProps) {
     isError,
     isFetchNextPageError,
     refetch,
-  } = useHotPlaceQuery(category, { x, y });
+  } = useHotPlaceQuery(kinds, { x, y });
 
-  const allPlaces = useMemo(
-    () => data?.pages.flatMap(page => page.documents) ?? [],
-    [data?.pages],
-  );
-  const isLoadingPlaces = isPending || isPlaceholderData;
+  const allPlaces = useMemo(() => {
+    const unique = new Map(
+      data?.pages.flatMap(page =>
+        page.documents.map(place => [place.id, place] as const),
+      ),
+    );
+    const places = Array.from(unique.values());
+    if (group)
+      places.sort(
+        (a, b) =>
+          Number(a.distance) - Number(b.distance) || a.id.localeCompare(b.id),
+      );
+    return places;
+  }, [data?.pages, group]);
+  const isLoadingPlaces =
+    isPending ||
+    isPlaceholderData ||
+    (!allPlaces.length && hasNextPage && !isFetchNextPageError);
 
   useEffect(() => {
     const target = loaderRef.current;
@@ -65,7 +126,13 @@ export default function HotPlaceModal({ x, y }: HotPlaceModalProps) {
     );
     observer.observe(target);
     return () => observer.disconnect();
-  }, [fetchNextPage, hasNextPage, isFetchingNextPage, isFetchNextPageError]);
+  }, [
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isFetchNextPageError,
+    data?.pages.length,
+  ]);
 
   return (
     <Container>
@@ -76,13 +143,63 @@ export default function HotPlaceModal({ x, y }: HotPlaceModalProps) {
             type="button"
             $selected={c.category === category}
             aria-pressed={c.category === category}
-            onClick={() => setCategory(c.category)}
+            aria-expanded={
+              c.category === 'sport' || c.category === 'play'
+                ? c.category === category && expanded
+                : undefined
+            }
+            aria-controls={
+              c.category === category && group ? panelId : undefined
+            }
+            onClick={() => selectCategory(c.category)}
           >
-            <span aria-hidden="true">{categoryIcons[c.category]}</span>
+            {(c.category === 'food' ||
+              c.category === 'cafe' ||
+              c.category === 'drink') && (
+              <span className="category-icon" aria-hidden="true">
+                {diningIcons[c.category]}
+              </span>
+            )}
             {c.title}
+            {c.category === category &&
+              group &&
+              !expanded &&
+              chosen.length > 0 && <small>{chosen.length}</small>}
+            {(c.category === 'sport' || c.category === 'play') && (
+              <ChevronDown size={13} aria-hidden="true" />
+            )}
           </CategoryButton>
         ))}
       </Category>
+      {group && (
+        <ActivityFilters
+          id={panelId}
+          hidden={!expanded}
+          role="group"
+          aria-label={group === 'sport' ? '운동 종목' : '놀거리 종류'}
+        >
+          <FilterButton
+            type="button"
+            aria-pressed={!chosen.length}
+            onClick={() => toggleActivity()}
+          >
+            {!chosen.length && <Check size={13} aria-hidden="true" />}전체
+          </FilterButton>
+          {options.map(item => (
+            <FilterButton
+              key={item.id}
+              type="button"
+              aria-pressed={chosen.includes(item.id)}
+              onClick={() => toggleActivity(item.id)}
+            >
+              {chosen.includes(item.id) && (
+                <Check size={13} aria-hidden="true" />
+              )}
+              {item.label}
+            </FilterButton>
+          ))}
+        </ActivityFilters>
+      )}
       {isLoadingPlaces ? (
         <Status role="status">주변 장소를 찾고 있어요.</Status>
       ) : isError && allPlaces.length === 0 ? (
@@ -123,6 +240,7 @@ export default function HotPlaceModal({ x, y }: HotPlaceModalProps) {
 }
 
 const Container = styled.div`
+  container-type: inline-size;
   --place-muted: color-mix(in srgb, var(--text-muted) 75%, var(--text-primary));
   padding: 4px 4px max(4px, env(safe-area-inset-bottom));
   button:focus-visible,
@@ -134,20 +252,20 @@ const Container = styled.div`
 `;
 
 const Category = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 16px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) repeat(2, minmax(0, 1.4fr));
+  gap: 4px;
+  margin-bottom: 12px;
 `;
 
 const CategoryButton = styled.button<{ $selected: boolean }>`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  min-width: 76px;
+  gap: 2px;
+  min-width: 0;
   min-height: 40px;
-  padding: 8px 14px;
+  padding: 6px 2px;
   border: 1px solid
     ${({ $selected }) =>
       $selected ? 'var(--primary)' : 'var(--border-strong)'};
@@ -160,11 +278,55 @@ const CategoryButton = styled.button<{ $selected: boolean }>`
   font-weight: 600;
   line-height: 1.4;
   cursor: pointer;
-  span {
-    display: flex;
+  white-space: nowrap;
+  .category-icon {
+    display: inline-flex;
+    margin-right: 3px;
+  }
+  @container (max-width: 335px) {
+    .category-icon {
+      display: none;
+    }
+  }
+  &[aria-expanded='true'] svg {
+    transform: rotate(180deg);
+  }
+  small {
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
   }
   &:hover {
     border-color: var(--primary);
+  }
+`;
+
+const ActivityFilters = styled.div`
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  &[hidden] {
+    display: none;
+  }
+`;
+
+const FilterButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-height: 34px;
+  padding: 4px 8px;
+  border-radius: 7px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  &[aria-pressed='true'] {
+    background: var(--surface-strong);
+    color: var(--text-primary);
+    font-weight: 650;
   }
 `;
 

@@ -1,4 +1,11 @@
-export type HotPlaceCategory = 'food' | 'cafe' | 'drink';
+import type {
+  Activity,
+  ActivityGroup,
+} from '../../../supabase/functions/lib/nearby-activities';
+
+export type DiningCategory = 'food' | 'cafe' | 'drink';
+export type HotPlaceCategory = DiningCategory | ActivityGroup;
+export type PlaceSearchKind = DiningCategory | Activity['id'];
 
 export type HotPlacePoint = {
   x: number;
@@ -17,6 +24,7 @@ export interface HotPlace {
   category_group_code: string;
   category_group_name: string;
   category_name: string;
+  activity_label?: string;
   distance: string;
   id: string;
   phone: string;

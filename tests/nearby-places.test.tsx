@@ -177,3 +177,52 @@ test('a place without a road address or business hours still has a usable addres
     'https://place.map.kakao.com/123',
   );
 });
+
+test('activity selections survive collapsing and switching groups; collapsing does not search again', async () => {
+  const requests: string[] = [];
+  await mount(async config => {
+    const kind = config.url!.split('/').pop()!;
+    requests.push(kind);
+    return {
+      config,
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      data: response([place(kind), place('shared')]),
+    };
+  });
+  const button = (label: string) => {
+    const result = tree.root
+      .findAllByType('button')
+      .find(node => node.children.includes(label));
+    assert.ok(result, label);
+    return result;
+  };
+  const click = async (label: string) =>
+    act(async () => button(label).props.onClick());
+  await click('운동');
+  await until(() => visibleText().includes('screen-golf'));
+  await click('헬스장');
+  await click('테니스');
+  await until(() => tree.root.findAllByType('a').length === 3);
+  const count = requests.length;
+  await click('운동');
+  assert.equal(button('운동').props['aria-expanded'], false);
+  assert.equal(
+    tree.root.findByProps({ 'aria-label': '운동 종목' }).props.hidden,
+    true,
+  );
+  assert.equal(tree.root.findAllByType('a').length, 3);
+  await click('운동');
+  assert.equal(button('테니스').props['aria-pressed'], true);
+  assert.equal(button('헬스장').props['aria-pressed'], true);
+  assert.equal(requests.length, count);
+  await click('놀거리');
+  await click('보드게임');
+  await click('운동');
+  assert.equal(button('테니스').props['aria-pressed'], true);
+  await click('전체');
+  assert.equal(button('전체').props['aria-pressed'], true);
+  await click('놀거리');
+  assert.equal(button('보드게임').props['aria-pressed'], true);
+});
