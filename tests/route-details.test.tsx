@@ -144,6 +144,41 @@ test('renders one direction suffix for bare and already formatted transit headsi
   }
 });
 
+test('combines consecutive walks before rounding while keeping original transfer indices', () => {
+  const clicked: number[] = [];
+  const root = mount({
+    itinerary: [
+      route([
+        { mode: 'walk', durationSeconds: 30, distanceMeters: 50 },
+        { mode: 'walk', durationSeconds: 30, distanceMeters: 60 },
+        { mode: 'transit' },
+        { mode: 'walk', durationSeconds: 4 },
+        { mode: 'walk', durationSeconds: 0 },
+        { mode: 'walk', durationSeconds: 29, distanceMeters: 31 },
+        { mode: 'walk', durationSeconds: 56, distanceMeters: 55 },
+        journey[3],
+        { mode: 'walk', durationSeconds: 0, distanceMeters: 12 },
+        { mode: 'car' },
+        { mode: 'walk', durationSeconds: 20 },
+        { mode: 'walk', durationSeconds: -1 },
+      ]),
+    ],
+    selectedTransfer: { stepIndex: 7, source: 'map' },
+    onSelectTransfer: index => clicked.push(index),
+  });
+  const rows = root.findByType('ol').findAllByType('li');
+  assert.equal(rows.length, 7);
+  assert.equal(text(rows[0]), '도보1분 · 110m');
+  assert.equal(text(rows[2]), '도보2분 · 확인 거리 86m');
+  assert.equal(text(rows[4]), '도보12m');
+  assert.equal(text(rows[6]), '도보확인 시간 1분 미만');
+  const transfer = rows[3].findByType('button');
+  assert.match(transfer.props['aria-label'], /환승 1.*교대역/);
+  assert.equal(transfer.props['aria-pressed'], true);
+  act(() => transfer.props.onClick());
+  assert.deepEqual(clicked, [7]);
+});
+
 test('keeps duplicate participant names and null route slots indexed during controlled selection', () => {
   const selected: number[] = [];
   const itinerary = [null, route([{ mode: 'car' }]), route([{ mode: 'walk' }])];
@@ -289,7 +324,7 @@ test('replaces old guidance on rerender without keeping stale lines, stops or tr
 });
 
 for (const [seconds, expected] of [
-  [0, '0분'],
+  [0, ''],
   [0.5, '1분 미만'],
   [59, '1분 미만'],
   [60, '1분'],

@@ -141,6 +141,18 @@ export const Disclosure = styled.details`
     font-weight: 600;
   }
 
+  .walking-summary {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0 6px;
+    color: var(--text-secondary);
+  }
+
+  .walking-summary h3 {
+    color: var(--text-primary);
+  }
+
   p {
     color: var(--text-secondary);
   }
